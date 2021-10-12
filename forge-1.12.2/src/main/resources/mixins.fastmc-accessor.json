@@ -1,0 +1,9 @@
+{
+  "required": false,
+  "compatibilityLevel": "JAVA_8",
+  "package": "me.xiaro.fastmc.accessor",
+  "refmap": "mixins.fastmc.refmap.json",
+  "client": [
+    "AccessorMinecraft"
+  ]
+}
