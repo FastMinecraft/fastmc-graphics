@@ -1,0 +1,338 @@
+package me.xiaro.fastmc.font
+
+import it.unimi.dsi.fastutil.bytes.ByteArrayList
+import it.unimi.dsi.fastutil.floats.FloatArrayList
+import it.unimi.dsi.fastutil.shorts.ShortArrayList
+import me.xiaro.fastmc.opengl.*
+import me.xiaro.fastmc.utils.BufferUtils
+import me.xiaro.fastmc.utils.ColorARGB
+import me.xiaro.fastmc.utils.FastIntMap
+import org.joml.Matrix4f
+import java.nio.ByteBuffer
+
+class RenderString(private val fontRenderer: FontRenderer, private val string: CharSequence) {
+    private val renderInfoList = ArrayList<StringRenderInfo>()
+
+    private val initTime = System.currentTimeMillis()
+    private var lastAccess = initTime
+
+    fun build(): RenderString {
+        val builders = FastIntMap<StringRenderInfo.Builder>()
+
+        var posX = 0.0f
+        var posY = 0.0f
+
+        val context = FontRenderContext()
+
+        for ((index, char) in string.withIndex()) {
+            if (context.checkFormatCode(string, index)) continue
+
+            if (char == '\n') {
+                posY += fontRenderer.fontHeight
+                posX = 0.0f
+            } else {
+                val charCode = char.code
+                val blockID = charCode shr 8
+                val glyphBlock = fontRenderer.getBlock(blockID) ?: continue
+
+                var renderInfo = builders[glyphBlock.texture.internalID]
+                if (renderInfo == null) {
+                    renderInfo = StringRenderInfo.Builder(glyphBlock.texture)
+                    builders[glyphBlock.texture.internalID] = renderInfo
+                }
+
+                val charInfo = glyphBlock.glyphs[charCode - (blockID shl 8)]
+
+                if (context.bold) {
+                    val offset = if (glyphBlock.unicode) 0.5f else 1.0f
+                    renderInfo.put(posX + offset, posY, charInfo, context)
+                }
+                renderInfo.put(posX, posY, charInfo, context)
+
+                posX += charInfo.width
+            }
+        }
+
+        builders.forEach {
+            renderInfoList.add(it.value.build())
+        }
+
+        return this
+    }
+
+    fun render(shader: FontRenderer.Shader, projection: Matrix4f, modelView: Matrix4f, color: ColorARGB, drawShadow: Boolean) {
+        lastAccess = System.currentTimeMillis()
+
+        glUseProgramForce(shader.id)
+        shader.preRender(projection, modelView, color)
+
+        renderInfoList.forEach {
+            it.render(drawShadow)
+        }
+
+        glBindTexture(0)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        shader.unbind()
+    }
+
+    fun tryClean(current: Long): Boolean {
+        return if (current - initTime >= 15000L || current - lastAccess >= 5000L) {
+            destroy()
+            true
+        } else {
+            false
+        }
+    }
+
+    fun destroy() {
+        renderInfoList.forEach {
+            it.destroy()
+        }
+        renderInfoList.clear()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as RenderString
+
+        if (string != other.string) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return string.hashCode()
+    }
+
+    private class StringRenderInfo private constructor(
+        private val texture: GlyphTexture,
+        private val size: Int,
+        private val vaoID: Int,
+        private val vboID: Int,
+        private val iboID: Int
+    ) {
+        fun render(drawShadow: Boolean) {
+            texture.bind()
+
+            glBindVertexArray(vaoID)
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID)
+
+            if (drawShadow) {
+                glDrawElements(GL_TRIANGLES, size * 2 * 6, GL_UNSIGNED_SHORT, 0L)
+            } else {
+                glDrawElements(GL_TRIANGLES, size * 6, GL_UNSIGNED_SHORT, size * 6L * 2L)
+            }
+        }
+
+        fun destroy() {
+            glDeleteVertexArrays(vaoID)
+            glDeleteBuffers(vboID)
+            glDeleteBuffers(iboID)
+        }
+
+        class Builder(private val texture: GlyphTexture) {
+            private var size = 0
+
+            private val posList = FloatArrayList()
+            private val uvList = ShortArrayList()
+            private val colorList = ByteArrayList()
+
+            fun put(posX: Float, posY: Float, charGlyph: CharGlyph, context: FontRenderContext) {
+                val uv = charGlyph.uv
+                val color = context.color
+                val offset = if (context.italic) 1.0f else 0.0f
+
+                posList.add(posX + offset)
+                posList.add(posY)
+                uvList.add(uv[0])
+                uvList.add(uv[1])
+
+                posList.add(posX + offset + charGlyph.renderWidth)
+                posList.add(posY)
+                uvList.add(uv[2])
+                uvList.add(uv[1])
+
+                posList.add(posX - offset)
+                posList.add(posY + charGlyph.renderHeight)
+                uvList.add(uv[0])
+                uvList.add(uv[3])
+
+                posList.add(posX - offset + charGlyph.renderWidth)
+                posList.add(posY + charGlyph.renderHeight)
+                uvList.add(uv[2])
+                uvList.add(uv[3])
+
+                colorList.add(color.toByte())
+
+                size++
+            }
+
+            fun build(): StringRenderInfo {
+                val vboBuffer = buildVboBuffer()
+                val iboBuffer = buildIboBuffer()
+
+                val vaoID = glGenVertexArrays()
+                val vboID = glGenBuffers()
+                val iboID = glGenBuffers()
+
+                glBindVertexArray(vaoID)
+
+                glBindBuffer(GL_ARRAY_BUFFER, vboID)
+                glBufferData(GL_ARRAY_BUFFER, vboBuffer, GL_STATIC_DRAW)
+
+                glVertexAttribPointer(0, 2, GL_FLOAT, false, 16, 0L)
+                glVertexAttribPointer(1, 2, GL_UNSIGNED_SHORT, true, 16, 8L)
+                glVertexAttribIPointer(2, 1, GL_BYTE, 16, 12L)
+
+                glEnableVertexAttribArray(0)
+                glEnableVertexAttribArray(1)
+                glEnableVertexAttribArray(2)
+
+                glBindBuffer(GL_ARRAY_BUFFER, 0)
+
+                glBindVertexArray(0)
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID)
+                glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboBuffer, GL_STATIC_DRAW)
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
+
+                return StringRenderInfo(texture, size, vaoID, vboID, iboID)
+            }
+
+            private fun buildVboBuffer(): ByteBuffer {
+                val vboBuffer = BufferUtils.byte(size * 4 * 2 * 16)
+
+                var posIndex = 0
+                var uvIndex = 0
+
+                for (i in colorList.indices) {
+                    val color = colorList.getByte(i)
+                    val shadowColor = getShadowColor(color)
+                    
+                    var posX = posList.getFloat(posIndex++)
+                    var posY = posList.getFloat(posIndex++)
+                    var u = uvList.getShort(uvIndex++)
+                    var v = uvList.getShort(uvIndex++)
+
+                    vboBuffer.putFloat(posX + 1.0f)
+                    vboBuffer.putFloat(posY + 1.0f)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(shadowColor)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    vboBuffer.putFloat(posX)
+                    vboBuffer.putFloat(posY)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(color)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    posX = posList.getFloat(posIndex++)
+                    posY = posList.getFloat(posIndex++)
+                    u = uvList.getShort(uvIndex++)
+                    v = uvList.getShort(uvIndex++)
+
+                    vboBuffer.putFloat(posX + 1.0f)
+                    vboBuffer.putFloat(posY + 1.0f)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(shadowColor)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    vboBuffer.putFloat(posX)
+                    vboBuffer.putFloat(posY)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(color)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    posX = posList.getFloat(posIndex++)
+                    posY = posList.getFloat(posIndex++)
+                    u = uvList.getShort(uvIndex++)
+                    v = uvList.getShort(uvIndex++)
+
+                    vboBuffer.putFloat(posX + 1.0f)
+                    vboBuffer.putFloat(posY + 1.0f)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(shadowColor)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    vboBuffer.putFloat(posX)
+                    vboBuffer.putFloat(posY)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(color)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    posX = posList.getFloat(posIndex++)
+                    posY = posList.getFloat(posIndex++)
+                    u = uvList.getShort(uvIndex++)
+                    v = uvList.getShort(uvIndex++)
+
+                    vboBuffer.putFloat(posX + 1.0f)
+                    vboBuffer.putFloat(posY + 1.0f)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(shadowColor)
+                    vboBuffer.position(vboBuffer.position() + 3)
+
+                    vboBuffer.putFloat(posX)
+                    vboBuffer.putFloat(posY)
+                    vboBuffer.putShort(u)
+                    vboBuffer.putShort(v)
+                    vboBuffer.put(color)
+                    vboBuffer.position(vboBuffer.position() + 3)
+                }
+
+                vboBuffer.flip()
+                return vboBuffer
+            }
+
+            private fun buildIboBuffer(): ByteBuffer {
+                val iboBuffer = BufferUtils.byte(size * 2 * 6 * 2)
+
+                val indexSize = size * 2 * 4
+                var index = 0
+
+                while (index < indexSize) {
+                    iboBuffer.putShort(index.toShort())
+                    iboBuffer.putShort((index + 4).toShort())
+                    iboBuffer.putShort((index + 2).toShort())
+                    iboBuffer.putShort((index + 6).toShort())
+                    iboBuffer.putShort((index + 2).toShort())
+                    iboBuffer.putShort((index + 4).toShort())
+                    index += 8
+                }
+
+                index = 0
+
+                while (index < indexSize) {
+                    iboBuffer.putShort((index + 1).toShort())
+                    iboBuffer.putShort((index + 5).toShort())
+                    iboBuffer.putShort((index + 3).toShort())
+                    iboBuffer.putShort((index + 7).toShort())
+                    iboBuffer.putShort((index + 3).toShort())
+                    iboBuffer.putShort((index + 5).toShort())
+                    index += 8
+                }
+
+                iboBuffer.flip()
+                return iboBuffer
+            }
+
+            private fun getShadowColor(color: Byte): Byte {
+                return if (color == (-1).toByte()) {
+                    -2
+                } else {
+                    (color + 16).toByte()
+                }
+            }
+        }
+    }
+}

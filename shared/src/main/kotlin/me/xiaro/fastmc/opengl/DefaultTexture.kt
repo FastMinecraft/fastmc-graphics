@@ -47,7 +47,6 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
         }
     }
 
-
     override fun bind() {
         glBindTexture(id)
     }

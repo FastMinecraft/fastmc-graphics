@@ -13,6 +13,8 @@ interface IGLWrapper {
     fun glTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, height: Int, border: Int, format: Int, type: Int, pixels: ByteBuffer?)
     fun glBindTexture(texture: Int)
 
+    fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long)
+
     // GL15
     fun glGenBuffers(): Int
     fun glDeleteBuffers(buffer: Int)
@@ -42,6 +44,7 @@ interface IGLWrapper {
     fun glGetUniformLocation(program: Int, name: CharSequence): Int
     fun glUniform1i(location: Int, v0: Int)
     fun glUniform1f(location: Int, v0: Float)
+    fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
     fun glUniformMatrix4(location: Int, transpose: Boolean, matrices: FloatBuffer)
 
     // GL30
@@ -96,8 +99,12 @@ fun glTexImage2D(target: Int, level: Int, internalformat: Int, width: Int, heigh
     glWrapper.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
 fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
 
+fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
+    glWrapper.glDrawElements(mode, indices_count, type, indices_buffer_offset)
+
 
 // GL12
+const val GL_RED = 0x1903
 const val GL_BGRA = 0x80E1
 
 const val GL_CLAMP_TO_EDGE = 0x812F
@@ -114,6 +121,7 @@ const val GL_TEXTURE_LOD_BIAS = 0x8501
 
 
 // GL15
+const val GL_ELEMENT_ARRAY_BUFFER = 0x8893
 const val GL_ARRAY_BUFFER = 0x8892
 const val GL_STREAM_DRAW = 0x88E0
 const val GL_STATIC_DRAW = 0x88E4
@@ -157,6 +165,7 @@ fun glGetProgramInfoLog(program: Int, maxLength: Int) = glWrapper.glGetProgramIn
 fun glGetUniformLocation(program: Int, name: CharSequence) = glWrapper.glGetUniformLocation(program, name)
 fun glUniform1i(location: Int, v0: Int) = glWrapper.glUniform1i(location, v0)
 fun glUniform1f(location: Int, v0: Float) = glWrapper.glUniform1f(location, v0)
+fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) = glWrapper.glUniform4f(location, v0, v1, v2, v3)
 fun glUniformMatrix4(location: Int, transpose: Boolean, matrices: FloatBuffer) = glWrapper.glUniformMatrix4(location, transpose, matrices)
 
 fun glUseProgramForce(program: Int) {
@@ -173,6 +182,8 @@ fun glUseProgram(program: Int) {
 
 
 // GL30
+const val GL_R8 = 0x8229
+
 fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
 
 fun glGenVertexArrays() = glWrapper.glGenVertexArrays()

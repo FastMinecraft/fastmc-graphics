@@ -17,6 +17,9 @@ class GLWrapper : IGLWrapper {
         GL11.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
     override fun glBindTexture(texture: Int) = GlStateManager.bindTexture(texture)
 
+    override fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
+        GL11.glDrawElements(mode, indices_count, type, indices_buffer_offset)
+
     // GL15
     override fun glGenBuffers(): Int = GL15.glGenBuffers()
     override fun glDeleteBuffers(buffer: Int) = GL15.glDeleteBuffers(buffer)
@@ -46,6 +49,7 @@ class GLWrapper : IGLWrapper {
     override fun glGetUniformLocation(program: Int, name: CharSequence): Int = GL20.glGetUniformLocation(program, name)
     override fun glUniform1i(location: Int, v0: Int) = GL20.glUniform1i(location, v0)
     override fun glUniform1f(location: Int, v0: Float) = GL20.glUniform1f(location, v0)
+    override fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) = GL20.glUniform4f(location, v0, v1, v2, v3)
     override fun glUniformMatrix4(location: Int, transpose: Boolean, matrices: FloatBuffer) = GL20.glUniformMatrix4(location, transpose, matrices)
 
 

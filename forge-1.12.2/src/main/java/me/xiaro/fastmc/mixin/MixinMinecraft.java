@@ -1,9 +1,7 @@
 package me.xiaro.fastmc.mixin;
 
-import me.xiaro.fastmc.AbstractEntityRenderer;
-import me.xiaro.fastmc.EntityRenderer;
-import me.xiaro.fastmc.FastMcMod;
-import me.xiaro.fastmc.GLWrapper;
+import me.xiaro.fastmc.*;
+import me.xiaro.fastmc.font.IFontRendererWrapper;
 import me.xiaro.fastmc.resource.IResourceManager;
 import me.xiaro.fastmc.resource.ResourceManager;
 import net.minecraft.client.Minecraft;
@@ -24,8 +22,10 @@ public class MixinMinecraft {
         Minecraft mc = (Minecraft) (Object) this;
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractEntityRenderer entityRenderer = new EntityRenderer(mc, resourceManager);
+        IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
+        fontRenderer.getWrapped().setUnicode(mc.gameSettings.forceUnicodeFont);
 
-        FastMcMod.INSTANCE.init(resourceManager, entityRenderer);
+        FastMcMod.INSTANCE.init(resourceManager, entityRenderer, fontRenderer);
     }
 
     @Inject(method = "runTick", at = @At("RETURN"))
@@ -38,7 +38,9 @@ public class MixinMinecraft {
         Minecraft mc = (Minecraft) (Object) this;
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractEntityRenderer entityRenderer = new EntityRenderer(mc, resourceManager);
+        IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
+        fontRenderer.getWrapped().setUnicode(mc.gameSettings.forceUnicodeFont);
 
-        FastMcMod.INSTANCE.reloadResource(resourceManager, entityRenderer);
+        FastMcMod.INSTANCE.reloadResource(resourceManager, entityRenderer, fontRenderer);
     }
 }

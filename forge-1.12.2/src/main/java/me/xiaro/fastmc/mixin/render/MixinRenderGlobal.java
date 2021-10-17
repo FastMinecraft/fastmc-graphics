@@ -88,6 +88,6 @@ public abstract class MixinRenderGlobal {
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractEntityRenderer entityRenderer = new EntityRenderer(mc, resourceManager);
 
-        FastMcMod.INSTANCE.reloadResource(resourceManager, entityRenderer);
+        FastMcMod.INSTANCE.reloadEntityRenderer(resourceManager, entityRenderer);
     }
 }

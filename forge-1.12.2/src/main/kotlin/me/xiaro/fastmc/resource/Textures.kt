@@ -384,6 +384,6 @@ fun shulkerTexture(mc: Minecraft): ITexture {
     return DefaultTexture("tileEntity/ShulkerBox", TextureUtils.combineColoredTextures(images))
 }
 
-private fun ResourceLocation.toBufferedImage(mc: Minecraft): BufferedImage {
+fun ResourceLocation.toBufferedImage(mc: Minecraft): BufferedImage {
     return TextureUtil.readBufferedImage(mc.resourceManager.getResource(this).inputStream)
 }
