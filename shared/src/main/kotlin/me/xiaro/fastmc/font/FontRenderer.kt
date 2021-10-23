@@ -20,7 +20,7 @@ class FontRenderer(
 ) {
     private val asciiBlock: GlyphBlock
     private val glyphBlocks = arrayOfNulls<GlyphBlock>(256)
-    val textures: Array<GlyphTexture>
+    private val textures: Array<GlyphTexture>
 
     private val renderStringMap = Object2ObjectOpenHashMap<CharSequence, RenderString>()
     private var cleanTimer = System.currentTimeMillis()
@@ -317,7 +317,7 @@ class FontRenderer(
 
         val string = charSequence.toString()
         val stringCache = renderStringMap.computeIfAbsent(string) {
-            RenderString(this, it).build()
+            RenderString(this, it)
         }
 
         modelView
@@ -347,7 +347,8 @@ class FontRenderer(
         "/assets/shaders/FontRenderer.vsh",
         "/assets/shaders/FontRenderer.fsh"
     ) {
-        val defaultColorUniform = glGetUniformLocation(id, "defaultColor")
+        private val defaultColorUniform = glGetUniformLocation(id, "defaultColor")
+        private var lastColor = ColorARGB(0)
 
         init {
             bind()
@@ -358,7 +359,10 @@ class FontRenderer(
         fun preRender(projection: Matrix4f, modelView: Matrix4f, color: ColorARGB) {
             updateProjectionMatrix(projection)
             updateModelViewMatrix(modelView)
-            glUniform4f(defaultColorUniform, color.rFloat, color.gFloat, color.bFloat, color.aFloat)
+            if (color != lastColor) {
+                glUniform4f(defaultColorUniform, color.rFloat, color.gFloat, color.bFloat, color.aFloat)
+                lastColor = color
+            }
         }
     }
 }

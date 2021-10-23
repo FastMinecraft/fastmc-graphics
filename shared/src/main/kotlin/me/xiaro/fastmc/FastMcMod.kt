@@ -40,6 +40,8 @@ object FastMcMod {
     }
 
     fun reloadResource(resourceManager: IResourceManager, entityRenderer: AbstractEntityRenderer, fontRenderer: IFontRendererWrapper) {
+//        isInitialized = true
+
         if (isInitialized) {
             this.resourceManager.destroy()
             this.fontRenderer.destroy()
@@ -48,6 +50,8 @@ object FastMcMod {
         this.resourceManager = resourceManager
         this.entityRenderer = entityRenderer
         this.fontRenderer = fontRenderer
+
+        isInitialized = false
     }
 
     fun onPostTick() {

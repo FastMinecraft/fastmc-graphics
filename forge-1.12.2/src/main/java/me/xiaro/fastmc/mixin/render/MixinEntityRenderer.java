@@ -14,11 +14,6 @@ import static org.lwjgl.opengl.GL11.*;
 
 @Mixin(EntityRenderer.class)
 public abstract class MixinEntityRenderer {
-    @Inject(method = "updateCameraAndRender", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiIngame;renderGameOverlay(F)V", shift = At.Shift.AFTER))
-    public void updateCameraAndRender(float partialTicks, long nanoTime, CallbackInfo ci) {
-        ((FontRendererWrapper) FastMcMod.INSTANCE.getFontRenderer()).test();
-    }
-
     @Inject(method = "setupCameraTransform", at = @At("RETURN"))
     private void setupCameraTransform$Inject$RETURN(float partialTicks, int pass, CallbackInfo ci) {
         glGetFloat(GL_PROJECTION_MATRIX, MatrixUtils.INSTANCE.getMatrixBuffer());

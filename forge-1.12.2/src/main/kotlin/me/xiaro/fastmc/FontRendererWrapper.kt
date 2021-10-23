@@ -32,37 +32,6 @@ class FontRendererWrapper(mc: Minecraft) : IFontRendererWrapper {
         wrapped = FontRenderer(asciiFont, unicodeFonts, glyphWidths, Minecraft.getGLMaximumTextureSize())
     }
 
-    fun test() {
-        return
-        GlStateManager.disableAlpha()
-
-        wrapped.textures[0].bind()
-        glUseProgramForce(0)
-        GlStateManager.disableDepth()
-        GlStateManager.enableTexture2D()
-        GlStateManager.enableBlend()
-
-        val tessellator = Tessellator.getInstance()
-        val buffer = tessellator.buffer
-
-        buffer.begin(GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR)
-        buffer.pos(0.0, 2048.0, 0.0).tex(0.0, 1.0).color(255, 255, 255, 127).endVertex()
-        buffer.pos(2048.0, 2048.0, 0.0).tex(1.0, 1.0).color(255, 255, 255, 127).endVertex()
-        buffer.pos(2048.0, 0.0, 0.0).tex(1.0, 0.0).color(255, 255, 255, 127).endVertex()
-        buffer.pos(0.0, 0.0, 0.0).tex(0.0, 0.0).color(255, 255, 255, 127).endVertex()
-
-//        buffer.begin(GL_QUADS, DefaultVertexFormats.POSITION_COLOR)
-//        buffer.pos(0.0, 256.0, 0.0).color(255, 255, 255, 255).endVertex()
-//        buffer.pos(256.0, 256.0, 0.0).color(255, 255, 255, 255).endVertex()
-//        buffer.pos(256.0, 0.0, 0.0).color(255, 255, 255, 255).endVertex()
-//        buffer.pos(0.0, 0.0, 0.0).color(255, 255, 255, 255).endVertex()
-
-        tessellator.draw()
-
-        GlStateManager.disableTexture2D()
-        me.xiaro.fastmc.opengl.glBindTexture(0)
-    }
-
     override fun drawString(
         projection: Matrix4f,
         modelView: Matrix4f,

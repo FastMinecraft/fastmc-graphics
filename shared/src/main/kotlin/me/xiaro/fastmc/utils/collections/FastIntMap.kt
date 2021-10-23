@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.utils.collections
 
 import it.unimi.dsi.fastutil.ints.AbstractInt2ObjectMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap

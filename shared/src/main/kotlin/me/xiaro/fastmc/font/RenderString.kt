@@ -6,18 +6,16 @@ import it.unimi.dsi.fastutil.shorts.ShortArrayList
 import me.xiaro.fastmc.opengl.*
 import me.xiaro.fastmc.utils.BufferUtils
 import me.xiaro.fastmc.utils.ColorARGB
-import me.xiaro.fastmc.utils.FastIntMap
+import me.xiaro.fastmc.utils.collections.FastIntMap
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 
-class RenderString(private val fontRenderer: FontRenderer, private val string: CharSequence) {
-    private val renderInfoList = ArrayList<StringRenderInfo>()
+class RenderString(fontRenderer: FontRenderer, private val string: CharSequence) {
+    private val renderInfos: Array<RenderInfo>
+    private var lastAccess = System.currentTimeMillis()
 
-    private val initTime = System.currentTimeMillis()
-    private var lastAccess = initTime
-
-    fun build(): RenderString {
-        val builders = FastIntMap<StringRenderInfo.Builder>()
+    init {
+        val builders = FastIntMap<RenderInfo.Builder>()
 
         var posX = 0.0f
         var posY = 0.0f
@@ -37,7 +35,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
 
                 var renderInfo = builders[glyphBlock.texture.internalID]
                 if (renderInfo == null) {
-                    renderInfo = StringRenderInfo.Builder(glyphBlock.texture)
+                    renderInfo = RenderInfo.Builder(glyphBlock.texture)
                     builders[glyphBlock.texture.internalID] = renderInfo
                 }
 
@@ -53,11 +51,13 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
             }
         }
 
+        val list = ArrayList<RenderInfo>()
+
         builders.forEach {
-            renderInfoList.add(it.value.build())
+            list.add(it.value.build())
         }
 
-        return this
+        renderInfos = list.toTypedArray()
     }
 
     fun render(shader: FontRenderer.Shader, projection: Matrix4f, modelView: Matrix4f, color: ColorARGB, drawShadow: Boolean) {
@@ -66,7 +66,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
         glUseProgramForce(shader.id)
         shader.preRender(projection, modelView, color)
 
-        renderInfoList.forEach {
+        renderInfos.forEach {
             it.render(drawShadow)
         }
 
@@ -78,7 +78,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
     }
 
     fun tryClean(current: Long): Boolean {
-        return if (current - initTime >= 15000L || current - lastAccess >= 5000L) {
+        return if (current - lastAccess >= 5000L) {
             destroy()
             true
         } else {
@@ -87,10 +87,9 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
     }
 
     fun destroy() {
-        renderInfoList.forEach {
+        renderInfos.forEach {
             it.destroy()
         }
-        renderInfoList.clear()
     }
 
     override fun equals(other: Any?): Boolean {
@@ -108,7 +107,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
         return string.hashCode()
     }
 
-    private class StringRenderInfo private constructor(
+    private class RenderInfo private constructor(
         private val texture: GlyphTexture,
         private val size: Int,
         private val vaoID: Int,
@@ -143,7 +142,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
 
             fun put(posX: Float, posY: Float, charGlyph: CharGlyph, context: FontRenderContext) {
                 val uv = charGlyph.uv
-                val color = context.color
+                val color = context.color + 1
                 val offset = if (context.italic) 1.0f else 0.0f
 
                 posList.add(posX + offset)
@@ -171,7 +170,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                 size++
             }
 
-            fun build(): StringRenderInfo {
+            fun build(): RenderInfo {
                 val vboBuffer = buildVboBuffer()
                 val iboBuffer = buildIboBuffer()
 
@@ -187,10 +186,14 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                 glVertexAttribPointer(0, 2, GL_FLOAT, false, 16, 0L)
                 glVertexAttribPointer(1, 2, GL_UNSIGNED_SHORT, true, 16, 8L)
                 glVertexAttribIPointer(2, 1, GL_BYTE, 16, 12L)
+                glVertexAttribPointer(3, 1, GL_UNSIGNED_BYTE, false, 16, 13L)
+                glVertexAttribPointer(4, 1, GL_UNSIGNED_BYTE, false, 16, 14L)
 
                 glEnableVertexAttribArray(0)
                 glEnableVertexAttribArray(1)
                 glEnableVertexAttribArray(2)
+                glEnableVertexAttribArray(3)
+                glEnableVertexAttribArray(4)
 
                 glBindBuffer(GL_ARRAY_BUFFER, 0)
 
@@ -200,7 +203,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                 glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboBuffer, GL_STATIC_DRAW)
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
 
-                return StringRenderInfo(texture, size, vaoID, vboID, iboID)
+                return RenderInfo(texture, size, vaoID, vboID, iboID)
             }
 
             private fun buildVboBuffer(): ByteBuffer {
@@ -211,7 +214,7 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
 
                 for (i in colorList.indices) {
                     val color = colorList.getByte(i)
-                    val shadowColor = getShadowColor(color)
+                    val overrideColor = (if (color.toInt() == 0) 1 else 0).toByte()
                     
                     var posX = posList.getFloat(posIndex++)
                     var posY = posList.getFloat(posIndex++)
@@ -222,15 +225,19 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                     vboBuffer.putFloat(posY + 1.0f)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
-                    vboBuffer.put(shadowColor)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(color)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(1)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
                     vboBuffer.put(color)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(0)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
@@ -241,15 +248,19 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                     vboBuffer.putFloat(posY + 1.0f)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
-                    vboBuffer.put(shadowColor)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(color)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(1)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
                     vboBuffer.put(color)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(0)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
@@ -260,15 +271,19 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                     vboBuffer.putFloat(posY + 1.0f)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
-                    vboBuffer.put(shadowColor)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(color)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(1)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
                     vboBuffer.put(color)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(0)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
@@ -279,15 +294,19 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
                     vboBuffer.putFloat(posY + 1.0f)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
-                    vboBuffer.put(shadowColor)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(color)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(1)
+                    vboBuffer.position(vboBuffer.position() + 1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
                     vboBuffer.putShort(u)
                     vboBuffer.putShort(v)
                     vboBuffer.put(color)
-                    vboBuffer.position(vboBuffer.position() + 3)
+                    vboBuffer.put(overrideColor)
+                    vboBuffer.put(0)
+                    vboBuffer.position(vboBuffer.position() + 1)
                 }
 
                 vboBuffer.flip()
@@ -324,14 +343,6 @@ class RenderString(private val fontRenderer: FontRenderer, private val string: C
 
                 iboBuffer.flip()
                 return iboBuffer
-            }
-
-            private fun getShadowColor(color: Byte): Byte {
-                return if (color == (-1).toByte()) {
-                    -2
-                } else {
-                    (color + 16).toByte()
-                }
             }
         }
     }
