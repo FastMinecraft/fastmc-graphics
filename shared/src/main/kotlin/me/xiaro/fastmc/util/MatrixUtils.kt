@@ -1,6 +1,7 @@
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.util
 
-import me.xiaro.fastmc.opengl.glUniformMatrix4
+import me.xiaro.fastmc.FastMcMod
+import me.xiaro.fastmc.opengl.glUniformMatrix4fv
 import org.joml.Matrix4f
 import java.nio.FloatBuffer
 
@@ -21,6 +22,6 @@ object MatrixUtils {
     }
 
     fun uploadMatrix(location: Int) {
-        glUniformMatrix4(location, false, matrixBuffer)
+        glUniformMatrix4fv(location, FastMcMod.glWrapper.rowMajor, matrixBuffer)
     }
 }

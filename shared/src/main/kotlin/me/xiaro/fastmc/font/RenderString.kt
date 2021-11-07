@@ -4,9 +4,9 @@ import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.shorts.ShortArrayList
 import me.xiaro.fastmc.opengl.*
-import me.xiaro.fastmc.utils.BufferUtils
-import me.xiaro.fastmc.utils.ColorARGB
-import me.xiaro.fastmc.utils.collections.FastIntMap
+import me.xiaro.fastmc.util.BufferUtils
+import me.xiaro.fastmc.util.ColorARGB
+import me.xiaro.fastmc.util.collection.FastIntMap
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 

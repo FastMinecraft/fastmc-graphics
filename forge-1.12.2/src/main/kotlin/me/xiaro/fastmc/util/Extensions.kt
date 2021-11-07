@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.util
 
 import me.xiaro.fastmc.accessor.AccessorMinecraft
 import net.minecraft.client.Minecraft

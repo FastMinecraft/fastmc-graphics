@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_8",
+  "package": "me.xiaro.fastmc.accessor",
+  "client": [
+    "AccessorMatrix4f"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

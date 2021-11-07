@@ -6,7 +6,7 @@ pluginManagement {
         gradlePluginPortal()
     }
     plugins {
-        id("fabric-loom").version("0.6-SNAPSHOT")
+        id("fabric-loom").version("0.6+")
         id("org.jetbrains.kotlin.jvm").version(kotlinVersion)
     }
 }

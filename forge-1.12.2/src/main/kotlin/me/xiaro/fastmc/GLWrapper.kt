@@ -7,6 +7,8 @@ import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
 class GLWrapper : IGLWrapper {
+    override val rowMajor = false
+
     // GL11
     override fun glGenTextures(): Int = GL11.glGenTextures()
     override fun glDeleteTextures(texture: Int) = GL11.glDeleteTextures(texture)
@@ -50,7 +52,7 @@ class GLWrapper : IGLWrapper {
     override fun glUniform1i(location: Int, v0: Int) = GL20.glUniform1i(location, v0)
     override fun glUniform1f(location: Int, v0: Float) = GL20.glUniform1f(location, v0)
     override fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) = GL20.glUniform4f(location, v0, v1, v2, v3)
-    override fun glUniformMatrix4(location: Int, transpose: Boolean, matrices: FloatBuffer) = GL20.glUniformMatrix4(location, transpose, matrices)
+    override fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer) = GL20.glUniformMatrix4(location, transpose, matrices)
 
 
     // GL30

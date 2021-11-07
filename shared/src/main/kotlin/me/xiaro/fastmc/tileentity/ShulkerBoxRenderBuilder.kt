@@ -11,8 +11,8 @@ class ShulkerBoxRenderBuilder(
     builtPosY: Double,
     builtPosZ: Double,
     size: Int
-) : TileEntityRenderBuilder<IShulkerBoxInfo>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
-    override fun add(info: IShulkerBoxInfo) {
+) : TileEntityRenderBuilder<IShulkerBoxInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+    override fun add(info: IShulkerBoxInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         val posZ = (info.posZ + 0.5 - builtPosZ).toFloat()

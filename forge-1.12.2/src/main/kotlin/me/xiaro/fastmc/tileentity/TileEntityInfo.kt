@@ -2,9 +2,10 @@ package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.tileentity.info.ITileEntityInfo
 import net.minecraft.tileentity.TileEntity
+import net.minecraft.tileentity.TileEntityChest
 
-abstract class TileEntityInfo<E : TileEntity> : ITileEntityInfo {
-    abstract var tileEntity: E
+abstract class TileEntityInfo<E : TileEntity> : ITileEntityInfo<E> {
+    override lateinit var tileEntity: E
 
     override val posX: Int
         get() = tileEntity.pos.x

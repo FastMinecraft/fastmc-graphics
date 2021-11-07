@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.util
 
 @JvmInline
 value class ColorARGB(val argb: Int) {

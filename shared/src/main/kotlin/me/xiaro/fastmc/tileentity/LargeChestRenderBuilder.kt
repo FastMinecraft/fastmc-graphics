@@ -11,12 +11,12 @@ class LargeChestRenderBuilder(
     builtPosZ: Double,
     size: Int
 ) : SmallChestRenderBuilder(resourceManager, builtPosX, builtPosY, builtPosZ, size) {
-    override fun add(info: IChestInfo) {
+    override fun add(info: IChestInfo<*>) {
         var posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         var posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
 
-        if (info.hasAdjChestZPos) posZ += 0.5f else posX += 0.5f
+        if (info.direction > 3) posZ += 0.5f else posX += 0.5f
 
         buffer.putFloat(posX)
         buffer.putFloat(posY)
@@ -29,10 +29,10 @@ class LargeChestRenderBuilder(
                 buffer.put(2)
             }
             4 -> {
-                buffer.put(-1)
+                buffer.put(1)
             }
             5 -> {
-                buffer.put(1)
+                buffer.put(-1)
             }
             else -> {
                 buffer.put(0)

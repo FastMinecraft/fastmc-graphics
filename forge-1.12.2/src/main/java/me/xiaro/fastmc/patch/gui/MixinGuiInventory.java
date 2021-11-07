@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.patch.gui;
 
-import me.xiaro.fastmc.utils.ExtensionsKt;
+import me.xiaro.fastmc.util.ExtensionsKt;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.entity.EntityLivingBase;

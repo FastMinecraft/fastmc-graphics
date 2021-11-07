@@ -1,6 +1,7 @@
 package me.xiaro.fastmc.opengl
 
-import me.xiaro.fastmc.utils.MatrixUtils
+import me.xiaro.fastmc.FastMcMod
+import me.xiaro.fastmc.util.MatrixUtils
 import org.joml.Matrix4f
 import java.nio.FloatBuffer
 
@@ -19,10 +20,10 @@ open class DrawShader(resourceName: String, vertShaderPath: String, fragShaderPa
     }
 
     fun updateProjectionMatrix(buffer: FloatBuffer) {
-        glUniformMatrix4(projectionUniform, false, buffer)
+        glUniformMatrix4fv(projectionUniform, FastMcMod.glWrapper.rowMajor, buffer)
     }
 
     fun updateModelViewMatrix(buffer: FloatBuffer) {
-        glUniformMatrix4(modelViewUniform, false, buffer)
+        glUniformMatrix4fv(modelViewUniform, FastMcMod.glWrapper.rowMajor, buffer)
     }
 }

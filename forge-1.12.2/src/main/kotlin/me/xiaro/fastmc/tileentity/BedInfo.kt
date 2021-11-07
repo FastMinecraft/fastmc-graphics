@@ -3,9 +3,7 @@ package me.xiaro.fastmc.tileentity
 import me.xiaro.fastmc.tileentity.info.IBedInfo
 import net.minecraft.tileentity.TileEntityBed
 
-class BedInfo : TileEntityInfo<TileEntityBed>(), IBedInfo {
-    override lateinit var tileEntity: TileEntityBed
-
+class BedInfo : TileEntityInfo<TileEntityBed>(), IBedInfo<TileEntityBed> {
     override val direction: Int
         get() = if (tileEntity.hasWorld()) {
             tileEntity.blockMetadata and 3

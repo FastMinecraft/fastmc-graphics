@@ -5,6 +5,8 @@ import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
 interface IGLWrapper {
+    val rowMajor: Boolean
+
     // GL11
     fun glGenTextures(): Int
     fun glDeleteTextures(texture: Int)
@@ -45,7 +47,7 @@ interface IGLWrapper {
     fun glUniform1i(location: Int, v0: Int)
     fun glUniform1f(location: Int, v0: Float)
     fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
-    fun glUniformMatrix4(location: Int, transpose: Boolean, matrices: FloatBuffer)
+    fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer)
 
     // GL30
     fun glGenerateMipmap(target: Int)
@@ -75,6 +77,8 @@ const val GL_UNSIGNED_SHORT = 0x1403
 const val GL_INT = 0x1404
 const val GL_UNSIGNED_INT = 0x1405
 const val GL_FLOAT = 0x1406
+
+const val GL_RGBA = 0x1908
 
 const val GL_NEAREST = 0x2600
 const val GL_LINEAR = 0x2601
@@ -115,6 +119,9 @@ const val GL_TEXTURE_MAX_LEVEL = 0x813D
 
 const val GL_UNSIGNED_INT_8_8_8_8_REV = 0x8367
 
+
+// GL13
+const val GL_COMPRESSED_RGBA = 0x84EE
 
 // GL14
 const val GL_TEXTURE_LOD_BIAS = 0x8501
@@ -166,7 +173,7 @@ fun glGetUniformLocation(program: Int, name: CharSequence) = glWrapper.glGetUnif
 fun glUniform1i(location: Int, v0: Int) = glWrapper.glUniform1i(location, v0)
 fun glUniform1f(location: Int, v0: Float) = glWrapper.glUniform1f(location, v0)
 fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) = glWrapper.glUniform4f(location, v0, v1, v2, v3)
-fun glUniformMatrix4(location: Int, transpose: Boolean, matrices: FloatBuffer) = glWrapper.glUniformMatrix4(location, transpose, matrices)
+fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer) = glWrapper.glUniformMatrix4fv(location, transpose, matrices)
 
 fun glUseProgramForce(program: Int) {
     glWrapper.glUseProgram(program)
@@ -183,6 +190,7 @@ fun glUseProgram(program: Int) {
 
 // GL30
 const val GL_R8 = 0x8229
+const val GL_COMPRESSED_RED = 0x8225
 
 fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
 

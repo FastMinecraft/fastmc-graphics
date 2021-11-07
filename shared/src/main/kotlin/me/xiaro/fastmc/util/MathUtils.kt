@@ -1,6 +1,6 @@
 @file:Suppress("NOTHING_TO_INLINE")
 
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.util
 
 import kotlin.math.PI
 import kotlin.math.ceil

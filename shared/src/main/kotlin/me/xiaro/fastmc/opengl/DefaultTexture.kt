@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.opengl
 
-import me.xiaro.fastmc.utils.BufferUtils
+import me.xiaro.fastmc.util.BufferUtils
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer
 import java.nio.ByteBuffer
@@ -17,7 +17,7 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
 
         bufferedImage.getRGBA(buffer)
         buffer.flip()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, buffer)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer)
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
@@ -42,7 +42,11 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
 
         for (y in 0 until height) {
             for (x in 0 until width) {
-                buffer.putInt(colorModel.getRGB(raster.getDataElements(x, y, data)))
+                val dataElement = raster.getDataElements(x, y, data)
+                buffer.put(colorModel.getRed(dataElement).toByte())
+                buffer.put(colorModel.getGreen(dataElement).toByte())
+                buffer.put(colorModel.getBlue(dataElement).toByte())
+                buffer.put(colorModel.getAlpha(dataElement).toByte())
             }
         }
     }

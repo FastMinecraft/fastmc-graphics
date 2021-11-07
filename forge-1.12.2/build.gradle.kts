@@ -8,7 +8,7 @@ buildscript {
     }
 
     dependencies {
-        classpath("net.minecraftforge.gradle:ForgeGradle:4.+")
+        classpath("net.minecraftforge.gradle:ForgeGradle:5.+")
         classpath("org.spongepowered:mixingradle:0.7-SNAPSHOT")
     }
 }
@@ -50,7 +50,7 @@ dependencies {
         exclude("log4j-core")
     }
 
-    annotationProcessor("org.spongepowered:mixin:0.8.2:processor") {
+    annotationProcessor("org.spongepowered:mixin:0.8.4:processor") {
         exclude("gson")
     }
 }
@@ -110,7 +110,7 @@ tasks {
     register<Task>("genRuns") {
         group = "ide"
         doLast {
-            file(File(rootDir, ".idea/runConfigurations/${project.name}_runClient.xml")).writer().use {
+            File(rootDir, ".idea/runConfigurations/${project.name}_runClient.xml").writer().use {
                 it.write(
                     """
                         <component name="ProjectRunConfigurationManager">
@@ -122,7 +122,12 @@ tasks {
                               <env name="MCP_MAPPINGS" value="${mappingsChannel}_$mappingsVersion" />
                               <env name="FORGE_VERSION" value="$forgeVersion" />
                               <env name="assetIndex" value="${minecraftVersion.substringBeforeLast('.')}" />
-                              <env name="assetDirectory" value="${gradle.gradleUserHomeDir.path.replace('\\', '/')}/caches/forge_gradle/assets" />
+                              <env name="assetDirectory" value="${
+                        gradle.gradleUserHomeDir.path.replace(
+                            '\\',
+                            '/'
+                        )
+                    }/caches/forge_gradle/assets" />
                               <env name="nativesDirectory" value="${'$'}PROJECT_DIR$/../${rootProject.name}/${project.name}/build/natives" />
                               <env name="FORGE_GROUP" value="net.minecraftforge" />
                               <env name="tweakClass" value="net.minecraftforge.fml.common.launcher.FMLTweaker" />
@@ -142,6 +147,7 @@ tasks {
                     """.trimIndent()
                 )
             }
+            File(projectDir, "run").mkdir()
         }
     }
 }

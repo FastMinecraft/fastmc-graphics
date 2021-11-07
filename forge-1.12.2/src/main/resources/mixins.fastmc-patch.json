@@ -1,5 +1,6 @@
 {
   "required": false,
+  "minVersion": "0.7",
   "compatibilityLevel": "JAVA_8",
   "package": "me.xiaro.fastmc.patch",
   "refmap": "mixins.fastmc.refmap.json",

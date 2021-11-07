@@ -5,9 +5,7 @@ import net.minecraft.block.BlockShulkerBox
 import net.minecraft.tileentity.TileEntityShulkerBox
 import net.minecraft.util.EnumFacing
 
-class ShulkerBoxInfo : TileEntityInfo<TileEntityShulkerBox>(), IShulkerBoxInfo {
-    override lateinit var tileEntity: TileEntityShulkerBox
-
+class ShulkerBoxInfo : TileEntityInfo<TileEntityShulkerBox>(), IShulkerBoxInfo<TileEntityShulkerBox> {
     @Suppress("UNNECESSARY_SAFE_CALL")
     override val direction: Int
         get() = tileEntity.world?.let {

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "fastmc",
+  "version": "${version}",
+  "name": "Fast Minecraft",
+  "description": "Agressive optimization mod",
+  "authors": [
+    "Xiaro"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/fastmc/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "me.xiaro.fastmc.FastMcEntryPoint"
+    ]
+  },
+  "mixins": [
+    "mixins.fastmc.json",
+    "mixins.fastmc-accessor.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.11",
+    "minecraft": "1.16.5"
+  }
+}

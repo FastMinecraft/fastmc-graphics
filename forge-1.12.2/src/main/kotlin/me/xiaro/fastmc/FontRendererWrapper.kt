@@ -4,11 +4,9 @@ import me.xiaro.fastmc.font.FontRenderer
 import me.xiaro.fastmc.font.IFontRendererWrapper
 import me.xiaro.fastmc.opengl.glUseProgramForce
 import me.xiaro.fastmc.resource.toBufferedImage
-import me.xiaro.fastmc.utils.ColorARGB
+import me.xiaro.fastmc.util.ColorARGB
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GlStateManager
-import net.minecraft.client.renderer.Tessellator
-import net.minecraft.client.renderer.vertex.DefaultVertexFormats
 import net.minecraft.util.ResourceLocation
 import org.joml.Matrix4f
 import org.lwjgl.opengl.GL11.*

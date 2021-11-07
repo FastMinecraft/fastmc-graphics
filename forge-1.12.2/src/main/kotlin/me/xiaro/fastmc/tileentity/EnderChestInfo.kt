@@ -3,9 +3,7 @@ package me.xiaro.fastmc.tileentity
 import me.xiaro.fastmc.tileentity.info.IEnderChestInfo
 import net.minecraft.tileentity.TileEntityEnderChest
 
-class EnderChestInfo : TileEntityInfo<TileEntityEnderChest>(), IEnderChestInfo {
-    override lateinit var tileEntity: TileEntityEnderChest
-
+class EnderChestInfo : TileEntityInfo<TileEntityEnderChest>(), IEnderChestInfo<TileEntityEnderChest> {
     override val direction: Int
         get() = if (tileEntity.hasWorld()) {
             tileEntity.blockMetadata

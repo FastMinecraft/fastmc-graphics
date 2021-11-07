@@ -5,11 +5,11 @@ import me.xiaro.fastmc.opengl.*
 import me.xiaro.fastmc.resource.IResourceManager
 import me.xiaro.fastmc.resource.ResourceEntry
 import me.xiaro.fastmc.tileentity.info.ITileEntityInfo
-import me.xiaro.fastmc.utils.BufferUtils
+import me.xiaro.fastmc.util.BufferUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 
-abstract class TileEntityRenderBuilder<T : ITileEntityInfo>(
+abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(
     protected val resourceManager: IResourceManager,
     protected val builtPosX: Double,
     protected val builtPosY: Double,

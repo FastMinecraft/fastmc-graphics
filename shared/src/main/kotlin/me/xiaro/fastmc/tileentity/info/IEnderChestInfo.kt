@@ -1,7 +1,6 @@
 package me.xiaro.fastmc.tileentity.info
 
-interface IEnderChestInfo : ITileEntityInfo {
-    val direction: Int
+interface IEnderChestInfo<E> : IDirectionalTileEntityInfo<E> {
     val prevLidAngle: Float
     val lidAngle: Float
 }

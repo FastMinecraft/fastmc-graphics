@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.util
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

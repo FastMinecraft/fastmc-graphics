@@ -2,9 +2,9 @@ package me.xiaro.fastmc.font
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import me.xiaro.fastmc.opengl.*
-import me.xiaro.fastmc.utils.BufferUtils
-import me.xiaro.fastmc.utils.ColorARGB
-import me.xiaro.fastmc.utils.sq
+import me.xiaro.fastmc.util.BufferUtils
+import me.xiaro.fastmc.util.ColorARGB
+import me.xiaro.fastmc.util.sq
 import org.joml.Matrix4f
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
@@ -39,15 +39,30 @@ class FontRenderer(
         val uvScale = 65536 / textureSize
 
         var glyphID = 0
+        var dirty = true
+
         var texture = GlyphTexture(glGenTextures(), glyphID++)
         var image = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_ARGB)
         var graphics2D = image.createGraphics()
-        var dirty = true
 
         val buffer = BufferUtils.byte(textureSize.sq)
         val textureList = ArrayList<GlyphTexture>()
 
         asciiBlock = GlyphBlock(texture, asciiBlock(graphics2D, asciiFont, uvScale), true)
+
+        fun upload() {
+            graphics2D.dispose()
+
+            buffer.clear()
+            image.getAlpha(buffer)
+            buffer.flip()
+
+            texture.bind()
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RED, textureSize, textureSize, 0, GL_RED, GL_UNSIGNED_BYTE, buffer)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            textureList.add(texture)
+        }
 
         var posX = fontTextureSize
         var posY = 0
@@ -69,17 +84,8 @@ class FontRenderer(
             }
 
             if (posY >= textureSize) {
-                graphics2D.dispose()
+                upload()
 
-                buffer.clear()
-                image.getAlpha(buffer)
-                buffer.flip()
-
-                texture.bind()
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, textureSize, textureSize, 0, GL_RED, GL_UNSIGNED_BYTE, buffer)
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-                textureList.add(texture)
                 dirty = false
 
                 texture = GlyphTexture(glGenTextures(), glyphID)
@@ -89,17 +95,7 @@ class FontRenderer(
         }
 
         if (dirty) {
-            graphics2D.dispose()
-
-            buffer.clear()
-            image.getAlpha(buffer)
-            buffer.flip()
-
-            texture.bind()
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, textureSize, textureSize, 0, GL_RED, GL_UNSIGNED_BYTE, buffer)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-            textureList.add(texture)
+            upload()
         }
 
         textures = textureList.toTypedArray()

@@ -1,7 +1,7 @@
 package me.xiaro.fastmc.patch.entity;
 
 import io.netty.handler.codec.EncoderException;
-import me.xiaro.fastmc.utils.collections.FastIntMap;
+import me.xiaro.fastmc.util.collection.FastIntMap;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;

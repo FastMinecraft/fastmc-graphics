@@ -1,8 +1,7 @@
 package me.xiaro.fastmc.mixin.render;
 
 import me.xiaro.fastmc.FastMcMod;
-import me.xiaro.fastmc.FontRendererWrapper;
-import me.xiaro.fastmc.utils.MatrixUtils;
+import me.xiaro.fastmc.util.MatrixUtils;
 import net.minecraft.client.renderer.EntityRenderer;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -22,6 +21,6 @@ public abstract class MixinEntityRenderer {
         glGetFloat(GL_MODELVIEW_MATRIX, MatrixUtils.INSTANCE.getMatrixBuffer());
         Matrix4f modelView = MatrixUtils.INSTANCE.getMatrix();
 
-        FastMcMod.INSTANCE.getEntityRenderer().setupCamera(projection, modelView);
+        FastMcMod.INSTANCE.getWorldRenderer().setupCamera(projection, modelView);
     }
 }

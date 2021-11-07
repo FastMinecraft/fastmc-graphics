@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.utils
+package me.xiaro.fastmc.util
 
 import net.minecraft.block.state.IBlockState
 import net.minecraft.util.EnumFacing

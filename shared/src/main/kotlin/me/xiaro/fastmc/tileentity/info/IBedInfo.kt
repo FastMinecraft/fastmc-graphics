@@ -1,7 +1,6 @@
 package me.xiaro.fastmc.tileentity.info
 
-interface IBedInfo : ITileEntityInfo {
-    val direction: Int
+interface IBedInfo<E> : IDirectionalTileEntityInfo<E> {
     val color: Int
     val isHead: Boolean
 }

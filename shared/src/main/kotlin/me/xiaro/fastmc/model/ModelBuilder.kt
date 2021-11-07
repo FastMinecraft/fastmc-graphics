@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.model
 
-import me.xiaro.fastmc.utils.BufferUtils
+import me.xiaro.fastmc.util.BufferUtils
 import java.nio.ByteBuffer
 
 open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: Int) {

@@ -1,11 +1,6 @@
 package me.xiaro.fastmc.tileentity.info
 
-interface IChestInfo : ITileEntityInfo {
-    val direction: Int
-    val hasAdjChestXNeg: Boolean
-    val hasAdjChestZNeg: Boolean
-    val hasAdjChestXPos: Boolean
-    val hasAdjChestZPos: Boolean
+interface IChestInfo<E> : ITileEntityInfo<E>, IDirectionalTileEntityInfo<E> {
     val isTrap: Boolean
     val prevLidAngle: Float
     val lidAngle: Float

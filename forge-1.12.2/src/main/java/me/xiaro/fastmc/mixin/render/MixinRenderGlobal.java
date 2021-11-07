@@ -1,7 +1,8 @@
 package me.xiaro.fastmc.mixin.render;
 
-import me.xiaro.fastmc.AbstractEntityRenderer;
-import me.xiaro.fastmc.EntityRenderer;
+import me.xiaro.fastmc.AbstractWorldRenderer;
+import me.xiaro.fastmc.TileEntityRenderer;
+import me.xiaro.fastmc.WorldRenderer;
 import me.xiaro.fastmc.FastMcMod;
 import me.xiaro.fastmc.resource.IResourceManager;
 import me.xiaro.fastmc.resource.ResourceManager;
@@ -23,71 +24,52 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 @Mixin(value = RenderGlobal.class, priority = Integer.MAX_VALUE)
 public abstract class MixinRenderGlobal {
     @Shadow @Final private Minecraft mc;
-    @Shadow private WorldClient world;
-    @Shadow @Final private Map<Integer, DestroyBlockProgress> damagedBlocks;
 
-    @Shadow protected abstract void preRenderDamagedBlocks();
-    @Shadow protected abstract void postRenderDamagedBlocks();
+    @Inject(method = "updateTileEntities", at = @At("HEAD"))
+    public void updateNoCullingBlockEntities$Inject$HEAD(Collection<TileEntity> tileEntitiesToRemove, Collection<TileEntity> tileEntitiesToAdd, CallbackInfo ci) {
+        TileEntityRenderer tileEntityRenderer = (TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer();
+        tileEntitiesToAdd.removeIf(tileEntityRenderer::hasRenderer);
+    }
 
-    @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", ordinal = 3, shift = At.Shift.AFTER), cancellable = true)
-    public void renderEntities$INVOKE$endStartSection$3$AFTER(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci) {
-        ci.cancel();
+    @ModifyVariable(method = "renderEntities", at = @At(value = "STORE", ordinal = 0), ordinal = 3)
+    public List<TileEntity> renderEntities$ModifyVariable$STORE(List<TileEntity> input) {
+        TileEntityRenderer tileEntityRenderer = (TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer();
+        List<TileEntity> list = new ArrayList<>();
 
-        RenderHelper.enableStandardItemLighting();
-        AbstractEntityRenderer entityRenderer = FastMcMod.INSTANCE.getEntityRenderer();
-
-        entityRenderer.preRender();
-        entityRenderer.renderTileEntities();
-
-        this.preRenderDamagedBlocks();
-
-        for (DestroyBlockProgress destroyblockprogress : this.damagedBlocks.values()) {
-            BlockPos blockpos = destroyblockprogress.getPosition();
-            IBlockState blockState = this.world.getBlockState(blockpos);
-
-            if (blockState.getBlock().hasTileEntity(blockState)) {
-                TileEntity tileentity = this.world.getTileEntity(blockpos);
-
-                if (tileentity instanceof TileEntityChest) {
-                    TileEntityChest tileentitychest = (TileEntityChest) tileentity;
-
-                    if (tileentitychest.adjacentChestXNeg != null) {
-                        blockpos = blockpos.offset(EnumFacing.WEST);
-                        tileentity = this.world.getTileEntity(blockpos);
-                        blockState = this.world.getBlockState(blockpos);
-                    } else if (tileentitychest.adjacentChestZNeg != null) {
-                        blockpos = blockpos.offset(EnumFacing.NORTH);
-                        tileentity = this.world.getTileEntity(blockpos);
-                        blockState = this.world.getBlockState(blockpos);
-                    }
-                }
-
-                if (tileentity != null && blockState.hasCustomBreakingProgress()) {
-                    TileEntityRendererDispatcher.instance.render(tileentity, partialTicks, destroyblockprogress.getPartialBlockDamage());
-                }
-            }
+        for (TileEntity tileEntity : input) {
+            if (!tileEntityRenderer.hasRenderer(tileEntity)) list.add(tileEntity);
         }
 
-        this.postRenderDamagedBlocks();
-        this.mc.entityRenderer.disableLightmap();
-        this.mc.profiler.endSection();
+        return list;
+    }
 
-        entityRenderer.postRender();
+    @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/EntityRenderer;disableLightmap()V"))
+    public void renderEntities$Inject$INVOKE$preRenderDamagedBlocks(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci) {
+        mc.profiler.endStartSection("tileEntities");
+        FastMcMod.INSTANCE.getWorldRenderer().preRender(partialTicks);
+        FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().render();
+        FastMcMod.INSTANCE.getWorldRenderer().postRender();
     }
 
     @Inject(method = "loadRenderers", at = @At("RETURN"))
     public void refreshResources$Inject$RETURN(CallbackInfo ci) {
         Minecraft mc = this.mc;
         IResourceManager resourceManager = new ResourceManager(mc);
-        AbstractEntityRenderer entityRenderer = new EntityRenderer(mc, resourceManager);
+        AbstractWorldRenderer worldRenderer = new me.xiaro.fastmc.WorldRenderer(mc, resourceManager);
 
-        FastMcMod.INSTANCE.reloadEntityRenderer(resourceManager, entityRenderer);
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
+
+        FastMcMod.INSTANCE.reloadEntityRenderer(resourceManager, worldRenderer);
     }
 }

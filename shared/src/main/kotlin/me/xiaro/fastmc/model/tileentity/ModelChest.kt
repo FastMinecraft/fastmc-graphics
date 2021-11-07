@@ -5,7 +5,7 @@ import me.xiaro.fastmc.model.ModelBuilder
 
 class ModelChest : Model("tileEntity/SmallChest", 64, 64) {
     override fun ModelBuilder.buildModel() {
-        // Below
+        // Body
         childModel(0.0f, 19.0f) {
             addBox(-7.0f, 0.0f, -7.0f, 14.0f, 10.0f, 14.0f)
         }

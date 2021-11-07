@@ -21,11 +21,13 @@ public class MixinMinecraft {
     public void init$Inject$RETURN(CallbackInfo ci) {
         Minecraft mc = (Minecraft) (Object) this;
         IResourceManager resourceManager = new ResourceManager(mc);
-        AbstractEntityRenderer entityRenderer = new EntityRenderer(mc, resourceManager);
+        AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
         IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
+
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
         fontRenderer.getWrapped().setUnicode(mc.gameSettings.forceUnicodeFont);
 
-        FastMcMod.INSTANCE.init(resourceManager, entityRenderer, fontRenderer);
+        FastMcMod.INSTANCE.init(resourceManager, worldRenderer, fontRenderer);
     }
 
     @Inject(method = "runTick", at = @At("RETURN"))
@@ -37,10 +39,12 @@ public class MixinMinecraft {
     public void refreshResources$Inject$RETURN(CallbackInfo ci) {
         Minecraft mc = (Minecraft) (Object) this;
         IResourceManager resourceManager = new ResourceManager(mc);
-        AbstractEntityRenderer entityRenderer = new EntityRenderer(mc, resourceManager);
+        AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
         IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
+
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
         fontRenderer.getWrapped().setUnicode(mc.gameSettings.forceUnicodeFont);
 
-        FastMcMod.INSTANCE.reloadResource(resourceManager, entityRenderer, fontRenderer);
+        FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer, fontRenderer);
     }
 }

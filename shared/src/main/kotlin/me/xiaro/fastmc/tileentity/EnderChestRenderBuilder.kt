@@ -11,8 +11,8 @@ class EnderChestRenderBuilder(
     builtPosY: Double,
     builtPosZ: Double,
     size: Int
-) : TileEntityRenderBuilder<IEnderChestInfo>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
-    override fun add(info: IEnderChestInfo) {
+) : TileEntityRenderBuilder<IEnderChestInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+    override fun add(info: IEnderChestInfo<*>) {
         putPos(info)
         putLightMapUV(info.lightMapUV)
 

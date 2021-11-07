@@ -1,8 +1,8 @@
 package me.xiaro.fastmc.mixin.render;
 
 import me.xiaro.fastmc.FastMcMod;
-import me.xiaro.fastmc.utils.MathUtilsKt;
-import me.xiaro.fastmc.utils.MatrixUtils;
+import me.xiaro.fastmc.util.MathUtilsKt;
+import me.xiaro.fastmc.util.MatrixUtils;
 import net.minecraft.client.gui.FontRenderer;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;

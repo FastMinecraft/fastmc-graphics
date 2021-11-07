@@ -11,8 +11,8 @@ class BedRenderBuilder(
     builtPosY: Double,
     builtPosZ: Double,
     size: Int
-) : TileEntityRenderBuilder<IBedInfo>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
-    override fun add(info: IBedInfo) {
+) : TileEntityRenderBuilder<IBedInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+    override fun add(info: IBedInfo<*>) {
         putPos(info)
         putLightMapUV(info.lightMapUV)
 

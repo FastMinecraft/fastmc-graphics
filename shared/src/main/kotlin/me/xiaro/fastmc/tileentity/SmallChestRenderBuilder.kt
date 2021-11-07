@@ -14,8 +14,8 @@ open class SmallChestRenderBuilder(
     builtPosY: Double,
     builtPosZ: Double,
     size: Int
-) : TileEntityRenderBuilder<IChestInfo>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
-    override fun add(info: IChestInfo) {
+) : TileEntityRenderBuilder<IChestInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+    override fun add(info: IChestInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         val posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
@@ -31,10 +31,10 @@ open class SmallChestRenderBuilder(
                 buffer.put(2)
             }
             4 -> {
-                buffer.put(-1)
+                buffer.put(1)
             }
             5 -> {
-                buffer.put(1)
+                buffer.put(-1)
             }
             else -> {
                 buffer.put(0)

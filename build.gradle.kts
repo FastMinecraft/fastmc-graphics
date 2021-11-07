@@ -25,10 +25,6 @@ allprojects {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
-        implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion") {
-            exclude("kotlin-stdlib-common")
-            exclude("annotations")
-        }
         implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
@@ -41,7 +37,6 @@ allprojects {
         compileOnly("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
         compileOnly("org.jetbrains:annotations:22.0.0")
 
-        val lwjglVersion: String by project
         val jomlVersion: String by project
 
         compileOnly("it.unimi.dsi:fastutil:7.1.0")
@@ -50,6 +45,7 @@ allprojects {
 
     tasks {
         jar {
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
             archiveBaseName.set(rootProject.name)
             archiveAppendix.set(project.name)
         }

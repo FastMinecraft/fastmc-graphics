@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.patch.world;
 
-import me.xiaro.fastmc.utils.RaytraceKt;
+import me.xiaro.fastmc.util.RaytraceKt;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
