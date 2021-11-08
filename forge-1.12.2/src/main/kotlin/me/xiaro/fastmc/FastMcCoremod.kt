@@ -2,9 +2,7 @@ package me.xiaro.fastmc
 
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.MCVersion
-import org.apache.logging.log4j.LogManager
 import org.spongepowered.asm.launch.MixinBootstrap
-import org.spongepowered.asm.mixin.MixinEnvironment
 import org.spongepowered.asm.mixin.Mixins
 
 @IFMLLoadingPlugin.Name("FastMcCoremod")

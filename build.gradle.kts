@@ -17,19 +17,26 @@ allprojects {
         maven("https://libraries.minecraft.net")
     }
 
+    val library by configurations.creating
+
     dependencies {
+        fun ModuleDependency.exclude(moduleName: String): ModuleDependency {
+            return exclude(module = moduleName)
+        }
+        
         val kotlinVersion: String by rootProject
         val kotlinxCoroutineVersion: String by rootProject
+        val jomlVersion: String by rootProject
 
-        implementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion") {
+        library("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
-        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion") {
+        library("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
-        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutineVersion") {
+        library("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutineVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
@@ -37,10 +44,10 @@ allprojects {
         compileOnly("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
         compileOnly("org.jetbrains:annotations:22.0.0")
 
-        val jomlVersion: String by project
-
         compileOnly("it.unimi.dsi:fastutil:7.1.0")
-        implementation("org.joml:joml:$jomlVersion")
+        library("org.joml:joml:$jomlVersion")
+
+        implementation(library)
     }
 
     tasks {

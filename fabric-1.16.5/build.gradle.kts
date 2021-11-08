@@ -8,6 +8,8 @@ repositories {
     maven("https://maven.fabricmc.net/")
 }
 
+val library by configurations
+
 dependencies {
     // Version variables
     val minecraftVersion: String by project
@@ -21,6 +23,10 @@ dependencies {
     mappings("net.fabricmc:yarn:$yarnMappings")
 
     modImplementation("net.fabricmc:fabric-loader:$loaderVersion")
+
+    library(project(":shared")) {
+        exclude(group = "org.apache.logging.log4j")
+    }
 }
 
 tasks {
@@ -35,6 +41,14 @@ tasks {
     }
 
     remapJar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+        from(
+            library.map {
+                if (it.isDirectory) it else zipTree(it)
+            }
+        )
+
         archiveBaseName.set(rootProject.name)
         archiveAppendix.set(project.name)
         archiveClassifier.set("release")

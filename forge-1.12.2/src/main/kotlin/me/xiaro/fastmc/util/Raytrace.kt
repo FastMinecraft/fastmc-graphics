@@ -1,5 +1,7 @@
 package me.xiaro.fastmc.util
 
+import me.xiaro.fastmc.shared.util.distanceSq
+import me.xiaro.fastmc.shared.util.fastFloor
 import net.minecraft.block.state.IBlockState
 import net.minecraft.util.EnumFacing
 import net.minecraft.util.math.BlockPos
@@ -37,7 +39,7 @@ fun rayTrace(
         && startBlockState.block.canCollideCheck(startBlockState, stopOnLiquid)
     ) {
 
-        startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end)?.let { return it }
+        startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end).let { return it }
     }
 
     // Int end position
@@ -118,10 +120,11 @@ fun rayTrace(
 
         if ((!ignoreBlockWithoutBoundingBox
                 || blockState.getCollisionBoundingBox(world, blockPos) != null)
-            && blockState.block.canCollideCheck(blockState, stopOnLiquid)) {
-                startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end)
-                    ?.let { return it }
-            }
+            && blockState.block.canCollideCheck(blockState, stopOnLiquid)
+        ) {
+            startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end)
+                .let { return it }
+        }
     }
 
     return if (returnLastUncollidableBlock) {
@@ -136,7 +139,12 @@ fun rayTrace(
             else EnumFacing.SOUTH
         }
 
-        RayTraceResult(RayTraceResult.Type.MISS, Vec3d(currentX, currentY, currentZ), enumFacing, blockPos.toImmutable())
+        RayTraceResult(
+            RayTraceResult.Type.MISS,
+            Vec3d(currentX, currentY, currentZ),
+            enumFacing,
+            blockPos.toImmutable()
+        )
     } else {
         null
     }

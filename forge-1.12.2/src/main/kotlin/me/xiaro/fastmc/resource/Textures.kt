@@ -1,9 +1,9 @@
 package me.xiaro.fastmc.resource
 
-import me.xiaro.fastmc.adapter.BedTexture
-import me.xiaro.fastmc.opengl.DefaultTexture
-import me.xiaro.fastmc.opengl.ITexture
-import me.xiaro.fastmc.util.TextureUtils
+import me.xiaro.fastmc.shared.adapter.BedTexture
+import me.xiaro.fastmc.shared.opengl.DefaultTexture
+import me.xiaro.fastmc.shared.opengl.ITexture
+import me.xiaro.fastmc.shared.util.TextureUtils
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.TextureUtil
 import net.minecraft.item.EnumDyeColor

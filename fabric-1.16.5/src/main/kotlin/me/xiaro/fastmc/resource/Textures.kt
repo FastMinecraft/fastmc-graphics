@@ -1,11 +1,11 @@
 package me.xiaro.fastmc.resource
 
 import me.xiaro.fastmc.ResourceLocation
-import me.xiaro.fastmc.adapter.BedTexture
-import me.xiaro.fastmc.adapter.ChestTexture
-import me.xiaro.fastmc.opengl.DefaultTexture
-import me.xiaro.fastmc.opengl.ITexture
-import me.xiaro.fastmc.util.TextureUtils
+import me.xiaro.fastmc.shared.adapter.BedTexture
+import me.xiaro.fastmc.shared.adapter.ChestTexture
+import me.xiaro.fastmc.shared.opengl.DefaultTexture
+import me.xiaro.fastmc.shared.opengl.ITexture
+import me.xiaro.fastmc.shared.util.TextureUtils
 import net.minecraft.client.MinecraftClient
 import net.minecraft.util.DyeColor
 import org.joml.Matrix4f
@@ -36,7 +36,7 @@ fun smallChestTexture(mc: MinecraftClient): ITexture {
     )
 
     return DefaultTexture("tileEntity/SmallChest", TextureUtils.combineTexturesVertically(images))
-}    
+}
 
 fun transformSmallChestTexture(mc: MinecraftClient, name: String): BufferedImage {
     val input = ResourceLocation("textures/entity/chest/$name.png").toBufferedImage(mc)

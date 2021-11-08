@@ -1,13 +1,15 @@
 package me.xiaro.fastmc.resource
 
-import me.xiaro.fastmc.model.Model
-import me.xiaro.fastmc.model.tileentity.ModelBed
-import me.xiaro.fastmc.model.tileentity.ModelChest
-import me.xiaro.fastmc.model.tileentity.ModelLargeChest
-import me.xiaro.fastmc.model.tileentity.ModelShulkerBox
-import me.xiaro.fastmc.opengl.DefaultTexture
-import me.xiaro.fastmc.opengl.ITexture
-import me.xiaro.fastmc.tileentity.TileEntityRenderBuilder
+import me.xiaro.fastmc.shared.model.Model
+import me.xiaro.fastmc.shared.model.tileentity.ModelBed
+import me.xiaro.fastmc.shared.model.tileentity.ModelChest
+import me.xiaro.fastmc.shared.model.tileentity.ModelLargeChest
+import me.xiaro.fastmc.shared.model.tileentity.ModelShulkerBox
+import me.xiaro.fastmc.shared.opengl.DefaultTexture
+import me.xiaro.fastmc.shared.opengl.ITexture
+import me.xiaro.fastmc.shared.resource.IResourceManager
+import me.xiaro.fastmc.shared.resource.ResourceProvider
+import me.xiaro.fastmc.shared.tileentity.TileEntityRenderBuilder
 import net.minecraft.client.MinecraftClient
 
 class ResourceManager(mc: MinecraftClient) : IResourceManager {

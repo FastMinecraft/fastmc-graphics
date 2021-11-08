@@ -1,24 +1,16 @@
 package me.xiaro.fastmc.mixin.render;
 
-import me.xiaro.fastmc.AbstractWorldRenderer;
-import me.xiaro.fastmc.TileEntityRenderer;
-import me.xiaro.fastmc.WorldRenderer;
 import me.xiaro.fastmc.FastMcMod;
-import me.xiaro.fastmc.resource.IResourceManager;
+import me.xiaro.fastmc.renderer.TileEntityRenderer;
+import me.xiaro.fastmc.renderer.WorldRenderer;
 import me.xiaro.fastmc.resource.ResourceManager;
-import net.minecraft.block.state.IBlockState;
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer;
+import me.xiaro.fastmc.shared.resource.IResourceManager;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.WorldClient;
-import net.minecraft.client.renderer.DestroyBlockProgress;
 import net.minecraft.client.renderer.RenderGlobal;
-import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.culling.ICamera;
-import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityChest;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,7 +22,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 @Mixin(value = RenderGlobal.class, priority = Integer.MAX_VALUE)
 public abstract class MixinRenderGlobal {
@@ -66,7 +57,7 @@ public abstract class MixinRenderGlobal {
     public void refreshResources$Inject$RETURN(CallbackInfo ci) {
         Minecraft mc = this.mc;
         IResourceManager resourceManager = new ResourceManager(mc);
-        AbstractWorldRenderer worldRenderer = new me.xiaro.fastmc.WorldRenderer(mc, resourceManager);
+        AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
 
         worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
 

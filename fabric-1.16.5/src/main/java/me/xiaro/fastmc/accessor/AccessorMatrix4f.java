@@ -8,16 +8,16 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface AccessorMatrix4f {
     @Accessor("a00")
     float getA00();
-    
+
     @Accessor("a01")
     float getA01();
-    
+
     @Accessor("a02")
     float getA02();
 
     @Accessor("a03")
     float getA03();
-    
+
     @Accessor("a10")
     float getA10();
 

@@ -1,8 +1,9 @@
 package me.xiaro.fastmc
 
-import me.xiaro.fastmc.font.IFontRendererWrapper
-import me.xiaro.fastmc.opengl.IGLWrapper
-import me.xiaro.fastmc.resource.IResourceManager
+import me.xiaro.fastmc.shared.font.IFontRendererWrapper
+import me.xiaro.fastmc.shared.opengl.IGLWrapper
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
+import me.xiaro.fastmc.shared.resource.IResourceManager
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 
@@ -20,7 +21,11 @@ object FastMcMod {
         this.glWrapper = glWrapper
     }
 
-    fun init(resourceManager: IResourceManager, worldRenderer: AbstractWorldRenderer, fontRenderer: IFontRendererWrapper) {
+    fun init(
+        resourceManager: IResourceManager,
+        worldRenderer: AbstractWorldRenderer,
+        fontRenderer: IFontRendererWrapper
+    ) {
         if (isInitialized) error("Already initialized!")
 
         this.resourceManager = resourceManager
@@ -39,7 +44,11 @@ object FastMcMod {
         this.worldRenderer = entityRenderer
     }
 
-    fun reloadResource(resourceManager: IResourceManager, entityRenderer: AbstractWorldRenderer, fontRenderer: IFontRendererWrapper) {
+    fun reloadResource(
+        resourceManager: IResourceManager,
+        entityRenderer: AbstractWorldRenderer,
+        fontRenderer: IFontRendererWrapper
+    ) {
 //        isInitialized = true
 
         if (isInitialized) {

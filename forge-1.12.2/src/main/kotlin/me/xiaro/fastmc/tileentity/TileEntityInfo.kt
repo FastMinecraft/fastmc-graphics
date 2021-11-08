@@ -1,10 +1,9 @@
 package me.xiaro.fastmc.tileentity
 
-import me.xiaro.fastmc.tileentity.info.ITileEntityInfo
+import me.xiaro.fastmc.shared.tileentity.info.ITileEntityInfo
 import me.xiaro.fastmc.util.blockState
 import net.minecraft.block.state.IBlockState
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.tileentity.TileEntityChest
 
 abstract class TileEntityInfo<E : TileEntity> : ITileEntityInfo<E> {
     override lateinit var tileEntity: E

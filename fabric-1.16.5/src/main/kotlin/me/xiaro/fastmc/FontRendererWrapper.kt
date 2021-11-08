@@ -1,13 +1,14 @@
 package me.xiaro.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
-import me.xiaro.fastmc.font.FontRenderer
-import me.xiaro.fastmc.font.IFontRendererWrapper
-import me.xiaro.fastmc.opengl.glUseProgramForce
 import me.xiaro.fastmc.resource.toBufferedImage
-import me.xiaro.fastmc.util.ColorARGB
+import me.xiaro.fastmc.shared.font.FontRenderer
+import me.xiaro.fastmc.shared.font.IFontRendererWrapper
+import me.xiaro.fastmc.shared.opengl.glUseProgramForce
+import me.xiaro.fastmc.shared.util.ColorARGB
 import org.joml.Matrix4f
-import org.lwjgl.opengl.GL11.*
+import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
+import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 
 class FontRendererWrapper(mc: Minecraft) : IFontRendererWrapper {
     override val wrapped: FontRenderer
@@ -42,13 +43,11 @@ class FontRendererWrapper(mc: Minecraft) : IFontRendererWrapper {
         if (adjustedColor and -67108864 == 0) adjustedColor = color or -16777216
 
         RenderSystem.blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        RenderSystem.disableAlphaTest()
         RenderSystem.enableBlend()
         RenderSystem.enableTexture()
 
         wrapped.drawString(projection, modelView, string, posX, posY, ColorARGB(adjustedColor), scale, drawShadow)
 
-        RenderSystem.enableAlphaTest()
         glUseProgramForce(0)
     }
 }

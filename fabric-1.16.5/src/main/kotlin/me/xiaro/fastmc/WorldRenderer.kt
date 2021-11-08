@@ -1,12 +1,13 @@
 package me.xiaro.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
-import me.xiaro.fastmc.opengl.glBindTexture
-import me.xiaro.fastmc.opengl.glBindVertexArray
-import me.xiaro.fastmc.opengl.glUniform1f
-import me.xiaro.fastmc.opengl.glUseProgramForce
-import me.xiaro.fastmc.resource.IResourceManager
-import me.xiaro.fastmc.util.MatrixUtils
+import me.xiaro.fastmc.shared.opengl.glBindTexture
+import me.xiaro.fastmc.shared.opengl.glBindVertexArray
+import me.xiaro.fastmc.shared.opengl.glUniform1f
+import me.xiaro.fastmc.shared.opengl.glUseProgramForce
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
+import me.xiaro.fastmc.shared.resource.IResourceManager
+import me.xiaro.fastmc.shared.util.MatrixUtils
 import org.lwjgl.opengl.GL11.*
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :

@@ -1,12 +1,11 @@
 package me.xiaro.fastmc.tileentity
 
-import me.xiaro.fastmc.tileentity.info.IShulkerBoxInfo
-import net.minecraft.block.Block
+import me.xiaro.fastmc.shared.tileentity.info.IShulkerBoxInfo
 import net.minecraft.block.BlockShulkerBox
 import net.minecraft.tileentity.TileEntityShulkerBox
-import net.minecraft.util.EnumFacing
 
-class ShulkerBoxInfo : DirectionalTileEntityInfo<TileEntityShulkerBox>(BlockShulkerBox.FACING), IShulkerBoxInfo<TileEntityShulkerBox> {
+class ShulkerBoxInfo : DirectionalTileEntityInfo<TileEntityShulkerBox>(BlockShulkerBox.FACING),
+    IShulkerBoxInfo<TileEntityShulkerBox> {
     override val color: Int
         get() = tileEntity.color.metadata
 

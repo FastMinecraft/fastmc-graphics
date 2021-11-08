@@ -1,9 +1,10 @@
 package me.xiaro.fastmc.mixin;
 
 import me.xiaro.fastmc.*;
-import me.xiaro.fastmc.font.IFontRendererWrapper;
-import me.xiaro.fastmc.resource.IResourceManager;
 import me.xiaro.fastmc.resource.ResourceManager;
+import me.xiaro.fastmc.shared.font.IFontRendererWrapper;
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer;
+import me.xiaro.fastmc.shared.resource.IResourceManager;
 import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

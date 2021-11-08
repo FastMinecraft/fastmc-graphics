@@ -1,7 +1,7 @@
 package me.xiaro.fastmc.patch.entity;
 
 import io.netty.handler.codec.EncoderException;
-import me.xiaro.fastmc.util.collection.FastIntMap;
+import me.xiaro.fastmc.shared.util.collection.FastIntMap;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;
@@ -25,12 +25,24 @@ import java.util.concurrent.locks.ReadWriteLock;
 @SuppressWarnings("unchecked")
 @Mixin(EntityDataManager.class)
 public class MixinEntityDataManager {
+    private final FastIntMap<EntityDataManager.DataEntry<?>> entriesOverwrite = new FastIntMap<>();
     @Shadow @Final private ReadWriteLock lock;
     @Shadow @Final private Entity entity;
     @Shadow private boolean empty;
     @Shadow private boolean dirty;
 
-    private final FastIntMap<EntityDataManager.DataEntry<?>> entriesOverwrite = new FastIntMap<>();
+    private static <T> void writeEntryS(PacketBuffer buf, EntityDataManager.DataEntry<T> entry) {
+        DataParameter<T> dataParameter = entry.getKey();
+        int i = DataSerializers.getSerializerId(dataParameter.getSerializer());
+
+        if (i < 0) {
+            throw new EncoderException("Unknown serializer type " + dataParameter.getSerializer());
+        } else {
+            buf.writeByte(dataParameter.getId());
+            buf.writeVarInt(i);
+            dataParameter.getSerializer().write(buf, entry.getValue());
+        }
+    }
 
     /**
      * @author Xiaro
@@ -195,18 +207,5 @@ public class MixinEntityDataManager {
 
     private <T> void setEntryValueS(EntityDataManager.DataEntry<T> target, EntityDataManager.DataEntry<?> source) {
         target.setValue((T) source.getValue());
-    }
-
-    private static <T> void writeEntryS(PacketBuffer buf, EntityDataManager.DataEntry<T> entry) {
-        DataParameter<T> dataParameter = entry.getKey();
-        int i = DataSerializers.getSerializerId(dataParameter.getSerializer());
-
-        if (i < 0) {
-            throw new EncoderException("Unknown serializer type " + dataParameter.getSerializer());
-        } else {
-            buf.writeByte(dataParameter.getId());
-            buf.writeVarInt(i);
-            dataParameter.getSerializer().write(buf, entry.getValue());
-        }
     }
 }

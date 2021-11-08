@@ -1,12 +1,9 @@
 package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.TileEntityChest
-import me.xiaro.fastmc.tileentity.info.IChestInfo
+import me.xiaro.fastmc.shared.tileentity.info.IChestInfo
 import net.minecraft.block.ChestBlock
-import net.minecraft.block.entity.ChestBlockEntity
 import net.minecraft.block.entity.TrappedChestBlockEntity
-import net.minecraft.block.enums.ChestType
-import net.minecraft.util.math.Direction
 
 class ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>(ChestBlock.FACING), IChestInfo<TileEntityChest> {
     override val isTrap: Boolean

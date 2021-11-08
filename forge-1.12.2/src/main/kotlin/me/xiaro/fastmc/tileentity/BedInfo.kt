@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.tileentity
 
-import me.xiaro.fastmc.tileentity.info.IBedInfo
+import me.xiaro.fastmc.shared.tileentity.info.IBedInfo
 import net.minecraft.block.BlockBed
 import net.minecraft.tileentity.TileEntityBed
 

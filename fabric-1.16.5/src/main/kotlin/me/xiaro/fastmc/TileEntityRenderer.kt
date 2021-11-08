@@ -4,10 +4,15 @@ import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
-import me.xiaro.fastmc.tileentity.*
+import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
+import me.xiaro.fastmc.shared.tileentity.*
+import me.xiaro.fastmc.tileentity.BedInfo
+import me.xiaro.fastmc.tileentity.ChestInfo
+import me.xiaro.fastmc.tileentity.EnderChestInfo
+import me.xiaro.fastmc.tileentity.ShulkerBoxInfo
 import me.xiaro.fastmc.util.blockState
 import me.xiaro.fastmc.util.getPropertyOrDefault
-import me.xiaro.fastmc.util.getPropertyOrNull
 import net.minecraft.block.enums.ChestType
 import net.minecraft.util.math.Direction
 import org.joml.Matrix4f

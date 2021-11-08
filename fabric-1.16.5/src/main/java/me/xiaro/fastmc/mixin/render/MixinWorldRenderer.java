@@ -1,11 +1,11 @@
 package me.xiaro.fastmc.mixin.render;
 
-import me.xiaro.fastmc.AbstractWorldRenderer;
 import me.xiaro.fastmc.AdaptersKt;
 import me.xiaro.fastmc.FastMcMod;
 import me.xiaro.fastmc.TileEntityRenderer;
-import me.xiaro.fastmc.resource.IResourceManager;
 import me.xiaro.fastmc.resource.ResourceManager;
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer;
+import me.xiaro.fastmc.shared.resource.IResourceManager;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;

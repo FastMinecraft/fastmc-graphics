@@ -22,7 +22,7 @@ repositories {
     maven("https://repo.spongepowered.org/repository/maven-public/")
 }
 
-val library by configurations.creating
+val library by configurations
 
 val minecraftVersion: String by project
 val forgeVersion: String by project
@@ -32,7 +32,7 @@ val mappingsVersion: String by project
 dependencies {
     // Jar packaging
     fun ModuleDependency.exclude(moduleName: String): ModuleDependency {
-        return exclude(mapOf("module" to moduleName))
+        return exclude(module = moduleName)
     }
 
     // Forge
@@ -40,14 +40,16 @@ dependencies {
     minecraft("net.minecraftforge:forge:$minecraftVersion-$forgeVersion")
 
     // Dependencies
-    implementation(project(":shared"))
+    library(project(":shared")) {
+        exclude(group = "org.apache.logging.log4j")
+    }
 
-    implementation("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
+    library("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
         exclude("commons-io")
         exclude("gson")
         exclude("guava")
         exclude("launchwrapper")
-        exclude("log4j-core")
+        exclude(group = "org.apache.logging.log4j")
     }
 
     annotationProcessor("org.spongepowered:mixin:0.8.4:processor") {
@@ -97,7 +99,7 @@ tasks {
         }
 
         from(
-            (configurations.runtimeClasspath.get() - configurations["minecraft"]).map {
+            library.map {
                 if (it.isDirectory) it else zipTree(it)
             }
         )
