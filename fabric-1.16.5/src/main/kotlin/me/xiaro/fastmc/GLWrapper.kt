@@ -8,6 +8,7 @@ import java.nio.FloatBuffer
 
 class GLWrapper : IGLWrapper {
     override val rowMajor = true
+    override val lightMapUnit = 2
 
     // GL11
     override fun glGenTextures(): Int = GL11.glGenTextures()
@@ -51,6 +52,7 @@ class GLWrapper : IGLWrapper {
     override fun glGetUniformLocation(program: Int, name: CharSequence): Int = GL20.glGetUniformLocation(program, name)
     override fun glUniform1i(location: Int, v0: Int) = GL20.glUniform1i(location, v0)
     override fun glUniform1f(location: Int, v0: Float) = GL20.glUniform1f(location, v0)
+    override fun glUniform3f(location: Int, v0: Float, v1: Float, v2: Float) = GL20.glUniform3f(location, v0, v1, v2)
     override fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) = GL20.glUniform4f(location, v0, v1, v2, v3)
     override fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer) = GL20.glUniformMatrix4fv(location, transpose, matrices)
 

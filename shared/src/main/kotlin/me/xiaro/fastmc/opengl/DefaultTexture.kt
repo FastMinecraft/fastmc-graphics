@@ -16,7 +16,7 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
         val buffer = BufferUtils.byte(width * height * 4)
 
         bufferedImage.getRGBA(buffer)
-        buffer.flip()
+        buffer.rewind()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_COMPRESSED_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer)
 
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)

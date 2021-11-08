@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage
 object TextureUtils {
     @JvmStatic
     fun combineTexturesVertically(images: Array<BufferedImage>): BufferedImage {
-        assert(images.isNotEmpty())
+        check(images.isNotEmpty())
 
         val firstImage = images[0]
         val height = firstImage.height
@@ -26,7 +26,7 @@ object TextureUtils {
 
     @JvmStatic
     fun combineColoredTextures(images: Array<BufferedImage>): BufferedImage {
-        assert(images.size == 16)
+        check(images.size == 16)
 
         val firstImage = images[0]
         val size = firstImage.width
@@ -45,8 +45,31 @@ object TextureUtils {
         return finalImage
     }
 
+    @JvmStatic
+    fun combineColoredWithUncoloredTextures(images: Array<BufferedImage>): BufferedImage {
+        check(images.size == 17)
+
+        val firstImage = images[0]
+        val size = firstImage.width
+        val finalImage = BufferedImage(size * 4, MathUtils.ceilToPOT(size * 5), firstImage.type)
+        val graphics = finalImage.createGraphics()
+
+        for (x in 0 until 4) {
+            for (y in 0 until 4) {
+                val src = images[x + y * 4]
+                graphics.drawImage(src, x * size, y * size, null)
+            }
+        }
+
+        graphics.drawImage(images[16], 0, 4 * size, null)
+
+        graphics.dispose()
+
+        return finalImage
+    }
+
     fun combineTextureSides(output: Graphics2D, images: Array<BufferedImage>, x: Int, y: Int) {
-        assert(images.size == 6)
+        check(images.size == 6)
 
         val sizeX = images[0].width
         val sizeY = images[2].height

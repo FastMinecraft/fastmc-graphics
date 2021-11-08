@@ -1,17 +1,12 @@
 package me.xiaro.fastmc.tileentity
 
+import me.xiaro.fastmc.IRenderer
 import me.xiaro.fastmc.opengl.*
 import me.xiaro.fastmc.resource.IResourceManager
 import me.xiaro.fastmc.tileentity.info.IShulkerBoxInfo
 import java.nio.ByteBuffer
 
-class ShulkerBoxRenderBuilder(
-    resourceManager: IResourceManager,
-    builtPosX: Double,
-    builtPosY: Double,
-    builtPosZ: Double,
-    size: Int
-) : TileEntityRenderBuilder<IShulkerBoxInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+class ShulkerBoxRenderBuilder : TileEntityRenderBuilder<IShulkerBoxInfo<*>>(20) {
     override fun add(info: IShulkerBoxInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()

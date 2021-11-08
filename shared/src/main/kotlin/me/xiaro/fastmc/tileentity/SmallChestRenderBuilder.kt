@@ -1,5 +1,6 @@
 package me.xiaro.fastmc.tileentity
 
+import me.xiaro.fastmc.IRenderer
 import me.xiaro.fastmc.model.Model
 import me.xiaro.fastmc.opengl.*
 import me.xiaro.fastmc.resource.IResourceManager
@@ -8,13 +9,7 @@ import me.xiaro.fastmc.tileentity.info.IChestInfo
 import java.nio.ByteBuffer
 import java.util.*
 
-open class SmallChestRenderBuilder(
-    resourceManager: IResourceManager,
-    builtPosX: Double,
-    builtPosY: Double,
-    builtPosZ: Double,
-    size: Int
-) : TileEntityRenderBuilder<IChestInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) {
     override fun add(info: IChestInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
@@ -25,21 +20,7 @@ open class SmallChestRenderBuilder(
         buffer.putFloat(posZ)
 
         putLightMapUV(info.lightMapUV)
-
-        when (info.direction) {
-            2 -> {
-                buffer.put(2)
-            }
-            4 -> {
-                buffer.put(1)
-            }
-            5 -> {
-                buffer.put(-1)
-            }
-            else -> {
-                buffer.put(0)
-            }
-        }
+        putHDirection(info.hDirection)
 
         when {
             isChristmas -> {

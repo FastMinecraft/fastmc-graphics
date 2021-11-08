@@ -30,7 +30,7 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
         resourceManager.tileEntityShader.resources.forEach {
             it.bind()
             glUniform1f(it.partialTicksUniform, partialTicks)
-            it.updateProjectionMatrix(MatrixUtils.matrixBuffer)
+            it.updateProjectionMatrix()
         }
 
         val entity = mc.renderViewEntity ?: mc.player

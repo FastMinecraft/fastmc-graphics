@@ -3,6 +3,8 @@ precision highp float;
 
 uniform mat4 projection;
 uniform mat4 modelView;
+uniform vec3 offset;
+
 uniform float alpha;
 uniform float partialTicks;
 
@@ -27,6 +29,7 @@ out vec2 lightMapUV;
 
 const float angleMultiplier = 1.57079637050628662109375;
 const float lidAngleMultiplier = 4.7123889803846898576939650749193;
+const vec2 uvMultiplier = vec2(0.25, 0.125);
 
 mat3 rotateX(mat3 matrix, float angle) {
     float sin = sin(angle);
@@ -149,8 +152,8 @@ void main() {
     position = position * rotationMatrix;
     position.y += 0.5;
 
-    gl_Position = projection * modelView * vec4(position + renderPosition, 1.0);
-    uv = vertUV * 0.25 + vec2(float(colorIndex % 4), float(colorIndex / 4)) * 0.25;
+    gl_Position = projection * modelView * vec4(position + (renderPosition + offset), 1.0);
+    uv = (vertUV + vec2(float(colorIndex % 4), float(colorIndex / 4))) * uvMultiplier;
     normal = normal * rotationMatrix;
     lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;
 }

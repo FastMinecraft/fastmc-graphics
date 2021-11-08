@@ -58,7 +58,7 @@ public abstract class MixinWorldRenderer {
         return list;
     }
 
-    @Inject(method = "render", at = @At(value = "INVOKE", target = "Ljava/util/List;iterator()Ljava/util/Iterator;"))
+    @Inject(method = "render", at = @At("RETURN"))
     public void renderEntities$Inject$INVOKE$draw(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f, CallbackInfo ci) {
         client.getProfiler().swap("tileEntities");
 

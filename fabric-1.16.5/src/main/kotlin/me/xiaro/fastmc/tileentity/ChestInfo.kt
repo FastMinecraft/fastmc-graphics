@@ -8,7 +8,7 @@ import net.minecraft.block.entity.TrappedChestBlockEntity
 import net.minecraft.block.enums.ChestType
 import net.minecraft.util.math.Direction
 
-class ChestInfo : DirectionalTileEntityInfo<TileEntityChest>(), IChestInfo<TileEntityChest> {
+class ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>(ChestBlock.FACING), IChestInfo<TileEntityChest> {
     override val isTrap: Boolean
         get() = tileEntity is TrappedChestBlockEntity
 

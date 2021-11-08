@@ -3,6 +3,8 @@ precision highp float;
 
 uniform mat4 projection;
 uniform mat4 modelView;
+uniform vec3 offset;
+
 uniform float alpha;
 uniform float partialTicks;
 
@@ -145,7 +147,7 @@ void main() {
     mat3 rotationMatrix = mat3(1.0);
     rotationMatrix = rotateY90(rotationMatrix, rotationY);
 
-    gl_Position = projection * modelView * vec4(position * rotationMatrix + renderPosition, 1.0);
+    gl_Position = projection * modelView * vec4(position * rotationMatrix + (renderPosition + offset), 1.0);
     uv = vertUV;
     uv.y += vertTexID;
     uv.y *= 0.25;

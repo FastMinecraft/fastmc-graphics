@@ -2,16 +2,10 @@ package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.tileentity.info.IChestInfo
 import net.minecraft.block.BlockChest
+import net.minecraft.block.BlockShulkerBox
 import net.minecraft.tileentity.TileEntityChest
 
-class ChestInfo : TileEntityInfo<TileEntityChest>(), IChestInfo<TileEntityChest> {
-    override val direction: Int
-        get() = if (tileEntity.hasWorld()) {
-            tileEntity.blockMetadata
-        } else {
-            0
-        }
-
+class ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>(BlockChest.FACING), IChestInfo<TileEntityChest> {
     override val isTrap: Boolean
         get() = tileEntity.chestType == BlockChest.Type.TRAP
 

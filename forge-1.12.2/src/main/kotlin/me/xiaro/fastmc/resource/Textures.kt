@@ -61,13 +61,18 @@ fun bedTexture(mc: Minecraft): ITexture {
 
 fun shulkerTexture(mc: Minecraft): ITexture {
     val enumDyeColors = EnumDyeColor.values()
-    val images = Array(enumDyeColors.size) {
-        val enumDyeColor = enumDyeColors[it]
-        val resourceLocation = ResourceLocation("textures/entity/shulker/shulker_${enumDyeColor.dyeColorName}.png")
-        resourceLocation.toBufferedImage(mc)
+    val images = Array(enumDyeColors.size + 1) {
+        if (it < 16) {
+            val enumDyeColor = enumDyeColors[it]
+            val resourceLocation = ResourceLocation("textures/entity/shulker/shulker_${enumDyeColor.getName()}.png")
+            resourceLocation.toBufferedImage(mc)
+        } else {
+            val resourceLocation = ResourceLocation("textures/entity/shulker/shulker_purple.png")
+            resourceLocation.toBufferedImage(mc)
+        }
     }
 
-    return DefaultTexture("tileEntity/ShulkerBox", TextureUtils.combineColoredTextures(images))
+    return DefaultTexture("tileEntity/ShulkerBox", TextureUtils.combineColoredWithUncoloredTextures(images))
 }
 
 fun ResourceLocation.toBufferedImage(mc: Minecraft): BufferedImage {

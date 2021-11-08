@@ -13,12 +13,12 @@ abstract class AbstractTileEntityRenderer<TE : Any>(protected val worldRenderer:
     protected val renderEntryList = ArrayList<AbstractRenderEntry<TE, *>>()
 
     protected inline fun <reified E : TE, T : ITileEntityInfo<E>> register(
-        clazz: Class<T>,
-        noinline newBuilder: (Int) -> TileEntityRenderBuilder<in T>
+        tileEntityInfoClass: Class<T>,
+        builderClass: Class<out TileEntityRenderBuilder<in T>>
     ) {
         val tileEntityClass = E::class.java
         if (!renderEntryMap.containsKey(tileEntityClass)) {
-            addRenderEntry(RenderEntry(clazz, newBuilder))
+            addRenderEntry(RenderEntry(tileEntityInfoClass, builderClass))
         }
     }
 
@@ -35,6 +35,7 @@ abstract class AbstractTileEntityRenderer<TE : Any>(protected val worldRenderer:
     }
 
     fun hasRenderer(tileEntity: TE): Boolean {
+//        return false
         return renderEntryMap.containsKey(tileEntity.javaClass)
     }
 
@@ -83,7 +84,7 @@ abstract class AbstractTileEntityRenderer<TE : Any>(protected val worldRenderer:
 
     protected inner class RenderEntry<E : TE, T : ITileEntityInfo<E>>(
         private val tileEntityInfoClass: Class<T>,
-        private val newBuilder: (Int) -> TileEntityRenderBuilder<in T>,
+        private val builderClass: Class<out TileEntityRenderBuilder<in T>>,
     ) : AbstractRenderEntry<E, T>() {
         private var renderer: TileEntityRenderBuilder.Renderer? = null
         private val tileEntities = ArrayList<E>()
@@ -123,8 +124,10 @@ abstract class AbstractTileEntityRenderer<TE : Any>(protected val worldRenderer:
             } else {
                 dirty = false
                 scope.launch {
-                    val builder = newBuilder.invoke(tileEntities.size)
+                    val builder = builderClass.newInstance()
                     val entityInfo = tileEntityInfoClass.newInstance()
+
+                    builder.init(this@AbstractTileEntityRenderer, tileEntities.size)
 
                     tileEntities.forEach {
                         entityInfo.tileEntity = it

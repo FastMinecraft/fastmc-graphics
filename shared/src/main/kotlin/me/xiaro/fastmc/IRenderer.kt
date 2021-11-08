@@ -6,10 +6,10 @@ import org.joml.Matrix4f
 interface IRenderer {
     val resourceManager: IResourceManager
 
-    var renderPosX: Double
-    var renderPosY: Double
-    var renderPosZ: Double
+    val renderPosX: Double
+    val renderPosY: Double
+    val renderPosZ: Double
 
-    var projectionMatrix: Matrix4f
-    var modelViewMatrix: Matrix4f
+    val projectionMatrix: Matrix4f
+    val modelViewMatrix: Matrix4f
 }

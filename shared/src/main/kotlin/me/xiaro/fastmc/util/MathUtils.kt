@@ -82,3 +82,6 @@ inline val Int.quart: Int get() = this * this * this * this
 inline val Double.quint: Double get() = this * this * this * this * this
 inline val Float.quint: Float get() = this * this * this * this * this
 inline val Int.quint: Int get() = this * this * this * this * this
+
+inline val Int.isEven: Boolean get() = this and 1 == 0
+inline val Int.isOdd: Boolean get() = this and 1 == 1

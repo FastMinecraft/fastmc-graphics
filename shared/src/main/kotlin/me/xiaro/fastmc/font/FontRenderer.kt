@@ -31,8 +31,8 @@ class FontRenderer(
     var unicode = false
 
     init {
-        assert(unicodeFonts.size == 256)
-        assert(glyphWidths.size == 65536)
+        check(unicodeFonts.size == 256)
+        check(glyphWidths.size == 65536)
 
         val textureSize = min(maxTextureSize, 4096)
         val fontTextureSize = unicodeFonts.first()!!.width

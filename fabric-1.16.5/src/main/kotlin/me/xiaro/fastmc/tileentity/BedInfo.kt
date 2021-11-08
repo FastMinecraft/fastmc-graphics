@@ -6,7 +6,7 @@ import net.minecraft.block.BedBlock
 import net.minecraft.block.entity.BedBlockEntity
 import net.minecraft.block.enums.BedPart
 
-class BedInfo : DirectionalTileEntityInfo<TileEntityBed>(), IBedInfo<TileEntityBed> {
+class BedInfo : HDirectionalTileEntityInfo<TileEntityBed>(BedBlock.FACING), IBedInfo<TileEntityBed> {
     override val color: Int
         get() = tileEntity.color.id
 

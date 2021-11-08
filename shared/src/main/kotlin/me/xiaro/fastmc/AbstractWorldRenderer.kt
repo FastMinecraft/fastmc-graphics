@@ -13,7 +13,7 @@ abstract class AbstractWorldRenderer: IRenderer {
     override var modelViewMatrix = Matrix4f()
 
     fun init(tileEntityRenderer: AbstractTileEntityRenderer<*>) {
-        assert(!this::tileEntityRenderer.isInitialized)
+        check(!this::tileEntityRenderer.isInitialized)
         this.tileEntityRenderer = tileEntityRenderer
     }
 

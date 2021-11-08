@@ -6,11 +6,11 @@ import me.xiaro.fastmc.opengl.glBindVertexArray
 import me.xiaro.fastmc.opengl.glUniform1f
 import me.xiaro.fastmc.opengl.glUseProgramForce
 import me.xiaro.fastmc.resource.IResourceManager
-import me.xiaro.fastmc.util.MathUtils
 import me.xiaro.fastmc.util.MatrixUtils
 import org.lwjgl.opengl.GL11.*
 
-class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) : AbstractWorldRenderer() {
+class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
+    AbstractWorldRenderer() {
     override fun onPostTick() {
         mc.profiler.startSection("tileEntityRenderer")
 
@@ -28,15 +28,13 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
         resourceManager.tileEntityShader.resources.forEach {
             it.bind()
             glUniform1f(it.partialTicksUniform, partialTicks)
-            it.updateProjectionMatrix(MatrixUtils.matrixBuffer)
+            it.updateProjectionMatrix()
         }
 
-        val entity = mc.renderViewEntity ?: mc.player
-        if (entity != null) {
-            renderPosX = MathUtils.lerp(entity.lastTickPosX, entity.posX, partialTicks)
-            renderPosY = MathUtils.lerp(entity.lastTickPosY, entity.posY, partialTicks)
-            renderPosZ = MathUtils.lerp(entity.lastTickPosZ, entity.posZ, partialTicks)
-        }
+        val cameraPos = mc.gameRenderer.camera.pos
+        renderPosX = cameraPos.getX()
+        renderPosY = cameraPos.getY()
+        renderPosZ = cameraPos.getZ()
     }
 
     override fun postRender() {

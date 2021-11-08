@@ -17,10 +17,6 @@ object MatrixUtils {
         return Matrix4f(matrixBuffer)
     }
 
-    fun getMatrix(matrix: Matrix4f) {
-        matrix.set(matrixBuffer)
-    }
-
     fun uploadMatrix(location: Int) {
         glUniformMatrix4fv(location, FastMcMod.glWrapper.rowMajor, matrixBuffer)
     }

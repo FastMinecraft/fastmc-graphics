@@ -1,35 +1,16 @@
 package me.xiaro.fastmc.tileentity
 
+import me.xiaro.fastmc.IRenderer
 import me.xiaro.fastmc.opengl.*
 import me.xiaro.fastmc.resource.IResourceManager
 import me.xiaro.fastmc.tileentity.info.IBedInfo
 import java.nio.ByteBuffer
 
-class BedRenderBuilder(
-    resourceManager: IResourceManager,
-    builtPosX: Double,
-    builtPosY: Double,
-    builtPosZ: Double,
-    size: Int
-) : TileEntityRenderBuilder<IBedInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+class BedRenderBuilder : TileEntityRenderBuilder<IBedInfo<*>>(20) {
     override fun add(info: IBedInfo<*>) {
         putPos(info)
         putLightMapUV(info.lightMapUV)
-
-        when (info.direction) {
-            1 -> {
-                buffer.put(-1)
-            }
-            2 -> {
-                buffer.put(0)
-            }
-            3 -> {
-                buffer.put(1)
-            }
-            else -> {
-                buffer.put(2)
-            }
-        }
+        putHDirection((info.hDirection - 2 + 2) % 4 + 2)
 
         buffer.put(info.color.toByte())
         buffer.put(if (info.isHead) 1 else 0)

@@ -13,15 +13,9 @@ import org.joml.Matrix4f
 
 class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) : AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
     init {
-        register(BedInfo::class.java) {
-            BedRenderBuilder(resourceManager, renderPosX, renderPosY, renderPosZ, it)
-        }
-        register(EnderChestInfo::class.java) {
-            EnderChestRenderBuilder(resourceManager, renderPosX, renderPosY, renderPosZ, it)
-        }
-        register(ShulkerBoxInfo::class.java) {
-            ShulkerBoxRenderBuilder(resourceManager, renderPosX, renderPosY, renderPosZ, it)
-        }
+        register(BedInfo::class.java, BedRenderBuilder::class.java)
+        register(EnderChestInfo::class.java, EnderChestRenderBuilder::class.java)
+        register(ShulkerBoxInfo::class.java, ShulkerBoxRenderBuilder::class.java)
 
         addRenderEntry(ChestRenderEntry())
     }
@@ -151,14 +145,10 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                 } else {
                     smallDirty = false
                     scope.launch {
-                        val builder = SmallChestRenderBuilder(
-                            resourceManager,
-                            renderPosX,
-                            renderPosY,
-                            renderPosZ,
-                            smallChest.size
-                        )
+                        val builder = SmallChestRenderBuilder()
                         val entityInfo = ChestInfo()
+
+                        builder.init(this@TileEntityRenderer, smallChest.size)
 
                         smallChest.forEach {
                             entityInfo.tileEntity = it
@@ -180,14 +170,10 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                 } else {
                     largeDirty = false
                     scope.launch {
-                        val builder = LargeChestRenderBuilder(
-                            resourceManager,
-                            renderPosX,
-                            renderPosY,
-                            renderPosZ,
-                            largeChest.size
-                        )
+                        val builder = LargeChestRenderBuilder()
                         val entityInfo = ChestInfo()
+
+                        builder.init(this@TileEntityRenderer, largeChest.size)
 
                         largeChest.forEach {
                             entityInfo.tileEntity = it

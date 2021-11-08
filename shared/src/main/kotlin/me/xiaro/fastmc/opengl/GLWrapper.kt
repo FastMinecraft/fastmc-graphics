@@ -6,6 +6,7 @@ import java.nio.FloatBuffer
 
 interface IGLWrapper {
     val rowMajor: Boolean
+    val lightMapUnit: Int
 
     // GL11
     fun glGenTextures(): Int
@@ -46,6 +47,7 @@ interface IGLWrapper {
     fun glGetUniformLocation(program: Int, name: CharSequence): Int
     fun glUniform1i(location: Int, v0: Int)
     fun glUniform1f(location: Int, v0: Float)
+    fun glUniform3f(location: Int, v0: Float, v1: Float, v2: Float)
     fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
     fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer)
 
@@ -172,6 +174,7 @@ fun glGetProgramInfoLog(program: Int, maxLength: Int) = glWrapper.glGetProgramIn
 fun glGetUniformLocation(program: Int, name: CharSequence) = glWrapper.glGetUniformLocation(program, name)
 fun glUniform1i(location: Int, v0: Int) = glWrapper.glUniform1i(location, v0)
 fun glUniform1f(location: Int, v0: Float) = glWrapper.glUniform1f(location, v0)
+fun glUniform3f(location: Int, v0: Float, v1: Float, v2: Float) = glWrapper.glUniform3f(location, v0, v1, v2)
 fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) = glWrapper.glUniform4f(location, v0, v1, v2, v3)
 fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer) = glWrapper.glUniformMatrix4fv(location, transpose, matrices)
 

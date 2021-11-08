@@ -3,6 +3,7 @@ precision highp float;
 
 uniform sampler2D lightMapTexture;
 uniform sampler2D texture;
+uniform vec3 offset;
 
 in vec2 uv;
 flat in vec3 normal;

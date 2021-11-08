@@ -1,35 +1,16 @@
 package me.xiaro.fastmc.tileentity
 
+import me.xiaro.fastmc.IRenderer
 import me.xiaro.fastmc.opengl.*
 import me.xiaro.fastmc.resource.IResourceManager
 import me.xiaro.fastmc.tileentity.info.IEnderChestInfo
 import java.nio.ByteBuffer
 
-class EnderChestRenderBuilder(
-    resourceManager: IResourceManager,
-    builtPosX: Double,
-    builtPosY: Double,
-    builtPosZ: Double,
-    size: Int
-) : TileEntityRenderBuilder<IEnderChestInfo<*>>(resourceManager, builtPosX, builtPosY, builtPosZ, size, 20) {
+class EnderChestRenderBuilder : TileEntityRenderBuilder<IEnderChestInfo<*>>(20) {
     override fun add(info: IEnderChestInfo<*>) {
         putPos(info)
         putLightMapUV(info.lightMapUV)
-
-        when (info.direction) {
-            2 -> {
-                buffer.put(2)
-            }
-            4 -> {
-                buffer.put(-1)
-            }
-            5 -> {
-                buffer.put(1)
-            }
-            else -> {
-                buffer.put(0)
-            }
-        }
+        putHDirection(info.hDirection)
 
         buffer.putShort((info.prevLidAngle * 65535.0f).toInt().toShort())
         buffer.putShort((info.lidAngle * 65535.0f).toInt().toShort())
