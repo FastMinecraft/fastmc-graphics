@@ -1,7 +1,7 @@
 package me.xiaro.fastmc.shared.resource
 
 import me.xiaro.fastmc.shared.model.Model
-import me.xiaro.fastmc.shared.opengl.ITexture
+import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.tileentity.TileEntityRenderBuilder
 
 interface IResourceManager {

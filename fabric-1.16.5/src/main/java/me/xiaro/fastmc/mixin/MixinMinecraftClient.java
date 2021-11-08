@@ -44,11 +44,9 @@ public class MixinMinecraftClient {
         MinecraftClient mc = (MinecraftClient) (Object) this;
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
-        IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
 
         worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
-        fontRenderer.getWrapped().setUnicode(mc.options.forceUnicodeFont);
 
-        FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer, fontRenderer);
+        FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer);
     }
 }

@@ -3,6 +3,7 @@ package me.xiaro.fastmc.shared.tileentity
 import me.xiaro.fastmc.shared.model.Model
 import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.resource.ResourceEntry
+import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.tileentity.info.IChestInfo
 import java.nio.ByteBuffer
 import java.util.*

@@ -1,11 +1,11 @@
 package me.xiaro.fastmc.resource
 
 import me.xiaro.fastmc.ResourceLocation
-import me.xiaro.fastmc.shared.adapter.BedTexture
-import me.xiaro.fastmc.shared.adapter.ChestTexture
-import me.xiaro.fastmc.shared.opengl.DefaultTexture
-import me.xiaro.fastmc.shared.opengl.ITexture
-import me.xiaro.fastmc.shared.util.TextureUtils
+import me.xiaro.fastmc.shared.texture.BedTexture
+import me.xiaro.fastmc.shared.texture.ChestTexture
+import me.xiaro.fastmc.shared.texture.DefaultTexture
+import me.xiaro.fastmc.shared.texture.ITexture
+import me.xiaro.fastmc.shared.texture.TextureUtils
 import net.minecraft.client.MinecraftClient
 import net.minecraft.util.DyeColor
 import org.joml.Matrix4f

@@ -1,6 +1,5 @@
-package me.xiaro.fastmc.shared.adapter
+package me.xiaro.fastmc.shared.texture
 
-import me.xiaro.fastmc.shared.util.TextureUtils
 import me.xiaro.fastmc.shared.util.collection.mapArray
 import me.xiaro.fastmc.shared.util.fastCeil
 import me.xiaro.fastmc.shared.util.toRadian

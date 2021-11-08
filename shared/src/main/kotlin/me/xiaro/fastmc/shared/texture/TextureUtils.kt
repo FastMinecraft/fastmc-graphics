@@ -1,5 +1,6 @@
-package me.xiaro.fastmc.shared.util
+package me.xiaro.fastmc.shared.texture
 
+import me.xiaro.fastmc.shared.util.MathUtils
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 

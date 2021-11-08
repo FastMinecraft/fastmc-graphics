@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.shared.font
 
-import me.xiaro.fastmc.shared.opengl.ITexture
+import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.opengl.glBindTexture
 import me.xiaro.fastmc.shared.opengl.glDeleteTextures
 

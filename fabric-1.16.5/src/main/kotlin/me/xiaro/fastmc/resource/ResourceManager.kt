@@ -5,8 +5,8 @@ import me.xiaro.fastmc.shared.model.tileentity.ModelBed
 import me.xiaro.fastmc.shared.model.tileentity.ModelChest
 import me.xiaro.fastmc.shared.model.tileentity.ModelLargeChest
 import me.xiaro.fastmc.shared.model.tileentity.ModelShulkerBox
-import me.xiaro.fastmc.shared.opengl.DefaultTexture
-import me.xiaro.fastmc.shared.opengl.ITexture
+import me.xiaro.fastmc.shared.texture.DefaultTexture
+import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.resource.IResourceManager
 import me.xiaro.fastmc.shared.resource.ResourceProvider
 import me.xiaro.fastmc.shared.tileentity.TileEntityRenderBuilder

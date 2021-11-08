@@ -1,5 +1,6 @@
-package me.xiaro.fastmc.shared.opengl
+package me.xiaro.fastmc.shared.texture
 
+import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.util.BufferUtils
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer

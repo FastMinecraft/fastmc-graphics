@@ -24,7 +24,7 @@ object FastMcMod {
     fun init(
         resourceManager: IResourceManager,
         worldRenderer: AbstractWorldRenderer,
-        fontRenderer: IFontRendererWrapper
+        fontRenderer: IFontRendererWrapper,
     ) {
         if (isInitialized) error("Already initialized!")
 
@@ -47,18 +47,13 @@ object FastMcMod {
     fun reloadResource(
         resourceManager: IResourceManager,
         entityRenderer: AbstractWorldRenderer,
-        fontRenderer: IFontRendererWrapper
     ) {
-//        isInitialized = true
-
         if (isInitialized) {
             this.resourceManager.destroy()
-            this.fontRenderer.destroy()
         }
 
         this.resourceManager = resourceManager
         this.worldRenderer = entityRenderer
-        this.fontRenderer = fontRenderer
 
         isInitialized = false
     }

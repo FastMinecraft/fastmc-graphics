@@ -6,6 +6,7 @@ import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.renderer.IRenderer
 import me.xiaro.fastmc.shared.resource.IResourceManager
 import me.xiaro.fastmc.shared.resource.ResourceEntry
+import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.tileentity.info.ITileEntityInfo
 import me.xiaro.fastmc.shared.util.BufferUtils
 import org.joml.Matrix4f
