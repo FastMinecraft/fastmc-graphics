@@ -58,7 +58,7 @@ dependencies {
 }
 
 configure<MixinExtension> {
-    add(sourceSets["main"], "mixins.epsilon.refmap.json")
+    add(sourceSets["main"], "mixins.fastmc.refmap.json")
 }
 
 configure<UserDevExtension> {
@@ -91,7 +91,7 @@ tasks {
         manifest {
             attributes(
                 "Manifest-Version" to 1.0,
-                "MixinConfigs" to "mixins.fastmc.json, mixins.fastmc-accessor.json, mixins.fastmc-patch.json",
+                "MixinConfigs" to "mixins.fastmc-core.json, mixins.fastmc-accessor.json, mixins.fastmc-patch.json",
                 "TweakClass" to "org.spongepowered.asm.launch.MixinTweaker",
                 "FMLCorePluginContainsFMLMod" to true,
                 "FMLCorePlugin" to "me.xiaro.fastmc.FastMcCoremod"

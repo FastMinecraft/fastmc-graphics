@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.Mixins
 class FastMcCoremod : IFMLLoadingPlugin {
     init {
         MixinBootstrap.init()
-        Mixins.addConfigurations("mixins.fastmc.json", "mixins.fastmc-accessor.json", "mixins.fastmc-patch.json")
+        Mixins.addConfigurations("mixins.fastmc-core.json", "mixins.fastmc-accessor.json", "mixins.fastmc-patch.json")
     }
 
     override fun injectData(data: Map<String, Any>) {

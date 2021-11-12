@@ -17,7 +17,7 @@
     ]
   },
   "mixins": [
-    "mixins.fastmc.json",
+    "mixins.fastmc-core.json",
     "mixins.fastmc-accessor.json"
   ],
   "depends": {

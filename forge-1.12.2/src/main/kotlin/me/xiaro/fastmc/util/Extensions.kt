@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.util
 
-import me.xiaro.fastmc.accessor.AccessorMinecraft
+import me.xiaro.fastmc.mixin.accessor.AccessorMinecraft
 import net.minecraft.block.properties.IProperty
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft

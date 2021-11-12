@@ -2,9 +2,12 @@
   "required": false,
   "minVersion": "0.7",
   "compatibilityLevel": "JAVA_8",
-  "package": "me.xiaro.fastmc.accessor",
+  "package": "me.xiaro.fastmc.mixin.accessor",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
     "AccessorMinecraft"
+  ],
+  "mixins": [
+    "AccessorBlockStateContainer"
   ]
 }

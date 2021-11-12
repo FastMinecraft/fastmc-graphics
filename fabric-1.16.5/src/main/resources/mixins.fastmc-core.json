@@ -2,9 +2,10 @@
   "required": true,
   "minVersion": "0.8",
   "compatibilityLevel": "JAVA_8",
-  "package": "me.xiaro.fastmc.mixin.accessor",
+  "package": "me.xiaro.fastmc.mixin.core",
   "client": [
-    "AccessorMatrix4f"
+    "MixinMinecraftClient",
+    "render.MixinWorldRenderer"
   ],
   "injectors": {
     "defaultRequire": 1

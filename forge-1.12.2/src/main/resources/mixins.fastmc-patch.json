@@ -2,16 +2,17 @@
   "required": false,
   "minVersion": "0.7",
   "compatibilityLevel": "JAVA_8",
-  "package": "me.xiaro.fastmc.patch",
+  "package": "me.xiaro.fastmc.mixin.patch",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
+    "MixinTextFormatting",
     "entity.MixinEntityDataManager",
     "gui.MixinGuiInventory",
     "optifine.MixinConfig",
     "player.MixinPlayerControllerMP",
-    "world.MixinBlock"
-  ],
-  "mixins": [
+    "render.MixinRenderGlobal",
+    "render.MixinVisGraph",
+    "world.MixinBlock",
     "world.MixinWorld"
   ]
 }

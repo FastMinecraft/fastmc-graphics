@@ -1,6 +1,6 @@
 package me.xiaro.fastmc
 
-import me.xiaro.fastmc.accessor.AccessorMatrix4f
+import me.xiaro.fastmc.mixin.accessor.AccessorMatrix4f
 import net.minecraft.block.ChestBlock
 import net.minecraft.block.entity.*
 import net.minecraft.client.MinecraftClient

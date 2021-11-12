@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.7",
+  "compatibilityLevel": "JAVA_8",
+  "package": "me.xiaro.fastmc.mixin.core",
+  "refmap": "mixins.fastmc.refmap.json",
+  "client": [
+    "MixinMinecraft",
+    "render.MixinEntityRenderer",
+    "render.MixinFontRenderer",
+    "render.MixinRenderGlobal",
+    "render.MixinTextureMap"
+  ]
+}
