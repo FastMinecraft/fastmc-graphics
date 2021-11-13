@@ -86,7 +86,8 @@ abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(private val verte
         buffer.putFloat((info.posZ + 0.5 - builtPosZ).toFloat())
     }
 
-    protected fun putLightMapUV(lightMapUV: Int) {
+    protected fun putLightMapUV(info: T) {
+        val lightMapUV = info.lightMapUV
         buffer.put((lightMapUV and 0xFF).toByte())
         buffer.put((lightMapUV shr 16 and 0xFF).toByte())
     }

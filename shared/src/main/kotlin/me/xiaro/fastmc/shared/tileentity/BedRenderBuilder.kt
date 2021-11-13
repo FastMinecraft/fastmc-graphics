@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 class BedRenderBuilder : TileEntityRenderBuilder<IBedInfo<*>>(20) {
     override fun add(info: IBedInfo<*>) {
         putPos(info)
-        putLightMapUV(info.lightMapUV)
+        putLightMapUV(info)
         putHDirection((info.hDirection - 2 + 2) % 4 + 2)
 
         buffer.put(info.color.toByte())

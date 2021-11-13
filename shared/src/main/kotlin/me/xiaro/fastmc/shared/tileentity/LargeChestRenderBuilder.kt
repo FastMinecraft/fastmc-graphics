@@ -16,7 +16,7 @@ class LargeChestRenderBuilder : SmallChestRenderBuilder() {
         buffer.putFloat(posY)
         buffer.putFloat(posZ)
 
-        putLightMapUV(info.lightMapUV)
+        putLightMapUV(info)
         putHDirection(info.hDirection)
 
         when {

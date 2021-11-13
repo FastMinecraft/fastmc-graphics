@@ -18,7 +18,7 @@ open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) 
         buffer.putFloat(posY)
         buffer.putFloat(posZ)
 
-        putLightMapUV(info.lightMapUV)
+        putLightMapUV(info)
         putHDirection(info.hDirection)
 
         when {

@@ -14,7 +14,7 @@ class ShulkerBoxRenderBuilder : TileEntityRenderBuilder<IShulkerBoxInfo<*>>(20) 
         buffer.putFloat(posY)
         buffer.putFloat(posZ)
 
-        putLightMapUV(info.lightMapUV)
+        putLightMapUV(info)
 
         when (info.direction) {
             0 -> {

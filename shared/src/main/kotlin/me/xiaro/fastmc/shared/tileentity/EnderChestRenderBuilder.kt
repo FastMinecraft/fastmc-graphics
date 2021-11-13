@@ -7,7 +7,7 @@ import java.nio.ByteBuffer
 class EnderChestRenderBuilder : TileEntityRenderBuilder<IEnderChestInfo<*>>(20) {
     override fun add(info: IEnderChestInfo<*>) {
         putPos(info)
-        putLightMapUV(info.lightMapUV)
+        putLightMapUV(info)
         putHDirection(info.hDirection)
 
         buffer.putShort((info.prevLidAngle * 65535.0f).toInt().toShort())
