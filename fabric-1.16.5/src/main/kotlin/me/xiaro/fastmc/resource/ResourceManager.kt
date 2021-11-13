@@ -5,6 +5,7 @@ import me.xiaro.fastmc.shared.model.tileentity.ModelBed
 import me.xiaro.fastmc.shared.model.tileentity.ModelChest
 import me.xiaro.fastmc.shared.model.tileentity.ModelLargeChest
 import me.xiaro.fastmc.shared.model.tileentity.ModelShulkerBox
+import me.xiaro.fastmc.shared.opengl.Shader
 import me.xiaro.fastmc.shared.texture.DefaultTexture
 import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.resource.IResourceManager
@@ -41,6 +42,10 @@ class ResourceManager(mc: MinecraftClient) : IResourceManager {
             "/assets/shaders/tileentity/Chest.vsh",
             "/assets/shaders/tileentity/Default.fsh"
         )
+    )
+
+    override val shader: ResourceProvider<Shader> = ResourceProvider(
+
     )
 
     override val texture: ResourceProvider<ITexture> = ResourceProvider(

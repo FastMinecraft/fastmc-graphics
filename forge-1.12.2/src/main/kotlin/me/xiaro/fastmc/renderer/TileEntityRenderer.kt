@@ -163,6 +163,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                         }
 
                         actor.send {
+                            smallChestRenderer?.destroy()
                             smallChestRenderer = builder.build()
                         }
                     }
@@ -188,6 +189,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                         }
 
                         actor.send {
+                            largeChestRenderer?.destroy()
                             largeChestRenderer = builder.build()
                         }
                     }
@@ -201,6 +203,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             smallChestRenderer = null
             largeChestRenderer = null
             smallDirty = false
+            largeDirty = false
         }
 
         override fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double) {

@@ -103,5 +103,7 @@ fun shulkerTexture(mc: MinecraftClient): ITexture {
 }
 
 fun ResourceLocation.toBufferedImage(mc: MinecraftClient): BufferedImage {
-    return ImageIO.read(mc.resourceManager.getResource(this).inputStream)
+    return mc.resourceManager.getResource(this).inputStream.use {
+        ImageIO.read(it)
+    }
 }

@@ -34,7 +34,7 @@ public abstract class MixinRenderGlobal {
 
     @Redirect(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;render(Lnet/minecraft/tileentity/TileEntity;FI)V"))
     public void renderEntities$Redirect$INVOKE$render(TileEntityRendererDispatcher instance, TileEntity tileentityIn, float partialTicks, int destroyStage) {
-        if (((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer()).hasRenderer(tileentityIn)) {
+        if (!((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer()).hasRenderer(tileentityIn)) {
             instance.render(tileentityIn, partialTicks, destroyStage);
         }
     }

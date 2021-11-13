@@ -135,6 +135,7 @@ abstract class AbstractTileEntityRenderer<TE : Any>(protected val worldRenderer:
                     }
 
                     actor.send {
+                        renderer?.destroy()
                         renderer = builder.build()
                     }
                 }

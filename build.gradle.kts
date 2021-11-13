@@ -89,13 +89,6 @@ tasks {
         }
     }
 
-    disable(compileKotlin, compileJava, compileTestKotlin, compileTestJava)
-    disable(processResources, processTestResources)
-    disable(classes, testClasses)
-    disable(inspectClassesForKotlinIC)
-    disable(test, check)
-    disable(jar, assemble, build)
-
     val collectJars by register<Copy>("collectJars") {
         group = "build"
 

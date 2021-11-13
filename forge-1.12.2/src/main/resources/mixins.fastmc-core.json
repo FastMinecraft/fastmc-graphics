@@ -8,7 +8,6 @@
     "MixinMinecraft",
     "render.MixinEntityRenderer",
     "render.MixinFontRenderer",
-    "render.MixinRenderGlobal",
-    "render.MixinTextureMap"
+    "render.MixinRenderGlobal"
   ]
 }
