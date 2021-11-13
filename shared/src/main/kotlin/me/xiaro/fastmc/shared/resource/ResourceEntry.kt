@@ -5,16 +5,14 @@ interface ResourceEntry<T : Resource> {
 
     companion object {
         operator fun <T : Resource> invoke(
-            resourceClass: Class<T>,
             name: String,
             block: (IResourceManager) -> ResourceProvider<T>
         ): ResourceEntry<T> {
-            return EntryInternal(resourceClass, name, block)
+            return EntryInternal(name, block)
         }
     }
 
     private class EntryInternal<T : Resource>(
-        private val resourceClass: Class<T>,
         private val name: String,
         private val block: (IResourceManager) -> ResourceProvider<T>
     ) : ResourceEntry<T> {
@@ -39,15 +37,12 @@ interface ResourceEntry<T : Resource> {
             other as EntryInternal<*>
 
             if (name != other.name) return false
-            if (resourceClass != other.resourceClass) return false
 
             return true
         }
 
         override fun hashCode(): Int {
-            var result = name.hashCode()
-            result = 31 * result + resourceClass.hashCode()
-            return result
+            return name.hashCode()
         }
     }
 }

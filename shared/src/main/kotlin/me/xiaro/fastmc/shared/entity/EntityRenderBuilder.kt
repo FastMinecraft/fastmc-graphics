@@ -1,18 +1,18 @@
-package me.xiaro.fastmc.shared.tileentity
+package me.xiaro.fastmc.shared.entity
 
 import me.xiaro.fastmc.FastMcMod
+import me.xiaro.fastmc.shared.entity.info.IEntityInfo
 import me.xiaro.fastmc.shared.model.Model
 import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.renderer.IRenderer
 import me.xiaro.fastmc.shared.resource.IResourceManager
 import me.xiaro.fastmc.shared.resource.ResourceEntry
 import me.xiaro.fastmc.shared.texture.ITexture
-import me.xiaro.fastmc.shared.tileentity.info.ITileEntityInfo
 import me.xiaro.fastmc.shared.util.BufferUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 
-abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(private val vertexSize: Int) {
+abstract class EntityRenderBuilder<T : IEntityInfo<*>>(private val vertexSize: Int) {
     fun init(renderer: IRenderer, size: Int) {
         check(size0 == -1)
         check(resourceManager0 == null)
@@ -81,9 +81,19 @@ abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(private val verte
     abstract fun add(info: T)
 
     protected fun putPos(info: T) {
-        buffer.putFloat((info.posX + 0.5 - builtPosX).toFloat())
-        buffer.putFloat((info.posY - builtPosY).toFloat())
-        buffer.putFloat((info.posZ + 0.5 - builtPosZ).toFloat())
+        buffer.putFloat((info.prevX - builtPosX).toFloat())
+        buffer.putFloat((info.prevY - builtPosY).toFloat())
+        buffer.putFloat((info.prevZ - builtPosZ).toFloat())
+        buffer.putFloat((info.x - builtPosX).toFloat())
+        buffer.putFloat((info.y - builtPosY).toFloat())
+        buffer.putFloat((info.z - builtPosZ).toFloat())
+    }
+
+    protected fun putRotations(info: T) {
+        buffer.putFloat(info.rotationYaw)
+        buffer.putFloat(info.rotationPitch)
+        buffer.putFloat(info.prevRotationYaw)
+        buffer.putFloat(info.prevRotationPitch)
     }
 
     protected fun putLightMapUV(info: T) {
@@ -92,29 +102,25 @@ abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(private val verte
         buffer.put((lightMapUV shr 16 and 0xFF).toByte())
     }
 
-    protected fun putHDirection(hDirection: Int) {
-        buffer.put(hDirection.toByte())
-    }
-
     protected fun renderInfo(shader: Shader, vaoID: Int, vboID: Int, model: Model): RenderInfo {
         return RenderInfo(resourceManager, shader, vaoID, vboID, model.modelSize, size, builtPosX, builtPosY, builtPosZ)
     }
 
     protected companion object {
         fun model(name: String): ResourceEntry<Model> {
-            return ResourceEntry("tileEntity/$name") {
+            return ResourceEntry("entity/$name") {
                 it.model
             }
         }
 
         fun shader(name: String): ResourceEntry<Shader> {
-            return ResourceEntry("tileEntity/$name") {
-                it.tileEntityShader
+            return ResourceEntry("entity/$name") {
+                it.entityShader
             }
         }
 
         fun texture(name: String): ResourceEntry<ITexture> {
-            return ResourceEntry("tileEntity/$name") {
+            return ResourceEntry("entity/$name") {
                 it.texture
             }
         }

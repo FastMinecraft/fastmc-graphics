@@ -52,24 +52,6 @@ val Minecraft.renderViewEntity: Entity?
 val World.loadedTileEntityList: List<TileEntity>
     get() = this.blockEntities
 
-val Entity.lastTickPosX: Double
-    get() = this.prevX
-
-val Entity.lastTickPosY: Double
-    get() = this.prevY
-
-val Entity.lastTickPosZ: Double
-    get() = this.prevZ
-
-val Entity.posX: Double
-    get() = this.x
-
-val Entity.posY: Double
-    get() = this.y
-
-val Entity.posZ: Double
-    get() = this.z
-
 typealias Minecraft = MinecraftClient
 typealias BlockChest = ChestBlock
 
