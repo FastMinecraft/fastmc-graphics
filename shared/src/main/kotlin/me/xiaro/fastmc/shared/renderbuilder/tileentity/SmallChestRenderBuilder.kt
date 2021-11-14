@@ -1,11 +1,10 @@
-package me.xiaro.fastmc.shared.tileentity
+package me.xiaro.fastmc.shared.renderbuilder.tileentity
 
 import me.xiaro.fastmc.shared.model.Model
 import me.xiaro.fastmc.shared.opengl.*
+import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.xiaro.fastmc.shared.resource.ResourceEntry
 import me.xiaro.fastmc.shared.texture.ITexture
-import me.xiaro.fastmc.shared.tileentity.info.IChestInfo
-import java.nio.ByteBuffer
 import java.util.*
 
 open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) {
@@ -37,25 +36,11 @@ open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) 
         buffer.putShort((info.lidAngle * 65535.0f).toInt().toShort())
     }
 
-    override fun uploadBuffer(buffer: ByteBuffer): TileEntityRenderBuilder.Renderer {
-        return upload(buffer, model.get(resourceManager), texture)
-    }
+    override val model: ResourceEntry<Model> get() = Companion.model
+    override val shader: ResourceEntry<Shader> get() = Companion.shader
+    override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
-    protected fun upload(
-        buffer: ByteBuffer,
-        model: Model,
-        texture: ResourceEntry<ITexture>
-    ): TileEntityRenderBuilder.Renderer {
-        val shader = shader.get(resourceManager)
-
-        val vaoID = glGenVertexArrays()
-        val vboID = glGenBuffers()
-
-        glBindBuffer(GL_ARRAY_BUFFER, vboID)
-        glBufferData(GL_ARRAY_BUFFER, buffer, GL_STREAM_DRAW)
-
-        glBindVertexArray(vaoID)
-
+    override fun setupAttribute() {
         glVertexAttribPointer(4, 3, GL_FLOAT, false, 20, 0L) // 12
         glVertexAttribPointer(5, 2, GL_UNSIGNED_BYTE, true, 20, 12L) // 2
 
@@ -71,32 +56,12 @@ open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) 
         glVertexAttribDivisor(8, 1)
         glVertexAttribDivisor(9, 1)
 
-        model.attachVBO()
-
         glEnableVertexAttribArray(4)
         glEnableVertexAttribArray(5)
         glEnableVertexAttribArray(6)
         glEnableVertexAttribArray(7)
         glEnableVertexAttribArray(8)
         glEnableVertexAttribArray(9)
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
-        glBindVertexArray(0)
-
-        return Renderer(renderInfo(shader, vaoID, vboID, model), texture)
-    }
-
-    private class Renderer(
-        renderInfo: RenderInfo,
-        private val texture: ResourceEntry<ITexture>
-    ) : TileEntityRenderBuilder.Renderer(renderInfo) {
-        override fun preRender() {
-            texture.get(resourceManager).bind()
-        }
-
-        override fun postRender() {
-
-        }
     }
 
     protected companion object {

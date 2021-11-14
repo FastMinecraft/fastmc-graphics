@@ -1,6 +1,7 @@
 package me.xiaro.fastmc.mixin.core.render;
 
 import me.xiaro.fastmc.AdaptersKt;
+import me.xiaro.fastmc.EntityRenderer;
 import me.xiaro.fastmc.FastMcMod;
 import me.xiaro.fastmc.TileEntityRenderer;
 import me.xiaro.fastmc.resource.ResourceManager;
@@ -22,7 +23,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -81,8 +81,8 @@ public abstract class MixinWorldRenderer {
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractWorldRenderer worldRenderer = new me.xiaro.fastmc.WorldRenderer(mc, resourceManager);
 
-        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
 
-        FastMcMod.INSTANCE.reloadEntityRenderer(resourceManager, worldRenderer);
+        FastMcMod.INSTANCE.reloadRenderer(resourceManager, worldRenderer);
     }
 }

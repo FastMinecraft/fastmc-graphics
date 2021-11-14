@@ -1,7 +1,6 @@
-package me.xiaro.fastmc.shared.entity
+package me.xiaro.fastmc.shared.renderbuilder
 
 import me.xiaro.fastmc.FastMcMod
-import me.xiaro.fastmc.shared.entity.info.IEntityInfo
 import me.xiaro.fastmc.shared.model.Model
 import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.renderer.IRenderer
@@ -12,7 +11,7 @@ import me.xiaro.fastmc.shared.util.BufferUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 
-abstract class EntityRenderBuilder<T : IEntityInfo<*>>(private val vertexSize: Int) {
+abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
     fun init(renderer: IRenderer, size: Int) {
         check(size0 == -1)
         check(resourceManager0 == null)
@@ -76,54 +75,40 @@ abstract class EntityRenderBuilder<T : IEntityInfo<*>>(private val vertexSize: I
         return uploadBuffer(buffer)
     }
 
-    protected abstract fun uploadBuffer(buffer: ByteBuffer): Renderer
+    protected open val model: ResourceEntry<Model> get() = throw UnsupportedOperationException()
+    protected open val shader: ResourceEntry<Shader> get() = throw UnsupportedOperationException()
+    protected open val texture: ResourceEntry<ITexture> get() = throw UnsupportedOperationException()
+
+    protected open fun setupAttribute() {
+
+    }
+
+    protected open fun uploadBuffer(buffer: ByteBuffer): Renderer {
+        val shader = shader.get(resourceManager)
+        val model = model.get(resourceManager)
+
+        val vaoID = glGenVertexArrays()
+        val vboID = glGenBuffers()
+
+        glBindBuffer(GL_ARRAY_BUFFER, vboID)
+        glBufferData(GL_ARRAY_BUFFER, buffer, GL_STREAM_DRAW)
+
+        glBindVertexArray(vaoID)
+
+        setupAttribute()
+
+        model.attachVBO()
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glBindVertexArray(0)
+
+        return SingleTextureRenderer(renderInfo(shader, vaoID, vboID, model), texture)
+    }
 
     abstract fun add(info: T)
 
-    protected fun putPos(info: T) {
-        buffer.putFloat((info.prevX - builtPosX).toFloat())
-        buffer.putFloat((info.prevY - builtPosY).toFloat())
-        buffer.putFloat((info.prevZ - builtPosZ).toFloat())
-        buffer.putFloat((info.x - builtPosX).toFloat())
-        buffer.putFloat((info.y - builtPosY).toFloat())
-        buffer.putFloat((info.z - builtPosZ).toFloat())
-    }
-
-    protected fun putRotations(info: T) {
-        buffer.putFloat(info.rotationYaw)
-        buffer.putFloat(info.rotationPitch)
-        buffer.putFloat(info.prevRotationYaw)
-        buffer.putFloat(info.prevRotationPitch)
-    }
-
-    protected fun putLightMapUV(info: T) {
-        val lightMapUV = info.lightMapUV
-        buffer.put((lightMapUV and 0xFF).toByte())
-        buffer.put((lightMapUV shr 16 and 0xFF).toByte())
-    }
-
     protected fun renderInfo(shader: Shader, vaoID: Int, vboID: Int, model: Model): RenderInfo {
         return RenderInfo(resourceManager, shader, vaoID, vboID, model.modelSize, size, builtPosX, builtPosY, builtPosZ)
-    }
-
-    protected companion object {
-        fun model(name: String): ResourceEntry<Model> {
-            return ResourceEntry("entity/$name") {
-                it.model
-            }
-        }
-
-        fun shader(name: String): ResourceEntry<Shader> {
-            return ResourceEntry("entity/$name") {
-                it.entityShader
-            }
-        }
-
-        fun texture(name: String): ResourceEntry<ITexture> {
-            return ResourceEntry("entity/$name") {
-                it.texture
-            }
-        }
     }
 
     open class Renderer(
@@ -155,6 +140,15 @@ abstract class EntityRenderBuilder<T : IEntityInfo<*>>(private val vertexSize: I
             glDeleteVertexArrays(vaoID)
             glDeleteBuffers(vboID)
             glDeleteBuffers(vboID)
+        }
+    }
+
+    class SingleTextureRenderer(
+        renderInfo: RenderInfo,
+        private val texture: ResourceEntry<ITexture>
+    ) : Renderer(renderInfo) {
+        override fun preRender() {
+            texture.get(resourceManager).bind()
         }
     }
 

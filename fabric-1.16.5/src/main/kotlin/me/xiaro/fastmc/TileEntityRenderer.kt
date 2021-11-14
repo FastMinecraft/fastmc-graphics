@@ -4,9 +4,10 @@ import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
-import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
+import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
-import me.xiaro.fastmc.shared.tileentity.*
+import me.xiaro.fastmc.shared.renderbuilder.tileentity.*
+import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.xiaro.fastmc.tileentity.BedInfo
 import me.xiaro.fastmc.tileentity.ChestInfo
 import me.xiaro.fastmc.tileentity.EnderChestInfo
@@ -25,11 +26,10 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         register(EnderChestInfo::class.java, EnderChestRenderBuilder::class.java)
         register(ShulkerBoxInfo::class.java, ShulkerBoxRenderBuilder::class.java)
 
-        addRenderEntry(ChestRenderEntry())
+        register(ChestRenderEntry())
     }
 
     override fun onPostTick() {
-//        return
         renderEntryList.forEach {
             it.clear()
         }
@@ -51,7 +51,6 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     }
 
     override fun render() {
-//        return
         mc.profiler.startSection("render")
 
         mc.gameRenderer.lightmapTextureManager.enable()
@@ -66,8 +65,8 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     }
 
     private inner class ChestRenderEntry : AbstractRenderEntry<TileEntityChest, ChestInfo>() {
-        private var smallChestRenderer: TileEntityRenderBuilder.Renderer? = null
-        private var largeChestRenderer: TileEntityRenderBuilder.Renderer? = null
+        private var smallChestRenderer: AbstractRenderBuilder.Renderer? = null
+        private var largeChestRenderer: AbstractRenderBuilder.Renderer? = null
 
         private val smallChest = ArrayList<TileEntityChest>()
         private val largeChest = ArrayList<TileEntityChest>()
@@ -87,25 +86,25 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             }
         }
 
-        override fun add(tileEntity: TileEntityChest) {
-            val blockState = tileEntity.blockState
+        override fun add(entity: TileEntityChest) {
+            val blockState = entity.blockState
             val chestType = blockState.getPropertyOrDefault(BlockChest.CHEST_TYPE, ChestType.SINGLE)
 
             when (chestType) {
                 ChestType.LEFT -> {
                     if (blockState.getPropertyOrDefault(BlockChest.FACING, Direction.SOUTH).horizontal >= 2) {
-                        largeChest.add(tileEntity)
+                        largeChest.add(entity)
                         largeDirty = true
                     }
                 }
                 ChestType.RIGHT -> {
                     if (blockState.getPropertyOrDefault(BlockChest.FACING, Direction.SOUTH).horizontal < 2) {
-                        largeChest.add(tileEntity)
+                        largeChest.add(entity)
                         largeDirty = true
                     }
                 }
                 else -> {
-                    smallChest.add(tileEntity)
+                    smallChest.add(entity)
                     smallDirty = true
                 }
             }
@@ -117,9 +116,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             }
         }
 
-        override fun remove(tileEntity: TileEntityChest): Boolean {
-            val smallRemoved = smallChest.remove(tileEntity)
-            val largeRemoved = largeChest.remove(tileEntity)
+        override fun remove(entity: TileEntityChest): Boolean {
+            val smallRemoved = smallChest.remove(entity)
+            val largeRemoved = largeChest.remove(entity)
             smallDirty = smallRemoved || smallDirty
             largeDirty = largeRemoved || largeDirty
             return smallRemoved || largeRemoved
@@ -142,7 +141,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                         builder.init(this@TileEntityRenderer, smallChest.size)
 
                         smallChest.forEach {
-                            entityInfo.tileEntity = it
+                            entityInfo.entity = it
                             builder.add(entityInfo)
                         }
 
@@ -168,7 +167,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                         builder.init(this@TileEntityRenderer, largeChest.size)
 
                         largeChest.forEach {
-                            entityInfo.tileEntity = it
+                            entityInfo.entity = it
                             builder.add(entityInfo)
                         }
 

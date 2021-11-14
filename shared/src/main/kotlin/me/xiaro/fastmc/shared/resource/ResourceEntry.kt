@@ -24,9 +24,9 @@ interface ResourceEntry<T : Resource> {
 
             return if (source !== this.source) {
                 this.source = source
-                source.resourceMap[name]!!.also { value = it }
+                source[name].also { value = it }
             } else {
-                value ?: source.resourceMap[name]!!.also { value = it }
+                value ?: source[name].also { value = it }
             }
         }
 

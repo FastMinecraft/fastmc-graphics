@@ -8,7 +8,7 @@ abstract class Model(override val resourceName: String, private val textureSizeX
     private var vboID = 0
     var modelSize = 0; private set
 
-    fun init() {
+    private fun init0() {
         val builder = ModelBuilder(0, textureSizeX, textureSizeZ)
         builder.buildModel()
 
@@ -38,5 +38,12 @@ abstract class Model(override val resourceName: String, private val textureSizeX
 
     override fun destroy() {
         glDeleteBuffers(vboID)
+    }
+
+    companion object {
+        fun <T : Model> T.init() :T {
+            this.init0()
+            return this
+        }
     }
 }

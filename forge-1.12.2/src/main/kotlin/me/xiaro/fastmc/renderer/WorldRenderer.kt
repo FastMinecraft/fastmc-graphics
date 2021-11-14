@@ -15,20 +15,23 @@ import org.lwjgl.opengl.GL11.*
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
     override fun onPostTick() {
-        mc.profiler.startSection("tileEntityRenderer")
+        mc.profiler.startSection("worldRenderer")
 
+        mc.profiler.startSection("entity")
+        entityRenderer.onPostTick()
+        mc.profiler.endStartSection("tileEntity")
         tileEntityRenderer.onPostTick()
+        mc.profiler.endSection()
 
         mc.profiler.endSection()
     }
 
     override fun preRender(partialTicks: Float) {
-        GlStateManager.tryBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
         glUseProgramForce(0)
 
         MatrixUtils.putMatrix(projectionMatrix)
 
-        resourceManager.tileEntityShader.resources.forEach {
+        resourceManager.entityShader.resources.forEach {
             it.bind()
             glUniform1f(it.partialTicksUniform, partialTicks)
             it.updateProjectionMatrix()

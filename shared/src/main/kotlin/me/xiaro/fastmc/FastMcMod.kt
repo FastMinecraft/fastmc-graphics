@@ -35,7 +35,10 @@ object FastMcMod {
         isInitialized = true
     }
 
-    fun reloadEntityRenderer(resourceManager: IResourceManager, entityRenderer: AbstractWorldRenderer) {
+    fun reloadRenderer(
+        resourceManager: IResourceManager,
+        entityRenderer: AbstractWorldRenderer
+    ) {
         if (isInitialized) {
             this.resourceManager.destroy()
         }

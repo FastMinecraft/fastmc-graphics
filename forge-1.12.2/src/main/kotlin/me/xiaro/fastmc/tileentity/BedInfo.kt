@@ -1,13 +1,13 @@
 package me.xiaro.fastmc.tileentity
 
-import me.xiaro.fastmc.shared.tileentity.info.IBedInfo
+import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IBedInfo
 import net.minecraft.block.BlockBed
 import net.minecraft.tileentity.TileEntityBed
 
 class BedInfo : HDirectionalTileEntityInfo<TileEntityBed>(BlockBed.FACING), IBedInfo<TileEntityBed> {
     override val color: Int
-        get() = tileEntity.color.metadata
+        get() = entity.color.metadata
 
     override val isHead: Boolean
-        get() = if (tileEntity.hasWorld()) tileEntity.isHeadPiece else true
+        get() = if (entity.hasWorld()) entity.isHeadPiece else true
 }

@@ -1,6 +1,9 @@
-package me.xiaro.fastmc.shared.tileentity
+package me.xiaro.fastmc.shared.renderbuilder.tileentity
 
-import me.xiaro.fastmc.shared.tileentity.info.IChestInfo
+import me.xiaro.fastmc.shared.model.Model
+import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
+import me.xiaro.fastmc.shared.resource.ResourceEntry
+import me.xiaro.fastmc.shared.texture.ITexture
 import me.xiaro.fastmc.shared.util.isOdd
 import java.nio.ByteBuffer
 
@@ -35,9 +38,9 @@ class LargeChestRenderBuilder : SmallChestRenderBuilder() {
         buffer.putShort((info.lidAngle * 65535.0f).toInt().toShort())
     }
 
-    override fun uploadBuffer(buffer: ByteBuffer): TileEntityRenderBuilder.Renderer {
-        return upload(buffer, model.get(resourceManager), texture)
-    }
+    override val model: ResourceEntry<Model> get() = Companion.model
+    override val shader: ResourceEntry<Shader> get() = SmallChestRenderBuilder.shader
+    override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
     private companion object {
         val model = model("LargeChest")

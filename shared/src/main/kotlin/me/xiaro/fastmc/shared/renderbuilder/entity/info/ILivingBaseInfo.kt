@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.shared.entity.info
+package me.xiaro.fastmc.shared.renderbuilder.entity.info
 
 interface ILivingBaseInfo<E> : IEntityInfo<E> {
     val rotationYawHead: Float

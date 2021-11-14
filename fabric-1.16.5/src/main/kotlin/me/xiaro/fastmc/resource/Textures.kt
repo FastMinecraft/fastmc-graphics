@@ -10,7 +10,6 @@ import net.minecraft.client.MinecraftClient
 import net.minecraft.util.DyeColor
 import org.joml.Matrix4f
 import java.awt.image.BufferedImage
-import java.io.File
 import java.text.NumberFormat
 import javax.imageio.ImageIO
 
@@ -80,10 +79,7 @@ fun bedTexture(mc: MinecraftClient): ITexture {
         BedTexture.vAll(resourceLocation.toBufferedImage(mc))
     }
 
-    val image = TextureUtils.combineColoredTextures(images)
-    ImageIO.write(image, "png", File("D:/out.png"))
-
-    return DefaultTexture("tileEntity/Bed", image)
+    return DefaultTexture("tileEntity/Bed", TextureUtils.combineColoredTextures(images))
 }
 
 fun shulkerTexture(mc: MinecraftClient): ITexture {

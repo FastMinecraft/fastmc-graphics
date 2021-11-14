@@ -2,6 +2,7 @@ package me.xiaro.fastmc.mixin.core;
 
 import me.xiaro.fastmc.FastMcMod;
 import me.xiaro.fastmc.GLWrapper;
+import me.xiaro.fastmc.renderer.EntityRenderer;
 import me.xiaro.fastmc.renderer.FontRendererWrapper;
 import me.xiaro.fastmc.renderer.TileEntityRenderer;
 import me.xiaro.fastmc.renderer.WorldRenderer;
@@ -29,7 +30,7 @@ public class MixinMinecraft {
         AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
         IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
 
-        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
         fontRenderer.getWrapped().setUnicode(mc.gameSettings.forceUnicodeFont);
 
         FastMcMod.INSTANCE.init(resourceManager, worldRenderer, fontRenderer);
@@ -46,7 +47,7 @@ public class MixinMinecraft {
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
 
-        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
 
         FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer);
     }

@@ -3,9 +3,10 @@ package me.xiaro.fastmc.renderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
-import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
+import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
-import me.xiaro.fastmc.shared.tileentity.*
+import me.xiaro.fastmc.shared.renderbuilder.tileentity.*
+import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.xiaro.fastmc.tileentity.BedInfo
 import me.xiaro.fastmc.tileentity.ChestInfo
 import me.xiaro.fastmc.tileentity.EnderChestInfo
@@ -16,6 +17,7 @@ import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.tileentity.TileEntityChest
 import org.joml.Matrix4f
+import org.lwjgl.opengl.GL11.*
 
 class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
     AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
@@ -24,7 +26,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         register(EnderChestInfo::class.java, EnderChestRenderBuilder::class.java)
         register(ShulkerBoxInfo::class.java, ShulkerBoxRenderBuilder::class.java)
 
-        addRenderEntry(ChestRenderEntry())
+        register(ChestRenderEntry())
     }
 
     override fun onPostTick() {
@@ -52,14 +54,15 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         mc.profiler.startSection("render")
 
         GlStateManager.disableCull()
+        GlStateManager.tryBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
         super.render()
 
         mc.profiler.endSection()
     }
 
     private inner class ChestRenderEntry : AbstractRenderEntry<TileEntityChest, ChestInfo>() {
-        private var smallChestRenderer: TileEntityRenderBuilder.Renderer? = null
-        private var largeChestRenderer: TileEntityRenderBuilder.Renderer? = null
+        private var smallChestRenderer: AbstractRenderBuilder.Renderer? = null
+        private var largeChestRenderer: AbstractRenderBuilder.Renderer? = null
 
         private val smallChest = ArrayList<TileEntityChest>()
         private val largeChest = ArrayList<TileEntityChest>()
@@ -79,27 +82,27 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             }
         }
 
-        override fun add(tileEntity: TileEntityChest) {
-            if (tileEntity.hasWorld()) {
-                val block = tileEntity.blockType
+        override fun add(entity: TileEntityChest) {
+            if (entity.hasWorld()) {
+                val block = entity.blockType
 
-                if (block is BlockChest && tileEntity.blockMetadata == 0) {
+                if (block is BlockChest && entity.blockMetadata == 0) {
                     block.checkForSurroundingChests(
-                        tileEntity.world,
-                        tileEntity.pos,
-                        tileEntity.world.getBlockState(tileEntity.pos)
+                        entity.world,
+                        entity.pos,
+                        entity.world.getBlockState(entity.pos)
                     )
                 }
             }
 
-            tileEntity.checkForAdjacentChests()
+            entity.checkForAdjacentChests()
 
-            if (tileEntity.adjacentChestXNeg == null && tileEntity.adjacentChestZNeg == null) {
-                if (tileEntity.adjacentChestXPos == null && tileEntity.adjacentChestZPos == null) {
-                    smallChest.add(tileEntity)
+            if (entity.adjacentChestXNeg == null && entity.adjacentChestZNeg == null) {
+                if (entity.adjacentChestXPos == null && entity.adjacentChestZPos == null) {
+                    smallChest.add(entity)
                     smallDirty = true
                 } else {
-                    largeChest.add(tileEntity)
+                    largeChest.add(entity)
                     largeDirty = true
                 }
             }
@@ -133,9 +136,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             }
         }
 
-        override fun remove(tileEntity: TileEntityChest): Boolean {
-            val smallRemoved = smallChest.remove(tileEntity)
-            val largeRemoved = largeChest.remove(tileEntity)
+        override fun remove(entity: TileEntityChest): Boolean {
+            val smallRemoved = smallChest.remove(entity)
+            val largeRemoved = largeChest.remove(entity)
             smallDirty = smallRemoved || smallDirty
             largeDirty = largeRemoved || largeDirty
             return smallRemoved || largeRemoved
@@ -158,7 +161,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                         builder.init(this@TileEntityRenderer, smallChest.size)
 
                         smallChest.forEach {
-                            entityInfo.tileEntity = it
+                            entityInfo.entity = it
                             builder.add(entityInfo)
                         }
 
@@ -184,7 +187,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                         builder.init(this@TileEntityRenderer, largeChest.size)
 
                         largeChest.forEach {
-                            entityInfo.tileEntity = it
+                            entityInfo.entity = it
                             builder.add(entityInfo)
                         }
 

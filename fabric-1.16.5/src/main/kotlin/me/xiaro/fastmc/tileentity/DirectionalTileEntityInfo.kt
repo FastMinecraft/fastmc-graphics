@@ -1,7 +1,7 @@
 package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.TileEntity
-import me.xiaro.fastmc.shared.tileentity.info.IDirectionalTileEntityInfo
+import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IDirectionalTileEntityInfo
 import me.xiaro.fastmc.util.getPropertyOrDefault
 import net.minecraft.state.property.EnumProperty
 import net.minecraft.util.math.Direction

@@ -1,7 +1,8 @@
-package me.xiaro.fastmc.shared.entity.info
+package me.xiaro.fastmc.shared.renderbuilder.entity.info
 
-interface IEntityInfo<E> {
-    var entity: E
+import me.xiaro.fastmc.shared.renderbuilder.IInfo
+
+interface IEntityInfo<E> : IInfo<E> {
 
     val lightMapUV: Int
 

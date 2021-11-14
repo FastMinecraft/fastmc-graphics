@@ -1,4 +1,4 @@
-package me.xiaro.fastmc.shared.tileentity.info
+package me.xiaro.fastmc.shared.renderbuilder.tileentity.info
 
 interface IHDirectionalTileEntityInfo<E> : ITileEntityInfo<E> {
     val hDirection: Int

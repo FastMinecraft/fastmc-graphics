@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.renderer
 
-import me.xiaro.fastmc.resource.toBufferedImage
+import me.xiaro.fastmc.resource.readImage
 import me.xiaro.fastmc.shared.font.FontRenderer
 import me.xiaro.fastmc.shared.font.IFontRendererWrapper
 import me.xiaro.fastmc.shared.opengl.glUseProgramForce
@@ -16,11 +16,11 @@ class FontRendererWrapper(mc: Minecraft) : IFontRendererWrapper {
     override val wrapped: FontRenderer
 
     init {
-        val asciiFont = ResourceLocation("textures/font/ascii.png").toBufferedImage(mc)
+        val asciiFont = ResourceLocation("textures/font/ascii.png").readImage(mc)
 
         val unicodeFonts = Array(256) {
             runCatching {
-                ResourceLocation("textures/font/unicode_page_%02x.png".format(it)).toBufferedImage(mc)
+                ResourceLocation("textures/font/unicode_page_%02x.png".format(it)).readImage(mc)
             }.getOrNull()
         }
 

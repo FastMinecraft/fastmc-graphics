@@ -9,12 +9,9 @@ open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: In
     private val childModels = ArrayList<ChildModelBuilder>()
 
     var vertexSize = 0; protected set
-    inline fun childModel(block: ChildModelBuilder.() -> Unit) {
-        childModel(0.0f, 0.0f, block)
-    }
 
-    inline fun childModel(textureOffsetX: Float, textureOffsetY: Float, block: ChildModelBuilder.() -> Unit) {
-        childModel(ChildModelBuilder(this, textureOffsetX, textureOffsetY).apply(block))
+    inline fun childModel(block: ChildModelBuilder.() -> Unit) {
+        childModel(ChildModelBuilder(this).apply(block))
     }
 
     fun childModel(childModelBuilder: ChildModelBuilder) {
@@ -37,15 +34,27 @@ open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: In
 }
 
 @Suppress("NOTHING_TO_INLINE")
-class ChildModelBuilder(parent: ModelBuilder, private val textureOffsetX: Float, private val textureOffsetY: Float) :
-    ModelBuilder(parent.idCounter++, parent.textureSizeX, parent.textureSizeY) {
+class ChildModelBuilder(parent: ModelBuilder) : ModelBuilder(parent.idCounter++, parent.textureSizeX, parent.textureSizeY) {
     override var idCounter: Int by parent::idCounter
 
     private val boxList = ArrayList<Box>()
 
-    fun addBox(offsetX: Float, offsetY: Float, offsetZ: Float, sizeX: Float, sizeY: Float, sizeZ: Float) {
-        boxList.add(Box(offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ))
+    fun addBox(
+        textureOffsetX: Float,
+        textureOffsetY: Float,
+        offsetX: Float,
+        offsetY: Float,
+        offsetZ: Float,
+        sizeX: Float,
+        sizeY: Float,
+        sizeZ: Float
+    ) {
+        boxList.add(Box(textureOffsetX, textureOffsetY, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ))
         vertexSize += 36
+    }
+
+    fun textureOffset(textureOffsetX: Float, textureOffsetY: Float, block: TextureOffsetGroup.() -> Unit) {
+        TextureOffsetGroup(textureOffsetX, textureOffsetY).apply(block)
     }
 
     override fun build(vboBuffer: ByteBuffer) {
@@ -60,7 +69,22 @@ class ChildModelBuilder(parent: ModelBuilder, private val textureOffsetX: Float,
         }
     }
 
+    inner class TextureOffsetGroup(private val textureOffsetX: Float, private val textureOffsetY: Float) {
+        fun addBox(
+            offsetX: Float,
+            offsetY: Float,
+            offsetZ: Float,
+            sizeX: Float,
+            sizeY: Float,
+            sizeZ: Float
+        ) {
+            this@ChildModelBuilder.addBox(textureOffsetX, textureOffsetY, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ)
+        }
+    }
+
     private inner class Box(
+        private val textureOffsetX: Float,
+        private val textureOffsetY: Float,
         offsetX: Float,
         offsetY: Float,
         offsetZ: Float,

@@ -28,7 +28,7 @@ public class MixinMinecraftClient {
         AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
         IFontRendererWrapper fontRenderer = new FontRendererWrapper(mc);
 
-        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
         fontRenderer.getWrapped().setUnicode(mc.options.forceUnicodeFont);
 
         FastMcMod.INSTANCE.init(resourceManager, worldRenderer, fontRenderer);
@@ -45,7 +45,7 @@ public class MixinMinecraftClient {
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);
 
-        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer));
+        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
 
         FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer);
     }

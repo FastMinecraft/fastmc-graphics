@@ -26,7 +26,7 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
 
         MatrixUtils.putMatrix(projectionMatrix)
 
-        resourceManager.tileEntityShader.resources.forEach {
+        resourceManager.entityShader.resources.forEach {
             it.bind()
             glUniform1f(it.partialTicksUniform, partialTicks)
             it.updateProjectionMatrix()
