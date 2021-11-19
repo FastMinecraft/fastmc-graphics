@@ -25,15 +25,7 @@ abstract class Model(override val resourceName: String, private val textureSizeX
     fun attachVBO() {
         glBindBuffer(GL_ARRAY_BUFFER, vboID)
 
-        glVertexAttribPointer(0, 3, GL_FLOAT, false, 20, 0L) // 12
-        glVertexAttribPointer(1, 2, GL_UNSIGNED_SHORT, true, 20, 12L) // 4
-        glVertexAttribPointer(2, 3, GL_BYTE, false, 20, 16L) // 3
-        glVertexAttribIPointer(3, 1, GL_UNSIGNED_BYTE, 20, 19L) // 1
-
-        glEnableVertexAttribArray(0)
-        glEnableVertexAttribArray(1)
-        glEnableVertexAttribArray(2)
-        glEnableVertexAttribArray(3)
+        vertexAttribute.apply()
     }
 
     override fun destroy() {
@@ -44,6 +36,13 @@ abstract class Model(override val resourceName: String, private val textureSizeX
         fun <T : Model> T.init() :T {
             this.init0()
             return this
+        }
+
+        private val vertexAttribute = buildAttribute(20) {
+            float(0, 3, GLDataType.GL_FLOAT, false)
+            float(0, 2, GLDataType.GL_UNSIGNED_SHORT, false)
+            float(0, 3, GLDataType.GL_BYTE, false)
+            int(0, 3, GLDataType.GL_UNSIGNED_BYTE)
         }
     }
 }

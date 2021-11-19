@@ -5,7 +5,7 @@ import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IBedInfo
 import me.xiaro.fastmc.shared.resource.ResourceEntry
 import me.xiaro.fastmc.shared.texture.ITexture
-import java.nio.ByteBuffer
+import me.xiaro.fastmc.shared.util.skip
 
 class BedRenderBuilder : TileEntityRenderBuilder<IBedInfo<*>>(20) {
     override fun add(info: IBedInfo<*>) {
@@ -15,32 +15,20 @@ class BedRenderBuilder : TileEntityRenderBuilder<IBedInfo<*>>(20) {
 
         buffer.put(info.color.toByte())
         buffer.put(if (info.isHead) 1 else 0)
-        buffer.position(buffer.position() + 3)
+        buffer.skip(3)
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model
     override val shader: ResourceEntry<Shader> get() = Companion.shader
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
-    override fun setupAttribute() {
-        glEnableVertexAttribArray(4)
-        glEnableVertexAttribArray(5)
-        glEnableVertexAttribArray(6)
-        glEnableVertexAttribArray(7)
-        glEnableVertexAttribArray(8)
+    override fun VertexAttribute.Builder.setupAttribute() {
+        float(4, 3, GLDataType.GL_FLOAT, false, 1) // 12
+        float(5, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1) // 2
 
-        glVertexAttribPointer(4, 3, GL_FLOAT, false, 20, 0L) // 12
-        glVertexAttribPointer(5, 2, GL_UNSIGNED_BYTE, true, 20, 12L) // 2
-
-        glVertexAttribIPointer(6, 1, GL_BYTE, 20, 14L) // 1
-        glVertexAttribIPointer(7, 1, GL_UNSIGNED_BYTE, 20, 15L) // 1
-        glVertexAttribIPointer(8, 1, GL_UNSIGNED_BYTE, 20, 16L) // 1
-
-        glVertexAttribDivisor(4, 1)
-        glVertexAttribDivisor(5, 1)
-        glVertexAttribDivisor(6, 1)
-        glVertexAttribDivisor(7, 1)
-        glVertexAttribDivisor(8, 1)
+        int(6, 1, GLDataType.GL_BYTE, 1) // 1
+        int(7, 1, GLDataType.GL_UNSIGNED_BYTE, 1) // 1
+        int(8, 1, GLDataType.GL_UNSIGNED_BYTE, 1) // 1
     }
 
     private companion object {

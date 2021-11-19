@@ -40,28 +40,14 @@ open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) 
     override val shader: ResourceEntry<Shader> get() = Companion.shader
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
-    override fun setupAttribute() {
-        glVertexAttribPointer(4, 3, GL_FLOAT, false, 20, 0L) // 12
-        glVertexAttribPointer(5, 2, GL_UNSIGNED_BYTE, true, 20, 12L) // 2
+    override fun VertexAttribute.Builder.setupAttribute() {
+        float(4, 3, GLDataType.GL_FLOAT, false, 1) // 12
+        float(5, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1) // 2
 
-        glVertexAttribIPointer(6, 1, GL_BYTE, 20, 14L) // 1
-        glVertexAttribIPointer(7, 1, GL_UNSIGNED_BYTE, 20, 15L) // 1
-        glVertexAttribPointer(8, 1, GL_UNSIGNED_SHORT, true, 20, 16L) // 2
-        glVertexAttribPointer(9, 1, GL_UNSIGNED_SHORT, true, 20, 18L) // 2
-
-        glVertexAttribDivisor(4, 1)
-        glVertexAttribDivisor(5, 1)
-        glVertexAttribDivisor(6, 1)
-        glVertexAttribDivisor(7, 1)
-        glVertexAttribDivisor(8, 1)
-        glVertexAttribDivisor(9, 1)
-
-        glEnableVertexAttribArray(4)
-        glEnableVertexAttribArray(5)
-        glEnableVertexAttribArray(6)
-        glEnableVertexAttribArray(7)
-        glEnableVertexAttribArray(8)
-        glEnableVertexAttribArray(9)
+        int(6, 1, GLDataType.GL_BYTE, 1) // 1
+        int(7, 1, GLDataType.GL_UNSIGNED_BYTE, 1) // 1
+        float(8, 1, GLDataType.GL_UNSIGNED_SHORT, true, 1) // 2
+        float(9, 1, GLDataType.GL_UNSIGNED_SHORT, true, 1) // 2
     }
 
     protected companion object {

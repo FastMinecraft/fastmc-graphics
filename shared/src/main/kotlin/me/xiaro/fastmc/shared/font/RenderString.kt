@@ -7,6 +7,7 @@ import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.util.BufferUtils
 import me.xiaro.fastmc.shared.util.ColorARGB
 import me.xiaro.fastmc.shared.util.collection.FastIntMap
+import me.xiaro.fastmc.shared.util.skip
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 
@@ -189,20 +190,9 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                 glBindBuffer(GL_ARRAY_BUFFER, vboID)
                 glBufferData(GL_ARRAY_BUFFER, vboBuffer, GL_STATIC_DRAW)
 
-                glVertexAttribPointer(0, 2, GL_FLOAT, false, 16, 0L)
-                glVertexAttribPointer(1, 2, GL_UNSIGNED_SHORT, true, 16, 8L)
-                glVertexAttribIPointer(2, 1, GL_BYTE, 16, 12L)
-                glVertexAttribPointer(3, 1, GL_UNSIGNED_BYTE, false, 16, 13L)
-                glVertexAttribPointer(4, 1, GL_UNSIGNED_BYTE, false, 16, 14L)
-
-                glEnableVertexAttribArray(0)
-                glEnableVertexAttribArray(1)
-                glEnableVertexAttribArray(2)
-                glEnableVertexAttribArray(3)
-                glEnableVertexAttribArray(4)
+                vertexAttribute.apply()
 
                 glBindBuffer(GL_ARRAY_BUFFER, 0)
-
                 glBindVertexArray(0)
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID)
@@ -234,7 +224,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(1)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
@@ -243,7 +233,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(0)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
@@ -257,7 +247,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(1)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
@@ -266,7 +256,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(0)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
@@ -280,7 +270,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(1)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
@@ -289,7 +279,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(0)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
@@ -303,7 +293,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(1)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
 
                     vboBuffer.putFloat(posX)
                     vboBuffer.putFloat(posY)
@@ -312,7 +302,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     vboBuffer.put(color)
                     vboBuffer.put(overrideColor)
                     vboBuffer.put(0)
-                    vboBuffer.position(vboBuffer.position() + 1)
+                    vboBuffer.skip(1)
                 }
 
                 vboBuffer.flip()
@@ -349,6 +339,16 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
 
                 iboBuffer.flip()
                 return iboBuffer
+            }
+
+            private companion object {
+                val vertexAttribute = buildAttribute(16) {
+                    float(0, 2, GLDataType.GL_FLOAT, false)
+                    float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true)
+                    int(2, 1, GLDataType.GL_BYTE)
+                    float(3, 1, GLDataType.GL_UNSIGNED_BYTE, false)
+                    float(4, 1, GLDataType.GL_UNSIGNED_BYTE, false)
+                }
             }
         }
     }

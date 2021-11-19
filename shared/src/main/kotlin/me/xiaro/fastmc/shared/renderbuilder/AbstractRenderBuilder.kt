@@ -25,6 +25,8 @@ abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
         builtPosY0 = renderer.renderPosY
         builtPosZ0 = renderer.renderPosZ
         buffer0 = BufferUtils.byte(size * vertexSize)
+
+        vertexAttribute = buildAttribute(vertexSize) { setupAttribute() }
     }
 
     private var resourceManager0: IResourceManager? = null
@@ -75,11 +77,13 @@ abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
         return uploadBuffer(buffer)
     }
 
+    private lateinit var vertexAttribute: VertexAttribute
+
     protected open val model: ResourceEntry<Model> get() = throw UnsupportedOperationException()
     protected open val shader: ResourceEntry<Shader> get() = throw UnsupportedOperationException()
     protected open val texture: ResourceEntry<ITexture> get() = throw UnsupportedOperationException()
 
-    protected open fun setupAttribute() {
+    protected open fun VertexAttribute.Builder.setupAttribute() {
 
     }
 
@@ -95,7 +99,7 @@ abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
 
         glBindVertexArray(vaoID)
 
-        setupAttribute()
+        vertexAttribute.apply()
 
         model.attachVBO()
 

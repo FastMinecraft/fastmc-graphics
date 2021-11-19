@@ -9,18 +9,30 @@ uniform float alpha;
 uniform float partialTicks;
 
 layout(location = 0) in vec3 modelPosition;
-layout(location = 1) in vec2 vertUV;
-layout(location = 2) in vec3 vertNormal;
-layout(location = 3) in int vertGroupID;
+layout(location = 1) in vec2 modelUV;
+layout(location = 2) in vec3 modelNormal;
+layout(location = 3) in int modelGroup;
+
 
 layout(location = 4) in vec3 prevEntityPos;
 layout(location = 5) in vec3 entityPos;
+layout(location = 6) in vec2 vertLightMapUV;
+
+layout(location = 7) in vec3 prevRotations;
+layout(location = 8) in vec3 rotations;
+
+layout(location = 9) in vec2 prevLimbSwing;
+layout(location = 10) in vec2 limbSwing;
 
 out vec2 uv;
 flat out vec3 normal;
 out vec2 lightMapUV;
 
 const float angleMultiplier = 1.57079637050628662109375;
+const float pi = 3.14159265358979323846;
+const float toRadian = 0.01745329251994329576923690768489;
+
+const vec3 headRotationPoint = vec3(0.0, 1.25, 0.5);
 
 mat3 rotateX(mat3 matrix, float angle) {
     float sin = sin(angle);
@@ -119,14 +131,62 @@ mat3 rotateZ90(mat3 matrix, float angle) {
 }
 
 void main() {
-    vec3 position = modelPosition;
     vec3 renderPosition = mix(prevEntityPos, entityPos, partialTicks);
+    vec3 renderRotations = mix(prevRotations, rotations, partialTicks);
+    vec2 renderLimbSwing = mix(prevLimbSwing, limbSwing, partialTicks);
+    
+    vec3 position = modelPosition;
+    
     mat3 rotationMatrix = mat3(1.0);
+    rotationMatrix = rotateY(rotationMatrix, renderRotations.x * toRadian);
+    
+    switch(modelGroup) {
+        case 0:
+        case 1:
+            mat3 headMatrix = mat3(1.0);
+            headMatrix = rotateX(headMatrix, -renderRotations.z * toRadian);
+            headMatrix = rotateY(headMatrix, (renderRotations.y - renderRotations.x) * toRadian);
+
+            position -= headRotationPoint;
+            position *= headMatrix;
+            position += headRotationPoint;
+            break;
+        case 2:
+        case 3:
+            break;
+        default:
+            vec3 legOffset = vec3(0.0);
+            float legAngle = 0.0;
+
+            switch(modelGroup) {
+                case 4:
+                    legOffset = vec3(-0.25, 0.75, -0.4375);
+                    legAngle = cos(renderLimbSwing.x * 0.6662 + pi) * 1.4 * renderLimbSwing.y;
+                    break;
+                case 5:
+                    legOffset = vec3(0.25, 0.75, -0.4375);
+                    legAngle = cos(renderLimbSwing.x * 0.6662) * 1.4 * renderLimbSwing.y;
+                    break;
+                case 6:
+                    legOffset = vec3(-0.25, 0.75, 0.375);
+                    legAngle = cos(renderLimbSwing.x * 0.6662) * 1.4 * renderLimbSwing.y;
+                    break;
+                case 7:
+                    legOffset = vec3(0.25, 0.75, 0.375);
+                    legAngle = cos(renderLimbSwing.x * 0.6662 + pi) * 1.4 * renderLimbSwing.y;
+                    break;
+                default:
+                    break;
+            }
+
+            position -= legOffset;
+            position *= rotateX(mat3(1.0), legAngle);
+            position += legOffset;
+    }
 
     gl_Position = projection * modelView * vec4(position * rotationMatrix + (renderPosition + offset), 1.0);
 
-    uv = vertUV;
-    normal = vertNormal;
-//    lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;
-    lightMapUV = vec2(0.96875);
+    uv = modelUV;
+    normal = modelNormal * rotationMatrix;
+    lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;
 }

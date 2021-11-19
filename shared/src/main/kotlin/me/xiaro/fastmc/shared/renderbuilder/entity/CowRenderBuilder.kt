@@ -5,9 +5,9 @@ import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.renderbuilder.entity.info.ICowInfo
 import me.xiaro.fastmc.shared.resource.ResourceEntry
 import me.xiaro.fastmc.shared.texture.ITexture
-import java.nio.ByteBuffer
+import me.xiaro.fastmc.shared.util.skip
 
-class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(24) {
+class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
     override fun add(info: ICowInfo<*>) {
         buffer.putFloat((info.prevX + 2.0 - builtPosX).toFloat())
         buffer.putFloat((info.prevY - builtPosY).toFloat())
@@ -15,21 +15,40 @@ class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(24) {
         buffer.putFloat((info.x + 2.0 - builtPosX).toFloat())
         buffer.putFloat((info.y - builtPosY).toFloat())
         buffer.putFloat((info.z - builtPosZ).toFloat())
+
+        putLightMapUV(info)
+
+        buffer.putFloat(info.prevRenderYawOffset)
+        buffer.putFloat(info.prevRotationYawHead)
+        buffer.putFloat(info.prevRotationPitch)
+
+        buffer.putFloat(info.renderYawOffset)
+        buffer.putFloat(info.rotationYawHead)
+        buffer.putFloat(info.rotationPitch)
+
+        buffer.putFloat(info.limbSwing - info.limbSwingAmount)
+        buffer.putFloat(info.prevLimbSwingAmount)
+
+        buffer.putFloat(info.limbSwing)
+        buffer.putFloat(info.limbSwingAmount)
+
+        buffer.skip(2)
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model
     override val shader: ResourceEntry<Shader> get() = Companion.shader
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
-    override fun setupAttribute() {
-        glEnableVertexAttribArray(4)
-        glEnableVertexAttribArray(5)
+    override fun VertexAttribute.Builder.setupAttribute() {
+        float(4, 3, GLDataType.GL_FLOAT, false, 1)
+        float(4, 3, GLDataType.GL_FLOAT, false, 1)
+        float(4, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1)
 
-        glVertexAttribPointer(4, 3, GL_FLOAT, false, 24, 0L) // 12
-        glVertexAttribPointer(5, 3, GL_FLOAT, false, 24, 12L) // 2
+        float(4, 3, GLDataType.GL_FLOAT, false, 1)
+        float(4, 3, GLDataType.GL_FLOAT, false, 1)
 
-        glVertexAttribDivisor(4, 1)
-        glVertexAttribDivisor(5, 1)
+        float(4, 3, GLDataType.GL_FLOAT, false, 1)
+        float(4, 3, GLDataType.GL_FLOAT, false, 1)
     }
 
     private companion object {

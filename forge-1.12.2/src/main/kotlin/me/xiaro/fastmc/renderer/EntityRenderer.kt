@@ -7,6 +7,7 @@ import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.Entity
+import net.minecraft.entity.passive.EntityCow
 import org.lwjgl.opengl.GL11.*
 
 class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
