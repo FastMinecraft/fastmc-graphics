@@ -3,9 +3,7 @@ package me.xiaro.fastmc.entity
 import me.xiaro.fastmc.shared.renderbuilder.entity.info.IEntityInfo
 import net.minecraft.entity.Entity
 
-open class EntityInfo<E : Entity> : IEntityInfo<E> {
-    override lateinit var entity: E
-
+interface EntityInfo<E : Entity> : IEntityInfo<E> {
     override val lightMapUV: Int
         get() = if (entity.isBurning) 0xF000F0 else entity.brightnessForRender
 

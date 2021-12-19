@@ -48,7 +48,9 @@ class VertexAttribute private constructor(private val stride: Int, private val e
             glVertexAttribPointer(index, size, type, normalized, stride, pointer.toLong())
 
             glEnableVertexAttribArray(index)
-            if (divisor != 0) glVertexAttribDivisor(index, divisor)
+            if (divisor != 0) {
+                glVertexAttribDivisor(index, divisor)
+            }
         }
     }
 
@@ -64,7 +66,9 @@ class VertexAttribute private constructor(private val stride: Int, private val e
             glVertexAttribIPointer(index, size, type, stride, pointer.toLong())
 
             glEnableVertexAttribArray(index)
-            if (divisor != 0) glVertexAttribDivisor(index, divisor)
+            if (divisor != 0) {
+                glVertexAttribDivisor(index, divisor)
+            }
         }
     }
 }

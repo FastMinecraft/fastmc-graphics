@@ -13,6 +13,7 @@
     "render.MixinRenderGlobal",
     "render.MixinVisGraph",
     "world.MixinBlock",
+    "world.MixinChunk",
     "world.MixinWorld"
   ]
 }

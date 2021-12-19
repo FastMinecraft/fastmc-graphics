@@ -2,16 +2,14 @@ package me.xiaro.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.*
 import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
-import me.xiaro.fastmc.tileentity.BedInfo
 import me.xiaro.fastmc.tileentity.ChestInfo
-import me.xiaro.fastmc.tileentity.EnderChestInfo
-import me.xiaro.fastmc.tileentity.ShulkerBoxInfo
 import me.xiaro.fastmc.util.blockState
 import me.xiaro.fastmc.util.getPropertyOrDefault
 import net.minecraft.block.enums.ChestType
@@ -22,9 +20,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
 
     init {
-        register(BedInfo::class.java, BedRenderBuilder::class.java)
-        register(EnderChestInfo::class.java, EnderChestRenderBuilder::class.java)
-        register(ShulkerBoxInfo::class.java, ShulkerBoxRenderBuilder::class.java)
+        register(BedRenderBuilder::class.java)
+        register(EnderChestRenderBuilder::class.java)
+        register(ShulkerBoxRenderBuilder::class.java)
 
         register(ChestRenderEntry())
     }
@@ -134,7 +132,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     smallChestRenderer = null
                 } else {
                     smallDirty = false
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         val builder = SmallChestRenderBuilder()
                         val entityInfo = ChestInfo()
 
@@ -160,7 +158,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     largeDirty = false
                 } else {
                     largeDirty = false
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         val builder = LargeChestRenderBuilder()
                         val entityInfo = ChestInfo()
 

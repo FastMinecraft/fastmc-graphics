@@ -1,4 +1,4 @@
 package me.xiaro.fastmc.shared.renderbuilder.entity.info
 
-interface ICowInfo<E> : ILivingBaseInfo<E> {
+interface ICowInfo<E : Any> : ILivingBaseInfo<E> {
 }

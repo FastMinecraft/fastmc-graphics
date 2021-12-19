@@ -5,26 +5,27 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.xiaro.fastmc.shared.renderbuilder.IInfo
+import me.xiaro.fastmc.shared.util.ClassIDRegistry
+import me.xiaro.fastmc.shared.util.ITypeID
+import me.xiaro.fastmc.shared.util.collection.FastIntMap
 import org.joml.Matrix4f
 
-abstract class AbstractRenderer<TE : Any>(protected val worldRenderer: AbstractWorldRenderer) :
+abstract class AbstractRenderer<ET : Any>(protected val worldRenderer: AbstractWorldRenderer, val registry: ClassIDRegistry<Any>) :
     IRenderer by worldRenderer {
-    protected val renderEntryMap = HashMap<Class<out TE>, AbstractRenderEntry<TE, *>>()
-    protected val renderEntryList = ArrayList<AbstractRenderEntry<TE, *>>()
+    protected val renderEntryMap = FastIntMap<AbstractRenderEntry<ET, *>>()
+    protected val renderEntryList = ArrayList<AbstractRenderEntry<ET, *>>()
 
-    protected inline fun <reified E : TE, T : IInfo<E>> register(
-        infoClass: Class<T>,
-        builderClass: Class<out AbstractRenderBuilder<in T>>
-    ) {
+    protected inline fun <reified E : ET, reified B : AbstractRenderBuilder<out IInfo<*>>> register() {
         val entityClass = E::class.java
-        if (!renderEntryMap.containsKey(entityClass)) {
-            register(RenderEntry(infoClass, builderClass))
+        @Suppress("UNCHECKED_CAST")
+        if (!renderEntryMap.containsKey((registry as ClassIDRegistry<E>).get(entityClass))) {
+            register<E>(RenderEntry(B::class.java))
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    protected inline fun <reified E : TE> register(renderEntry: AbstractRenderEntry<out TE, out IInfo<E>>) {
-        renderEntryMap[E::class.java] = renderEntry as AbstractRenderEntry<TE, *>
+    protected inline fun <reified E : ET> register(renderEntry: AbstractRenderEntry<out ET, out IInfo<E>>) {
+        renderEntryMap[(registry as ClassIDRegistry<E>).get(E::class.java)] = renderEntry as AbstractRenderEntry<ET, *>
         renderEntryList.add(renderEntry)
     }
 
@@ -34,8 +35,8 @@ abstract class AbstractRenderer<TE : Any>(protected val worldRenderer: AbstractW
         }
     }
 
-    fun hasRenderer(entity: TE): Boolean {
-        return renderEntryMap.containsKey(entity.javaClass)
+    fun hasRenderer(entity: ET): Boolean {
+        return renderEntryMap.containsKey((entity as ITypeID).typeID)
     }
 
     abstract fun onPostTick()
@@ -65,7 +66,7 @@ abstract class AbstractRenderer<TE : Any>(protected val worldRenderer: AbstractW
         }
     }
 
-    protected abstract inner class AbstractRenderEntry<E : TE, T : IInfo<E>> {
+    protected abstract inner class AbstractRenderEntry<E : ET, T : IInfo<E>> {
         abstract fun clear()
 
         abstract fun add(entity: E)
@@ -81,8 +82,7 @@ abstract class AbstractRenderer<TE : Any>(protected val worldRenderer: AbstractW
         abstract fun destroyRenderer()
     }
 
-    protected inner class RenderEntry<E : TE, T : IInfo<E>>(
-        private val infoClass: Class<T>,
+    protected inner class RenderEntry<E : ET, T : IInfo<E>>(
         private val builderClass: Class<out AbstractRenderBuilder<in T>>,
     ) : AbstractRenderEntry<E, T>() {
         private var renderer: AbstractRenderBuilder.Renderer? = null
@@ -122,15 +122,14 @@ abstract class AbstractRenderer<TE : Any>(protected val worldRenderer: AbstractW
                 destroyRenderer()
             } else {
                 dirty = false
-                scope.launch {
+                scope.launch(Dispatchers.Default) {
                     val builder = builderClass.newInstance()
-                    val entityInfo = infoClass.newInstance()
 
                     builder.init(this@AbstractRenderer, entities.size)
 
                     entities.forEach {
-                        entityInfo.entity = it
-                        builder.add(entityInfo)
+                        @Suppress("UNCHECKED_CAST")
+                        builder.add(it as T)
                     }
 
                     actor.send {

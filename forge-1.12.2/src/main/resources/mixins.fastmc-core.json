@@ -6,8 +6,15 @@
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
     "MixinMinecraft",
+    "entity.MixinEntity",
+    "entity.MixinEntityCow",
     "render.MixinEntityRenderer",
     "render.MixinFontRenderer",
-    "render.MixinRenderGlobal"
+    "render.MixinRenderGlobal",
+    "tileentity.MixinTileEntity",
+    "tileentity.MixinTileEntityBed",
+    "tileentity.MixinTileEntityChest",
+    "tileentity.MixinTileEntityEnderChest",
+    "tileentity.MixinTileEntityShulkerBox"
   ]
 }

@@ -136,6 +136,7 @@ void main() {
     vec2 renderLimbSwing = mix(prevLimbSwing, limbSwing, partialTicks);
     
     vec3 position = modelPosition;
+    vec3 normal = modelNormal;
     
     mat3 rotationMatrix = mat3(1.0);
     rotationMatrix = rotateY(rotationMatrix, renderRotations.x * toRadian);
@@ -149,12 +150,14 @@ void main() {
 
             position -= headRotationPoint;
             position *= headMatrix;
+            normal *= headMatrix;
             position += headRotationPoint;
             break;
         case 2:
         case 3:
             break;
         default:
+            mat3 legMatrix = mat3(1.0);
             vec3 legOffset = vec3(0.0);
             float legAngle = 0.0;
 
@@ -179,8 +182,11 @@ void main() {
                     break;
             }
 
+            legMatrix = rotateX(legMatrix, legAngle);
+
             position -= legOffset;
-            position *= rotateX(mat3(1.0), legAngle);
+            position *= legMatrix;
+            normal *= headMatrix;
             position += legOffset;
     }
 

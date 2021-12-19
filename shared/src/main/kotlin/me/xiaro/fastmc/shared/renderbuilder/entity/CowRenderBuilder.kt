@@ -9,10 +9,10 @@ import me.xiaro.fastmc.shared.util.skip
 
 class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
     override fun add(info: ICowInfo<*>) {
-        buffer.putFloat((info.prevX + 2.0 - builtPosX).toFloat())
+        buffer.putFloat((info.prevX - builtPosX).toFloat())
         buffer.putFloat((info.prevY - builtPosY).toFloat())
         buffer.putFloat((info.prevZ - builtPosZ).toFloat())
-        buffer.putFloat((info.x + 2.0 - builtPosX).toFloat())
+        buffer.putFloat((info.x - builtPosX).toFloat())
         buffer.putFloat((info.y - builtPosY).toFloat())
         buffer.putFloat((info.z - builtPosZ).toFloat())
 
@@ -41,14 +41,14 @@ class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
 
     override fun VertexAttribute.Builder.setupAttribute() {
         float(4, 3, GLDataType.GL_FLOAT, false, 1)
-        float(4, 3, GLDataType.GL_FLOAT, false, 1)
-        float(4, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1)
+        float(5, 3, GLDataType.GL_FLOAT, false, 1)
+        float(6, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1)
 
-        float(4, 3, GLDataType.GL_FLOAT, false, 1)
-        float(4, 3, GLDataType.GL_FLOAT, false, 1)
+        float(7, 3, GLDataType.GL_FLOAT, false, 1)
+        float(8, 3, GLDataType.GL_FLOAT, false, 1)
 
-        float(4, 3, GLDataType.GL_FLOAT, false, 1)
-        float(4, 3, GLDataType.GL_FLOAT, false, 1)
+        float(9, 2, GLDataType.GL_FLOAT, false, 1)
+        float(10, 2, GLDataType.GL_FLOAT, false, 1)
     }
 
     private companion object {

@@ -5,9 +5,7 @@ import me.xiaro.fastmc.util.blockState
 import net.minecraft.block.state.IBlockState
 import net.minecraft.tileentity.TileEntity
 
-abstract class TileEntityInfo<E : TileEntity> : ITileEntityInfo<E> {
-    override lateinit var entity: E
-
+interface TileEntityInfo<E : TileEntity> : ITileEntityInfo<E> {
     override val posX: Int
         get() = entity.pos.x
 

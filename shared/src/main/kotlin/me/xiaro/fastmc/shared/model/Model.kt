@@ -40,9 +40,9 @@ abstract class Model(override val resourceName: String, private val textureSizeX
 
         private val vertexAttribute = buildAttribute(20) {
             float(0, 3, GLDataType.GL_FLOAT, false)
-            float(0, 2, GLDataType.GL_UNSIGNED_SHORT, false)
-            float(0, 3, GLDataType.GL_BYTE, false)
-            int(0, 3, GLDataType.GL_UNSIGNED_BYTE)
+            float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true)
+            float(2, 3, GLDataType.GL_BYTE, false)
+            int(3, 3, GLDataType.GL_UNSIGNED_BYTE)
         }
     }
 }

@@ -1,6 +1,6 @@
 package me.xiaro.fastmc.shared.renderbuilder.entity.info
 
-interface ILivingBaseInfo<E> : IEntityInfo<E> {
+interface ILivingBaseInfo<E : Any> : IEntityInfo<E> {
     val deathTime: Int
 
     val limbSwing: Float

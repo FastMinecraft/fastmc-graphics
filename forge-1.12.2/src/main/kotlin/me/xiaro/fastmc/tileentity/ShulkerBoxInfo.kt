@@ -2,10 +2,14 @@ package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IShulkerBoxInfo
 import net.minecraft.block.BlockShulkerBox
+import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.tileentity.TileEntityShulkerBox
+import net.minecraft.util.EnumFacing
 
-class ShulkerBoxInfo : DirectionalTileEntityInfo<TileEntityShulkerBox>(BlockShulkerBox.FACING),
-    IShulkerBoxInfo<TileEntityShulkerBox> {
+interface ShulkerBoxInfo : DirectionalTileEntityInfo<TileEntityShulkerBox>, IShulkerBoxInfo<TileEntityShulkerBox> {
+    override val property: PropertyEnum<EnumFacing>
+        get() = BlockShulkerBox.FACING
+
     override val color: Int
         get() = entity.color.metadata
 

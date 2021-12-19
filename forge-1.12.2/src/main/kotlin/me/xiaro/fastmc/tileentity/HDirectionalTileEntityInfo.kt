@@ -6,9 +6,9 @@ import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.EnumFacing
 
-open class HDirectionalTileEntityInfo<E : TileEntity>(private val property: PropertyEnum<EnumFacing>) :
-    TileEntityInfo<E>(),
-    IHDirectionalTileEntityInfo<E> {
+interface HDirectionalTileEntityInfo<E : TileEntity> : TileEntityInfo<E>, IHDirectionalTileEntityInfo<E> {
+    val property: PropertyEnum<EnumFacing>
+
     override val hDirection: Int
         get() = blockState.getPropertyOrDefault(property, EnumFacing.SOUTH).horizontalIndex
 }

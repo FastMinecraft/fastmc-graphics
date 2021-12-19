@@ -2,9 +2,14 @@ package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IBedInfo
 import net.minecraft.block.BlockBed
+import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.tileentity.TileEntityBed
+import net.minecraft.util.EnumFacing
 
-class BedInfo : HDirectionalTileEntityInfo<TileEntityBed>(BlockBed.FACING), IBedInfo<TileEntityBed> {
+interface BedInfo : HDirectionalTileEntityInfo<TileEntityBed>, IBedInfo<TileEntityBed> {
+    override val property: PropertyEnum<EnumFacing>
+        get() = BlockBed.FACING
+
     override val color: Int
         get() = entity.color.metadata
 

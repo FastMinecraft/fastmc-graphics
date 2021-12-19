@@ -1,9 +1,9 @@
 package me.xiaro.fastmc.renderer
 
-import me.xiaro.fastmc.entity.CowInfo
 import me.xiaro.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.xiaro.fastmc.shared.renderer.AbstractEntityRenderer
 import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
+import me.xiaro.fastmc.shared.util.ITypeID
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.Entity
@@ -13,7 +13,7 @@ import org.lwjgl.opengl.GL11.*
 class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
     AbstractEntityRenderer<Entity>(worldRenderer) {
     init {
-        register(CowInfo::class.java, CowRenderBuilder::class.java)
+        register<EntityCow, CowRenderBuilder>()
     }
 
     override fun onPostTick() {
@@ -22,12 +22,9 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
         }
 
         mc.world?.let { world ->
-            world.loadedEntityList
-                .groupBy {
-                    it::class.java
-                }.forEach { (clazz, entities) ->
-                    renderEntryMap[clazz]?.addAll(entities)
-                }
+            world.loadedEntityList.forEach {
+                renderEntryMap[(it as ITypeID).typeID]?.add(it)
+            }
 
             updateRenderers()
         } ?: run {

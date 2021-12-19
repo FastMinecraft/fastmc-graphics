@@ -3,7 +3,7 @@ package me.xiaro.fastmc.entity
 import me.xiaro.fastmc.shared.renderbuilder.entity.info.ILivingBaseInfo
 import net.minecraft.entity.EntityLivingBase
 
-open class LivingBaseInfo<E : EntityLivingBase> : EntityInfo<E>(), ILivingBaseInfo<E> {
+interface LivingBaseInfo<E : EntityLivingBase> : EntityInfo<E>, ILivingBaseInfo<E> {
     override val deathTime: Int
         get() = entity.deathTime
 

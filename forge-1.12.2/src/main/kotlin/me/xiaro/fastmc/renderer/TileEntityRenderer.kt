@@ -1,30 +1,28 @@
 package me.xiaro.fastmc.renderer
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.*
 import me.xiaro.fastmc.shared.renderer.AbstractTileEntityRenderer
-import me.xiaro.fastmc.tileentity.BedInfo
+import me.xiaro.fastmc.shared.renderer.AbstractWorldRenderer
+import me.xiaro.fastmc.shared.util.ITypeID
 import me.xiaro.fastmc.tileentity.ChestInfo
-import me.xiaro.fastmc.tileentity.EnderChestInfo
-import me.xiaro.fastmc.tileentity.ShulkerBoxInfo
 import net.minecraft.block.BlockChest
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GlStateManager
-import net.minecraft.tileentity.TileEntity
-import net.minecraft.tileentity.TileEntityChest
+import net.minecraft.tileentity.*
 import org.joml.Matrix4f
 import org.lwjgl.opengl.GL11.*
 
 class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
     AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
     init {
-        register(BedInfo::class.java, BedRenderBuilder::class.java)
-        register(EnderChestInfo::class.java, EnderChestRenderBuilder::class.java)
-        register(ShulkerBoxInfo::class.java, ShulkerBoxRenderBuilder::class.java)
+        register<TileEntityBed, BedRenderBuilder>()
+        register<TileEntityShulkerBox, ShulkerBoxRenderBuilder>()
+        register<TileEntityEnderChest, EnderChestRenderBuilder>()
 
         register(ChestRenderEntry())
     }
@@ -35,12 +33,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         }
 
         mc.world?.let { world ->
-            world.loadedTileEntityList
-                .groupBy {
-                    it::class.java
-                }.forEach { (clazz, tileEntities) ->
-                    renderEntryMap[clazz]?.addAll(tileEntities)
-                }
+            world.loadedTileEntityList.forEach {
+                renderEntryMap[(it as ITypeID).typeID]?.add(it)
+            }
 
             updateRenderers()
         } ?: run {
@@ -154,15 +149,13 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     smallChestRenderer = null
                 } else {
                     smallDirty = false
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         val builder = SmallChestRenderBuilder()
-                        val entityInfo = ChestInfo()
 
                         builder.init(this@TileEntityRenderer, smallChest.size)
 
                         smallChest.forEach {
-                            entityInfo.entity = it
-                            builder.add(entityInfo)
+                            builder.add(it as ChestInfo)
                         }
 
                         actor.send {
@@ -180,15 +173,12 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     largeDirty = false
                 } else {
                     largeDirty = false
-                    scope.launch {
+                    scope.launch(Dispatchers.Default) {
                         val builder = LargeChestRenderBuilder()
-                        val entityInfo = ChestInfo()
-
                         builder.init(this@TileEntityRenderer, largeChest.size)
 
                         largeChest.forEach {
-                            entityInfo.entity = it
-                            builder.add(entityInfo)
+                            builder.add(it as ChestInfo)
                         }
 
                         actor.send {

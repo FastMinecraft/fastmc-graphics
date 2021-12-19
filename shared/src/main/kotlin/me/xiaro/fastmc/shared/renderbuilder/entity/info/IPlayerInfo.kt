@@ -1,4 +1,4 @@
 package me.xiaro.fastmc.shared.renderbuilder.entity.info
 
-interface IPlayerInfo<E> : ILivingBaseInfo<E> {
+interface IPlayerInfo<E : Any> : ILivingBaseInfo<E> {
 }

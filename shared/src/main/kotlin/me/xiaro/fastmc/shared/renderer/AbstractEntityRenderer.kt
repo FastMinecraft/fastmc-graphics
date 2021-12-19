@@ -1,3 +1,5 @@
 package me.xiaro.fastmc.shared.renderer
 
-abstract class AbstractEntityRenderer<TE: Any>(worldRenderer: AbstractWorldRenderer) : AbstractRenderer<TE>(worldRenderer)
+import me.xiaro.fastmc.shared.renderbuilder.entity.info.IEntityInfo
+
+abstract class AbstractEntityRenderer<TE: Any>(worldRenderer: AbstractWorldRenderer) : AbstractRenderer<TE>(worldRenderer, IEntityInfo.registry)

@@ -2,9 +2,14 @@ package me.xiaro.fastmc.tileentity
 
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import net.minecraft.block.BlockChest
+import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.tileentity.TileEntityChest
+import net.minecraft.util.EnumFacing
 
-class ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>(BlockChest.FACING), IChestInfo<TileEntityChest> {
+interface ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>, IChestInfo<TileEntityChest> {
+    override val property: PropertyEnum<EnumFacing>
+        get() = BlockChest.FACING
+
     override val isTrap: Boolean
         get() = entity.chestType == BlockChest.Type.TRAP
 

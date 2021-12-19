@@ -69,7 +69,8 @@ allprojects {
                 freeCompilerArgs = listOf(
                     "-Xopt-in=kotlin.RequiresOptIn",
                     "-Xopt-in=kotlin.contracts.ExperimentalContracts",
-                    "-Xlambdas=indy"
+                    "-Xlambdas=indy",
+                    "-Xjvm-default=all"
                 )
             }
         }
