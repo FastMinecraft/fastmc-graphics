@@ -5,6 +5,8 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.xiaro.fastmc.shared.renderbuilder.IInfo
+import me.xiaro.fastmc.shared.renderbuilder.IParallelBuilder
+import me.xiaro.fastmc.shared.renderbuilder.ParallelBuilderWorker
 import me.xiaro.fastmc.shared.util.ClassIDRegistry
 import me.xiaro.fastmc.shared.util.ITypeID
 import me.xiaro.fastmc.shared.util.collection.FastIntMap
@@ -112,6 +114,7 @@ abstract class AbstractRenderer<ET : Any>(protected val worldRenderer: AbstractW
             return removed
         }
 
+        @Suppress("UNCHECKED_CAST")
         override fun update(
             scope: CoroutineScope,
             actor: SendChannel<() -> Unit>
@@ -127,10 +130,39 @@ abstract class AbstractRenderer<ET : Any>(protected val worldRenderer: AbstractW
 
                     builder.init(this@AbstractRenderer, entities.size)
 
-                    entities.forEach {
-                        @Suppress("UNCHECKED_CAST")
-                        builder.add(it as T)
+                    if (builder is IParallelBuilder<*>) {
+                        coroutineScope {
+                            var index = 0
+                            val parallelSize = 1024
+                            val combineThreshold = parallelSize / 2
+
+                            while (index < entities.size) {
+                                val start = index
+                                var end = index + parallelSize
+                                val remaining = entities.size - end
+                                if (remaining < 0 || remaining < combineThreshold) {
+                                    end = entities.size
+                                }
+
+                                val sequence = sequence {
+                                    for (i in start until end) {
+                                        yield(entities[i] as T)
+                                    }
+                                }
+
+                                index = end
+
+                                launch {
+                                    ParallelBuilderWorker().run(builder as IParallelBuilder<T>, start, sequence)
+                                }
+                            }
+                        }
+                    } else {
+                        entities.forEach {
+                            builder.add(it as T)
+                        }
                     }
+
 
                     actor.send {
                         renderer?.destroy()

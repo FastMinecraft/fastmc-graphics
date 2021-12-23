@@ -3,6 +3,7 @@ package me.xiaro.fastmc.shared.renderbuilder.tileentity
 import me.xiaro.fastmc.shared.model.Model
 import me.xiaro.fastmc.shared.opengl.*
 import me.xiaro.fastmc.shared.renderbuilder.AbstractRenderBuilder
+import me.xiaro.fastmc.shared.renderbuilder.ParallelBuilderWorker
 import me.xiaro.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
 import me.xiaro.fastmc.shared.resource.ResourceEntry
 import me.xiaro.fastmc.shared.texture.ITexture
@@ -22,6 +23,22 @@ abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(vertexSize: Int) 
 
     protected fun putHDirection(hDirection: Int) {
         buffer.put(hDirection.toByte())
+    }
+
+    protected fun putPos(worker: ParallelBuilderWorker, info: T) {
+        worker.putFloat((info.posX + 0.5 - builtPosX).toFloat())
+        worker.putFloat((info.posY - builtPosY).toFloat())
+        worker.putFloat((info.posZ + 0.5 - builtPosZ).toFloat())
+    }
+
+    protected fun putLightMapUV(worker: ParallelBuilderWorker, info: T) {
+        val lightMapUV = info.lightMapUV
+        worker.put((lightMapUV and 0xFF).toByte())
+        worker.put((lightMapUV shr 16 and 0xFF).toByte())
+    }
+
+    protected fun putHDirection(worker: ParallelBuilderWorker, hDirection: Int) {
+        worker.put(hDirection.toByte())
     }
 
     protected companion object {

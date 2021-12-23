@@ -11,7 +11,7 @@ import me.xiaro.fastmc.shared.util.BufferUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 
-abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
+abstract class AbstractRenderBuilder<T : IInfo<*>>(override val vertexSize: Int): IBuilder<T> {
     fun init(renderer: IRenderer, size: Int) {
         check(size0 == -1)
         check(resourceManager0 == null)
@@ -60,20 +60,20 @@ abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
             return builtPosZ0
         }
 
-    protected val size: Int
+    override val size: Int
         get() {
             check(size0 != -1)
             return size0
         }
 
-    protected val buffer: ByteBuffer
+    override val buffer: ByteBuffer
         get() {
             check(buffer0 != null)
             return buffer0!!
         }
 
     fun build(): Renderer {
-        buffer.flip()
+        buffer.position(0).limit(buffer.capacity())
         return uploadBuffer(buffer)
     }
 
@@ -82,10 +82,6 @@ abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
     protected open val model: ResourceEntry<Model> get() = throw UnsupportedOperationException()
     protected open val shader: ResourceEntry<Shader> get() = throw UnsupportedOperationException()
     protected open val texture: ResourceEntry<ITexture> get() = throw UnsupportedOperationException()
-
-    protected open fun VertexAttribute.Builder.setupAttribute() {
-
-    }
 
     protected open fun uploadBuffer(buffer: ByteBuffer): Renderer {
         val shader = shader.get(resourceManager)
@@ -108,8 +104,6 @@ abstract class AbstractRenderBuilder<T>(private val vertexSize: Int) {
 
         return SingleTextureRenderer(renderInfo(shader, vaoID, vboID, model), texture)
     }
-
-    abstract fun add(info: T)
 
     protected fun renderInfo(shader: Shader, vaoID: Int, vboID: Int, model: Model): RenderInfo {
         return RenderInfo(resourceManager, shader, vaoID, vboID, model.modelSize, size, builtPosX, builtPosY, builtPosZ)

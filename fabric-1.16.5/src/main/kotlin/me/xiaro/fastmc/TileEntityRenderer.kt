@@ -20,9 +20,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
 
     init {
-        register(BedRenderBuilder::class.java)
-        register(EnderChestRenderBuilder::class.java)
-        register(ShulkerBoxRenderBuilder::class.java)
+//        register(BedRenderBuilder::class.java)
+//        register(EnderChestRenderBuilder::class.java)
+//        register(ShulkerBoxRenderBuilder::class.java)
 
         register(ChestRenderEntry())
     }
@@ -33,12 +33,12 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         }
 
         mc.world?.let { world ->
-            world.loadedTileEntityList
-                .groupBy {
-                    it::class.java
-                }.forEach { (clazz, tileEntities) ->
-                    renderEntryMap[clazz]?.addAll(tileEntities)
-                }
+//            world.loadedTileEntityList
+//                .groupBy {
+//                    it::class.java
+//                }.forEach { (clazz, tileEntities) ->
+//                    renderEntryMap[clazz]?.addAll(tileEntities)
+//                }
 
             updateRenderers()
         } ?: run {

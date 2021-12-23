@@ -18,12 +18,12 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
         }
 
         mc.world?.let { world ->
-            world.entities
-                .groupBy {
-                    it::class.java
-                }.forEach { (clazz, entities) ->
-                    renderEntryMap[clazz]?.addAll(entities)
-                }
+//            world.entities
+//                .groupBy {
+//                    it::class.java
+//                }.forEach { (clazz, entities) ->
+//                    renderEntryMap[clazz]?.addAll(entities)
+//                }
 
             updateRenderers()
         } ?: run {
