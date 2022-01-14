@@ -16,15 +16,17 @@ public class MixinBlock {
      */
     @Overwrite
     protected static void addCollisionBoxToList(BlockPos pos, AxisAlignedBB entityBox, List<AxisAlignedBB> collidingBoxes, AxisAlignedBB blockBox) {
-        if (blockBox != null && entityBox.intersects(
-            blockBox.minX + pos.getX(),
-            blockBox.minY + pos.getY(),
-            blockBox.minZ + pos.getZ(),
-            blockBox.maxX + pos.getX(),
-            blockBox.maxY + pos.getY(),
-            blockBox.maxZ + pos.getZ())
-        ) {
-            collidingBoxes.add(blockBox.offset(pos));
+        if (blockBox != null) {
+            double minX = blockBox.minX + pos.getX();
+            double minY = blockBox.minY + pos.getY();
+            double minZ = blockBox.minZ + pos.getZ();
+            double maxX = blockBox.maxX + pos.getX();
+            double maxY = blockBox.maxY + pos.getY();
+            double maxZ = blockBox.maxZ + pos.getZ();
+
+            if (entityBox.intersects(minX, minY, minZ, maxX, maxY, maxZ)) {
+                collidingBoxes.add(new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ));
+            }
         }
     }
 }
