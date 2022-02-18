@@ -5,7 +5,7 @@
   "name": "Fast Minecraft",
   "description": "Agressive optimization mod",
   "authors": [
-    "Xiaro"
+    "Luna"
   ],
   "contact": {},
   "license": "MIT",
@@ -13,7 +13,7 @@
   "environment": "client",
   "entrypoints": {
     "main": [
-      "me.xiaro.fastmc.FastMcEntryPoint"
+      "me.luna.fastmc.FastMcEntryPoint"
     ]
   },
   "mixins": [

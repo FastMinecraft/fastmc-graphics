@@ -2,7 +2,7 @@
   "required": false,
   "minVersion": "0.7",
   "compatibilityLevel": "JAVA_8",
-  "package": "me.xiaro.fastmc.mixin.patch",
+  "package": "me.luna.fastmc.mixin.patch",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
     "MixinTextFormatting",

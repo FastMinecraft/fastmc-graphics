@@ -78,7 +78,7 @@ configure<UserDevExtension> {
                 mapOf(
                     "forge.logging.markers" to "SCAN,REGISTRIES,REGISTRYDUMP",
                     "forge.logging.console.level" to "info",
-                    "fml.coreMods.load" to "me.xiaro.fastmc.FastMcCoremod",
+                    "fml.coreMods.load" to "me.luna.fastmc.FastMcCoremod",
                     "mixin.env.disableRefMap" to "true"
                 )
             )
@@ -94,7 +94,7 @@ tasks {
                 "MixinConfigs" to "mixins.fastmc-core.json, mixins.fastmc-accessor.json, mixins.fastmc-patch.json",
                 "TweakClass" to "org.spongepowered.asm.launch.MixinTweaker",
                 "FMLCorePluginContainsFMLMod" to true,
-                "FMLCorePlugin" to "me.xiaro.fastmc.FastMcCoremod"
+                "FMLCorePlugin" to "me.luna.fastmc.FastMcCoremod"
             )
         }
 
@@ -139,7 +139,7 @@ tasks {
                             <option name="MAIN_CLASS_NAME" value="net.minecraftforge.legacydev.MainClient" />
                             <module name="${rootProject.name}.${project.name}.main" />
                             <option name="PROGRAM_PARAMETERS" value="--width 1280 --height 720" />
-                            <option name="VM_PARAMETERS" value="-Dforge.logging.console.level=info -Dforge.logging.markers=SCAN,REGISTRIES,REGISTRYDUMP -Dmixin.env.disableRefMap=true -Dfml.coreMods.load=me.xiaro.fastmc.FastMcCoremod" />
+                            <option name="VM_PARAMETERS" value="-Dforge.logging.console.level=info -Dforge.logging.markers=SCAN,REGISTRIES,REGISTRYDUMP -Dmixin.env.disableRefMap=true -Dfml.coreMods.load=me.luna.fastmc.FastMcCoremod" />
                             <option name="WORKING_DIRECTORY" value="${'$'}PROJECT_DIR$/${project.name}/run" />
                             <method v="2">
                               <option name="Gradle.BeforeRunTask" enabled="true" tasks="${project.name}:prepareRunClient" externalProjectPath="${'$'}PROJECT_DIR$" />

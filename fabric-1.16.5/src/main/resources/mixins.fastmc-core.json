@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "compatibilityLevel": "JAVA_8",
-  "package": "me.xiaro.fastmc.mixin.core",
+  "package": "me.luna.fastmc.mixin.core",
   "client": [
     "MixinMinecraftClient",
     "render.MixinWorldRenderer"

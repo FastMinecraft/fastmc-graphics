@@ -4,7 +4,7 @@ plugins {
 }
 
 allprojects {
-    group = "me.xiaro"
+    group = "me.luna"
     version = "0.0.1"
 
     apply {
