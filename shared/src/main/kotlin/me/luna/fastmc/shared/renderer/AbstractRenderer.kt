@@ -5,14 +5,15 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.channels.actor
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.IInfo
-import me.luna.fastmc.shared.renderbuilder.IParallelBuilder
-import me.luna.fastmc.shared.renderbuilder.ParallelBuilderWorker
 import me.luna.fastmc.shared.util.ClassIDRegistry
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import org.joml.Matrix4f
 
-abstract class AbstractRenderer<ET : Any>(protected val worldRenderer: AbstractWorldRenderer, val registry: ClassIDRegistry<Any>) :
+abstract class AbstractRenderer<ET : Any>(
+    protected val worldRenderer: AbstractWorldRenderer,
+    val registry: ClassIDRegistry<Any>
+) :
     IRenderer by worldRenderer {
     protected val renderEntryMap = FastIntMap<AbstractRenderEntry<ET, *>>()
     protected val renderEntryList = ArrayList<AbstractRenderEntry<ET, *>>()
@@ -129,40 +130,7 @@ abstract class AbstractRenderer<ET : Any>(protected val worldRenderer: AbstractW
                     val builder = builderClass.newInstance()
 
                     builder.init(this@AbstractRenderer, entities.size)
-
-                    if (builder is IParallelBuilder<*>) {
-                        coroutineScope {
-                            var index = 0
-                            val parallelSize = 1024
-                            val combineThreshold = parallelSize / 2
-
-                            while (index < entities.size) {
-                                val start = index
-                                var end = index + parallelSize
-                                val remaining = entities.size - end
-                                if (remaining < 0 || remaining < combineThreshold) {
-                                    end = entities.size
-                                }
-
-                                val sequence = sequence {
-                                    for (i in start until end) {
-                                        yield(entities[i] as T)
-                                    }
-                                }
-
-                                index = end
-
-                                launch {
-                                    ParallelBuilderWorker().run(builder as IParallelBuilder<T>, start, sequence)
-                                }
-                            }
-                        }
-                    } else {
-                        entities.forEach {
-                            builder.add(it as T)
-                        }
-                    }
-
+                    builder.addAll(entities as List<T>)
 
                     actor.send {
                         renderer?.destroy()

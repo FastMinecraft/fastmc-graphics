@@ -6,6 +6,7 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.*
+import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.util.ITypeID
@@ -151,13 +152,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     smallDirty = false
                     scope.launch(Dispatchers.Default) {
                         val builder = SmallChestRenderBuilder()
-
                         builder.init(this@TileEntityRenderer, smallChest.size)
-
-                        smallChest.forEach {
-                            builder.add(it as ChestInfo)
-                        }
-
+                        @Suppress("UNCHECKED_CAST")
+                        builder.addAll(smallChest as List<IChestInfo<*>>)
                         actor.send {
                             smallChestRenderer?.destroy()
                             smallChestRenderer = builder.build()
@@ -176,11 +173,8 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     scope.launch(Dispatchers.Default) {
                         val builder = LargeChestRenderBuilder()
                         builder.init(this@TileEntityRenderer, largeChest.size)
-
-                        largeChest.forEach {
-                            builder.add(it as ChestInfo)
-                        }
-
+                        @Suppress("UNCHECKED_CAST")
+                        builder.addAll(largeChest as List<IChestInfo<*>>)
                         actor.send {
                             largeChestRenderer?.destroy()
                             largeChestRenderer = builder.build()

@@ -5,10 +5,11 @@ import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
+import java.nio.ByteBuffer
 import java.util.*
 
 open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) {
-    override fun add(info: IChestInfo<*>) {
+    override fun add(buffer: ByteBuffer, info: IChestInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         val posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
@@ -17,8 +18,8 @@ open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) 
         buffer.putFloat(posY)
         buffer.putFloat(posZ)
 
-        putLightMapUV(info)
-        putHDirection(info.hDirection)
+        buffer.putLightMapUV(info)
+        buffer.putHDirection(info.hDirection)
 
         when {
             isChristmas -> {

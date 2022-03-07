@@ -1,44 +1,27 @@
 package me.luna.fastmc.shared.renderbuilder.tileentity
 
 import me.luna.fastmc.shared.model.Model
-import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.luna.fastmc.shared.renderbuilder.ParallelBuilderWorker
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
+import java.nio.ByteBuffer
 
 abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(vertexSize: Int) : AbstractRenderBuilder<T>(vertexSize) {
-    protected fun putPos(info: T) {
-        buffer.putFloat((info.posX + 0.5 - builtPosX).toFloat())
-        buffer.putFloat((info.posY - builtPosY).toFloat())
-        buffer.putFloat((info.posZ + 0.5 - builtPosZ).toFloat())
+    protected fun ByteBuffer.putPos(info: T) {
+        putFloat((info.posX + 0.5 - builtPosX).toFloat())
+        putFloat((info.posY - builtPosY).toFloat())
+        putFloat((info.posZ + 0.5 - builtPosZ).toFloat())
     }
 
-    protected fun putLightMapUV(info: T) {
+    protected fun ByteBuffer.putLightMapUV(info: T) {
         val lightMapUV = info.lightMapUV
-        buffer.put((lightMapUV and 0xFF).toByte())
-        buffer.put((lightMapUV shr 16 and 0xFF).toByte())
+        put((lightMapUV and 0xFF).toByte())
+        put((lightMapUV shr 16 and 0xFF).toByte())
     }
 
-    protected fun putHDirection(hDirection: Int) {
-        buffer.put(hDirection.toByte())
-    }
-
-    protected fun putPos(worker: ParallelBuilderWorker, info: T) {
-        worker.putFloat((info.posX + 0.5 - builtPosX).toFloat())
-        worker.putFloat((info.posY - builtPosY).toFloat())
-        worker.putFloat((info.posZ + 0.5 - builtPosZ).toFloat())
-    }
-
-    protected fun putLightMapUV(worker: ParallelBuilderWorker, info: T) {
-        val lightMapUV = info.lightMapUV
-        worker.put((lightMapUV and 0xFF).toByte())
-        worker.put((lightMapUV shr 16 and 0xFF).toByte())
-    }
-
-    protected fun putHDirection(worker: ParallelBuilderWorker, hDirection: Int) {
-        worker.put(hDirection.toByte())
+    protected fun ByteBuffer.putHDirection(hDirection: Int) {
+        put(hDirection.toByte())
     }
 
     protected companion object {

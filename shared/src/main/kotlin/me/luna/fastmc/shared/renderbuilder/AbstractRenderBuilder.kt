@@ -1,5 +1,7 @@
 package me.luna.fastmc.shared.renderbuilder
 
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.*
@@ -10,25 +12,9 @@ import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.BufferUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
-abstract class AbstractRenderBuilder<T : IInfo<*>>(override val vertexSize: Int): IBuilder<T> {
-    fun init(renderer: IRenderer, size: Int) {
-        check(size0 == -1)
-        check(resourceManager0 == null)
-        check(builtPosX0.isNaN())
-        check(builtPosY0.isNaN())
-        check(builtPosZ0.isNaN())
-
-        size0 = size
-        resourceManager0 = renderer.resourceManager
-        builtPosX0 = renderer.renderPosX
-        builtPosY0 = renderer.renderPosY
-        builtPosZ0 = renderer.renderPosZ
-        buffer0 = BufferUtils.byte(size * vertexSize)
-
-        vertexAttribute = buildAttribute(vertexSize) { setupAttribute() }
-    }
-
+abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) {
     private var resourceManager0: IResourceManager? = null
     private var builtPosX0 = Double.NaN
     private var builtPosY0 = Double.NaN
@@ -60,28 +46,77 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(override val vertexSize: Int)
             return builtPosZ0
         }
 
-    override val size: Int
+    private val size: Int
         get() {
             check(size0 != -1)
             return size0
         }
 
-    override val buffer: ByteBuffer
+    private val buffer: ByteBuffer
         get() {
             check(buffer0 != null)
             return buffer0!!
         }
+
+    fun init(renderer: IRenderer, size: Int) {
+        check(size0 == -1)
+        check(resourceManager0 == null)
+        check(builtPosX0.isNaN())
+        check(builtPosY0.isNaN())
+        check(builtPosZ0.isNaN())
+
+        size0 = size
+        resourceManager0 = renderer.resourceManager
+        builtPosX0 = renderer.renderPosX
+        builtPosY0 = renderer.renderPosY
+        builtPosZ0 = renderer.renderPosZ
+        buffer0 = BufferUtils.byte(size * vertexSize)
+
+        vertexAttribute = buildAttribute(vertexSize) { setupAttribute() }
+    }
+
+    suspend fun addAll(entities: List<T>) {
+        coroutineScope {
+            var index = 0
+            val parallelSize = 1024
+            val combineThreshold = parallelSize / 2
+
+            while (index < entities.size) {
+                val start = index
+                var end = index + parallelSize
+                val remaining = entities.size - end
+                if (remaining < 0 || remaining < combineThreshold) {
+                    end = entities.size
+                }
+
+                index = end
+
+                launch {
+                    val regionBuffer = buffer.duplicate().order(ByteOrder.nativeOrder())
+                    regionBuffer.position(start * vertexSize)
+
+                    for (i in start until end) {
+                        add(regionBuffer, entities[i])
+                    }
+                }
+            }
+        }
+    }
 
     fun build(): Renderer {
         buffer.position(0).limit(buffer.capacity())
         return uploadBuffer(buffer)
     }
 
+    abstract fun VertexAttribute.Builder.setupAttribute()
+
+    abstract fun add(buffer: ByteBuffer, info: T)
+
     private lateinit var vertexAttribute: VertexAttribute
 
-    protected open val model: ResourceEntry<Model> get() = throw UnsupportedOperationException()
-    protected open val shader: ResourceEntry<Shader> get() = throw UnsupportedOperationException()
-    protected open val texture: ResourceEntry<ITexture> get() = throw UnsupportedOperationException()
+    protected abstract val model: ResourceEntry<Model>
+    protected abstract val shader: ResourceEntry<Shader>
+    protected abstract val texture: ResourceEntry<ITexture>
 
     protected open fun uploadBuffer(buffer: ByteBuffer): Renderer {
         val shader = shader.get(resourceManager)

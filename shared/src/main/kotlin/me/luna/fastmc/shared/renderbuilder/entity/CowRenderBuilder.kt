@@ -6,9 +6,10 @@ import me.luna.fastmc.shared.renderbuilder.entity.info.ICowInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.skip
+import java.nio.ByteBuffer
 
 class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
-    override fun add(info: ICowInfo<*>) {
+    override fun add(buffer: ByteBuffer, info: ICowInfo<*>) {
         buffer.putFloat((info.prevX - builtPosX).toFloat())
         buffer.putFloat((info.prevY - builtPosY).toFloat())
         buffer.putFloat((info.prevZ - builtPosZ).toFloat())
@@ -16,7 +17,7 @@ class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
         buffer.putFloat((info.y - builtPosY).toFloat())
         buffer.putFloat((info.z - builtPosZ).toFloat())
 
-        putLightMapUV(info)
+        buffer.putLightMapUV(info)
 
         buffer.putFloat(info.prevRenderYawOffset)
         buffer.putFloat(info.prevRotationYawHead)

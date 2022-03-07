@@ -6,12 +6,13 @@ import me.luna.fastmc.shared.renderbuilder.tileentity.info.IBedInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.skip
+import java.nio.ByteBuffer
 
 class BedRenderBuilder : TileEntityRenderBuilder<IBedInfo<*>>(20) {
-    override fun add(info: IBedInfo<*>) {
-        putPos(info)
-        putLightMapUV(info)
-        putHDirection((info.hDirection - 2 + 2) % 4 + 2)
+    override fun add(buffer: ByteBuffer, info: IBedInfo<*>) {
+        buffer.putPos(info)
+        buffer.putLightMapUV(info)
+        buffer.putHDirection((info.hDirection - 2 + 2) % 4 + 2)
 
         buffer.put(info.color.toByte())
         buffer.put(if (info.isHead) 1 else 0)

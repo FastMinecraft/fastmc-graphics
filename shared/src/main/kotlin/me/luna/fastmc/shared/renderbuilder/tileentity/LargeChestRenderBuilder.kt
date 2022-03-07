@@ -8,7 +8,7 @@ import me.luna.fastmc.shared.util.isOdd
 import java.nio.ByteBuffer
 
 class LargeChestRenderBuilder : SmallChestRenderBuilder() {
-    override fun add(info: IChestInfo<*>) {
+    override fun add(buffer: ByteBuffer, info: IChestInfo<*>) {
         var posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         var posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
@@ -19,8 +19,8 @@ class LargeChestRenderBuilder : SmallChestRenderBuilder() {
         buffer.putFloat(posY)
         buffer.putFloat(posZ)
 
-        putLightMapUV(info)
-        putHDirection(info.hDirection)
+        buffer.putLightMapUV(info)
+        buffer.putHDirection(info.hDirection)
 
         when {
             isChristmas -> {

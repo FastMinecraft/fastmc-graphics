@@ -5,28 +5,29 @@ import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.entity.info.IEntityInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
+import java.nio.ByteBuffer
 
 abstract class EntityRenderBuilder<T : IEntityInfo<*>>(vertexSize: Int) : AbstractRenderBuilder<T>(vertexSize) {
-    protected fun putPos(info: T) {
-        buffer.putFloat((info.prevX - builtPosX).toFloat())
-        buffer.putFloat((info.prevY - builtPosY).toFloat())
-        buffer.putFloat((info.prevZ - builtPosZ).toFloat())
-        buffer.putFloat((info.x - builtPosX).toFloat())
-        buffer.putFloat((info.y - builtPosY).toFloat())
-        buffer.putFloat((info.z - builtPosZ).toFloat())
+    protected fun ByteBuffer.putPos(info: T) {
+        putFloat((info.prevX - builtPosX).toFloat())
+        putFloat((info.prevY - builtPosY).toFloat())
+        putFloat((info.prevZ - builtPosZ).toFloat())
+        putFloat((info.x - builtPosX).toFloat())
+        putFloat((info.y - builtPosY).toFloat())
+        putFloat((info.z - builtPosZ).toFloat())
     }
 
-    protected fun putRotations(info: T) {
-        buffer.putFloat(info.rotationYaw)
-        buffer.putFloat(info.rotationPitch)
-        buffer.putFloat(info.prevRotationYaw)
-        buffer.putFloat(info.prevRotationPitch)
+    protected fun ByteBuffer.putRotations(info: T) {
+        putFloat(info.rotationYaw)
+        putFloat(info.rotationPitch)
+        putFloat(info.prevRotationYaw)
+        putFloat(info.prevRotationPitch)
     }
 
-    protected fun putLightMapUV(info: T) {
+    protected fun ByteBuffer.putLightMapUV(info: T) {
         val lightMapUV = info.lightMapUV
-        buffer.put((lightMapUV and 0xFF).toByte())
-        buffer.put((lightMapUV shr 16 and 0xFF).toByte())
+        put((lightMapUV and 0xFF).toByte())
+        put((lightMapUV shr 16 and 0xFF).toByte())
     }
 
     protected companion object {

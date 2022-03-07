@@ -6,9 +6,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
-import me.luna.fastmc.shared.renderbuilder.tileentity.*
+import me.luna.fastmc.shared.renderbuilder.tileentity.LargeChestRenderBuilder
+import me.luna.fastmc.shared.renderbuilder.tileentity.SmallChestRenderBuilder
+import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
+import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.tileentity.ChestInfo
 import me.luna.fastmc.util.blockState
 import me.luna.fastmc.util.getPropertyOrDefault
@@ -134,15 +136,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     smallDirty = false
                     scope.launch(Dispatchers.Default) {
                         val builder = SmallChestRenderBuilder()
-                        val entityInfo = ChestInfo()
-
                         builder.init(this@TileEntityRenderer, smallChest.size)
-
-                        smallChest.forEach {
-                            entityInfo.entity = it
-                            builder.add(entityInfo)
-                        }
-
+                        @Suppress("UNCHECKED_CAST")
+                        builder.addAll(smallChest as List<IChestInfo<*>>)
                         actor.send {
                             smallChestRenderer?.destroy()
                             smallChestRenderer = builder.build()
@@ -160,15 +156,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     largeDirty = false
                     scope.launch(Dispatchers.Default) {
                         val builder = LargeChestRenderBuilder()
-                        val entityInfo = ChestInfo()
-
                         builder.init(this@TileEntityRenderer, largeChest.size)
-
-                        largeChest.forEach {
-                            entityInfo.entity = it
-                            builder.add(entityInfo)
-                        }
-
+                        @Suppress("UNCHECKED_CAST")
+                        builder.addAll(largeChest as List<IChestInfo<*>>)
                         actor.send {
                             largeChestRenderer?.destroy()
                             largeChestRenderer = builder.build()

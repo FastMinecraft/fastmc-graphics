@@ -6,9 +6,10 @@ import me.luna.fastmc.shared.renderbuilder.tileentity.info.IShulkerBoxInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.skip
+import java.nio.ByteBuffer
 
 class ShulkerBoxRenderBuilder : TileEntityRenderBuilder<IShulkerBoxInfo<*>>(20) {
-    override fun add(info: IShulkerBoxInfo<*>) {
+    override fun add(buffer: ByteBuffer, info: IShulkerBoxInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         val posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
@@ -17,7 +18,7 @@ class ShulkerBoxRenderBuilder : TileEntityRenderBuilder<IShulkerBoxInfo<*>>(20) 
         buffer.putFloat(posY)
         buffer.putFloat(posZ)
 
-        putLightMapUV(info)
+        buffer.putLightMapUV(info)
 
         when (info.direction) {
             0 -> {
