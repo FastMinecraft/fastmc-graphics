@@ -41,7 +41,7 @@ interface IGLWrapper {
 
     fun glCreateShader(type: Int): Int
     fun glDeleteShader(shader: Int)
-    fun glShaderSource(shader: Int, string: String)
+    fun glShaderSource(shader: Int, string: CharSequence)
     fun glCompileShader(shader: Int)
     fun glGetShaderi(shader: Int, pname: Int): Int
     fun glGetShaderInfoLog(shader: Int, maxLength: Int): String
@@ -175,7 +175,7 @@ const val GL_COMPILE_STATUS = 0x8B81
 
 fun glCreateShader(type: Int) = glWrapper.glCreateShader(type)
 fun glDeleteShader(shader: Int) = glWrapper.glDeleteShader(shader)
-fun glShaderSource(shader: Int, string: String) = glWrapper.glShaderSource(shader, string)
+fun glShaderSource(shader: Int, string: CharSequence) = glWrapper.glShaderSource(shader, string)
 fun glCompileShader(shader: Int) = glWrapper.glCompileShader(shader)
 fun glGetShaderi(shader: Int, pname: Int) = glWrapper.glGetShaderi(shader, pname)
 fun glGetShaderInfoLog(shader: Int, maxLength: Int) = glWrapper.glGetShaderInfoLog(shader, maxLength)

@@ -30,12 +30,18 @@ open class Shader(final override val resourceName: String, vertShaderPath: Strin
     }
 
     private fun createShader(path: String, shaderType: Int): Int {
-        val srcString = javaClass.getResourceAsStream(path)!!.use {
-            it.readBytes().decodeToString()
+        val stringBuilder = StringBuilder()
+        javaClass.getResourceAsStream(path)!!.bufferedReader().forEachLine {
+            if (it.startsWith("#import")) {
+                val importContent = javaClass.getResourceAsStream(it.substring(8))!!.readBytes().decodeToString()
+                stringBuilder.appendLine(importContent)
+            } else {
+                stringBuilder.appendLine(it)
+            }
         }
         val id = glCreateShader(shaderType)
 
-        glShaderSource(id, srcString)
+        glShaderSource(id, stringBuilder)
         glCompileShader(id)
 
         val compiled = glGetShaderi(id, GL_COMPILE_STATUS)

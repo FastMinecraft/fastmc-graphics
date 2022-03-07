@@ -54,7 +54,7 @@ class GLWrapper : IGLWrapper {
 
     override fun glCreateShader(type: Int): Int = GL20.glCreateShader(type)
     override fun glDeleteShader(shader: Int) = GL20.glDeleteShader(shader)
-    override fun glShaderSource(shader: Int, string: String) = GL20.glShaderSource(shader, string)
+    override fun glShaderSource(shader: Int, string: CharSequence) = GL20.glShaderSource(shader, string)
     override fun glCompileShader(shader: Int) = GL20.glCompileShader(shader)
     override fun glGetShaderi(shader: Int, pname: Int): Int = GL20.glGetShaderi(shader, pname)
     override fun glGetShaderInfoLog(shader: Int, maxLength: Int): String = GL20.glGetShaderInfoLog(shader, maxLength)
