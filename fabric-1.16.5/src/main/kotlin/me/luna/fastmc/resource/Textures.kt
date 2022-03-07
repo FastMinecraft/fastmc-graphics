@@ -58,20 +58,6 @@ fun largeChestTexture(mc: MinecraftClient): ITexture {
     return DefaultTexture("tileEntity/LargeChest", TextureUtils.combineTexturesVertically(images))
 }
 
-fun main() {
-    val a = Matrix4f().identity()
-    val b = net.minecraft.util.math.Matrix4f().apply { loadIdentity() }
-
-    println(a.toString(NumberFormat.getNumberInstance()))
-    println(b)
-
-    a.scale(-1.0f, 0.5f, 1.0f)
-    b.multiply(net.minecraft.util.math.Matrix4f.scale(-1.0f, 0.5f, 1.0f))
-
-    println(a.toString(NumberFormat.getNumberInstance()))
-    println(b.toString())
-}
-
 fun bedTexture(mc: MinecraftClient): ITexture {
     val images = Array(DyeColor.values().size) {
         val enumDyeColor = DyeColor.values()[it]
