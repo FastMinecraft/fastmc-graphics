@@ -26,12 +26,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MixinRenderGlobal {
     @Shadow @Final private Minecraft mc;
 
-    @Redirect(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/tileentity/TileEntity;shouldRenderInPass(I)Z", remap = false))
-    public boolean renderEntities$Redirect$INVOKE$shouldRenderInPass(TileEntity instance, int pass) {
-        return !((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer()).hasRenderer(instance)
-            && instance.shouldRenderInPass(pass);
-    }
-
     @Redirect(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;render(Lnet/minecraft/tileentity/TileEntity;FI)V", ordinal = 2))
     public void renderEntities$Redirect$INVOKE$render(TileEntityRendererDispatcher instance, TileEntity tileentityIn, float partialTicks, int destroyStage) {
         if (!((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer()).hasRenderer(tileentityIn)) {
