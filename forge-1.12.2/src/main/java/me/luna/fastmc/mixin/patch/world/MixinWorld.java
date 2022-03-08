@@ -1,9 +1,10 @@
 package me.luna.fastmc.mixin.patch.world;
 
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import me.luna.fastmc.mixin.IPatchedChunk;
 import me.luna.fastmc.mixin.IPatchedWorld;
 import me.luna.fastmc.shared.util.ITypeID;
-import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.shared.util.collection.FastIntMap;
 import me.luna.fastmc.util.RaytraceKt;
 import net.minecraft.block.material.Material;
@@ -127,23 +128,22 @@ public abstract class MixinWorld implements IPatchedWorld {
     @Final
     protected List<Entity> unloadedEntityList;
 
-    private final ExtendedBitSet unloadedEntitiesOverride = new ExtendedBitSet();
-    private final ExtendedBitSet removingWeatherEffects = new ExtendedBitSet();
-    private final ExtendedBitSet removingEntities = new ExtendedBitSet();
+    private final IntSet unloadedEntitiesOverride = new IntOpenHashSet();
+    private final IntSet removingWeatherEffects = new IntOpenHashSet();
+    private final IntSet removingEntities = new IntOpenHashSet();
     private final List<Entity> removingEntitiesList = new ArrayList<>();
     private final Set<TileEntity> removingTileEntity = new LinkedHashSet<>();
     private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
-    private final FastIntMap<List<TileEntity>> groupedTileEntity = new FastIntMap<>();
 
-    @NotNull
     @Override
-    public ExtendedBitSet getUnloadedEntitiesOverride() {
+    @NotNull
+    public IntSet getUnloadedEntitiesOverride() {
         return unloadedEntitiesOverride;
     }
 
-    @NotNull
     @Override
-    public ExtendedBitSet getRemovingEntities() {
+    @NotNull
+    public IntSet getRemovingEntities() {
         return removingEntities;
     }
 
@@ -151,18 +151,6 @@ public abstract class MixinWorld implements IPatchedWorld {
     @Override
     public List<Entity> getRemovingEntitiesList() {
         return removingEntitiesList;
-    }
-
-    @NotNull
-    @Override
-    public FastIntMap<List<TileEntity>> getGroupedTickableTileEntity() {
-        return groupedTickableTileEntity;
-    }
-
-    @NotNull
-    @Override
-    public FastIntMap<List<TileEntity>> getGroupedTileEntity() {
-        return groupedTileEntity;
     }
 
     @Override
@@ -359,14 +347,23 @@ public abstract class MixinWorld implements IPatchedWorld {
             tileEntitiesToBeRemoved.clear();
         }
 
-        clearGroups(groupedTileEntity);
-        clearGroups(groupedTickableTileEntity);
+        for (List<TileEntity> list : groupedTickableTileEntity.values()) {
+            list.clear();
+        }
 
         for (TileEntity tileEntity : tickableTileEntities) {
             if (tileEntity.isInvalid()) {
                 removingTileEntity.add(tileEntity);
             } else {
-                addToGroup(tileEntity, groupedTickableTileEntity);
+                int id = ((ITypeID) tileEntity).getTypeID();
+                List<TileEntity> list = groupedTickableTileEntity.get(id);
+
+                if (list == null) {
+                    list = new ArrayList<>();
+                    groupedTickableTileEntity.put(id, list);
+                }
+
+                list.add(tileEntity);
             }
         }
 
@@ -385,10 +382,6 @@ public abstract class MixinWorld implements IPatchedWorld {
         }
 
         removingTileEntity.clear();
-
-        for (TileEntity tileEntity : loadedTileEntityList) {
-            addToGroup(tileEntity, groupedTileEntity);
-        }
 
         for (List<TileEntity> list : groupedTickableTileEntity.values()) {
             if (list.isEmpty()) continue;
@@ -427,24 +420,6 @@ public abstract class MixinWorld implements IPatchedWorld {
         }
 
         this.processingLoadedTiles = false;
-    }
-
-    private void clearGroups(FastIntMap<List<TileEntity>> map) {
-        for (List<TileEntity> list : map.values()) {
-            list.clear();
-        }
-    }
-
-    private void addToGroup(TileEntity tileEntity, FastIntMap<List<TileEntity>> map) {
-        int id = ((ITypeID) tileEntity).getTypeID();
-        List<TileEntity> list = map.get(id);
-
-        if (list == null) {
-            list = new ArrayList<>();
-            map.put(id, list);
-        }
-
-        list.add(tileEntity);
     }
 
     /**
