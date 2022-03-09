@@ -32,6 +32,17 @@ abstract class AbstractRenderer<ET : Any>(
         renderEntryList.add(renderEntry)
     }
 
+    protected val lock = Any()
+    protected var adding = ArrayList<ET>()
+    protected var removing = ArrayList<ET>()
+
+    fun updateEntities(adding: List<ET>, removing: List<ET>) {
+        synchronized(lock) {
+            this.adding.addAll(adding)
+            this.removing.addAll(removing)
+        }
+    }
+
     fun clear() {
         renderEntryList.forEach {
             it.clear()
@@ -74,15 +85,19 @@ abstract class AbstractRenderer<ET : Any>(
 
         abstract fun add(entity: E)
 
-        abstract fun addAll(list: Collection<E>)
+        abstract fun addAll(collection: Collection<E>)
 
         abstract fun remove(entity: E): Boolean
+
+        abstract fun removeAll(collection: Collection<E>)
 
         abstract fun update(scope: CoroutineScope, actor: SendChannel<() -> Unit>)
 
         abstract fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double)
 
         abstract fun destroyRenderer()
+
+        abstract fun markDirty()
     }
 
     protected inner class RenderEntry<E : ET, T : IInfo<E>>(
@@ -104,15 +119,19 @@ abstract class AbstractRenderer<ET : Any>(
             dirty = true
         }
 
-        override fun addAll(list: Collection<E>) {
-            entities.addAll(list)
-            dirty = true
+        override fun addAll(collection: Collection<E>) {
+            dirty = entities.addAll(collection) || dirty
         }
 
         override fun remove(entity: E): Boolean {
             val removed = entities.remove(entity)
             dirty = entities.remove(entity) || dirty
             return removed
+        }
+
+        override fun removeAll(collection: Collection<E>) {
+            @Suppress("ConvertArgumentToSet")
+            dirty = entities.removeAll(collection) || dirty
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -147,7 +166,11 @@ abstract class AbstractRenderer<ET : Any>(
         override fun destroyRenderer() {
             renderer?.destroy()
             renderer = null
-            dirty = false
+            dirty = true
+        }
+
+        override fun markDirty() {
+            dirty = true
         }
     }
 }

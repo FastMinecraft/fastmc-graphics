@@ -116,9 +116,6 @@ public abstract class MixinWorld implements IPatchedWorld {
     public abstract void onEntityRemoved(Entity entityIn);
 
     @Shadow
-    public abstract void removeEntity(Entity entityIn);
-
-    @Shadow
     public abstract void updateEntity(Entity ent);
 
     @Shadow
@@ -259,9 +256,10 @@ public abstract class MixinWorld implements IPatchedWorld {
 
                 if (ForgeModContainer.removeErroringEntities) {
                     FMLLog.log.fatal("{}", crashreport.getCompleteReport());
-                    removeEntity(entity);
-                } else
+                    getRemovingEntities().add(entity.getEntityId());
+                } else {
                     throw new ReportedException(crashreport);
+                }
             }
 
             if (entity.isDead) {
@@ -318,9 +316,10 @@ public abstract class MixinWorld implements IPatchedWorld {
                     entity.addEntityCrashInfo(crashReportCategory);
                     if (ForgeModContainer.removeErroringEntities) {
                         FMLLog.log.fatal("{}", crashReport.getCompleteReport());
-                        removeEntity(entity);
-                    } else
+                        getRemovingEntities().add(entity.getEntityId());
+                    } else {
                         throw new ReportedException(crashReport);
+                    }
                 }
             }
         }

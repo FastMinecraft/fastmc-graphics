@@ -110,8 +110,8 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             }
         }
 
-        override fun addAll(list: Collection<TileEntityChest>) {
-            list.forEach {
+        override fun addAll(collection: Collection<TileEntityChest>) {
+            collection.forEach {
                 add(it)
             }
         }
@@ -122,6 +122,12 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             smallDirty = smallRemoved || smallDirty
             largeDirty = largeRemoved || largeDirty
             return smallRemoved || largeRemoved
+        }
+
+        @Suppress("ConvertArgumentToSet")
+        override fun removeAll(collection: Collection<TileEntityChest>) {
+            smallDirty = smallChest.removeAll(collection) || smallDirty
+            largeDirty = largeChest.removeAll(collection) || largeDirty
         }
 
         override fun update(
@@ -173,12 +179,18 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             largeChestRenderer?.destroy()
             smallChestRenderer = null
             largeChestRenderer = null
-            smallDirty = false
+            smallDirty = true
+            largeDirty = true
         }
 
         override fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double) {
             smallChestRenderer?.render(modelView, renderPosX, renderPosY, renderPosZ)
             largeChestRenderer?.render(modelView, renderPosX, renderPosY, renderPosZ)
+        }
+
+        override fun markDirty() {
+            smallDirty = true
+            largeDirty = true
         }
     }
 }

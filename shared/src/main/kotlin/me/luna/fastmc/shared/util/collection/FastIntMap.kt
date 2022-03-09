@@ -85,6 +85,17 @@ class FastIntMap<V : Any> : AbstractInt2ObjectMap<V>() {
         }
     }
 
+    fun getOrPut(key: Int, defaultValue: () -> V): V {
+        val value = get(key)
+        return if (value == null) {
+            val answer = defaultValue()
+            put(key, answer)
+            answer
+        } else {
+            value
+        }
+    }
+
     override fun int2ObjectEntrySet(): ObjectSet<Int2ObjectMap.Entry<V>> {
         return object : AbstractObjectSet<Int2ObjectMap.Entry<V>>() {
             override fun iterator(): ObjectIterator<Int2ObjectMap.Entry<V>> {

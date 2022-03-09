@@ -6,8 +6,5 @@
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
     "AccessorMinecraft"
-  ],
-  "mixins": [
-    "AccessorBlockStateContainer"
   ]
 }
