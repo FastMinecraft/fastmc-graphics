@@ -62,12 +62,9 @@ configure<MixinExtension> {
 }
 
 configure<UserDevExtension> {
-    mappings(
-        mapOf(
-            "channel" to mappingsChannel,
-            "version" to mappingsVersion
-        )
-    )
+    mappings(mappingsChannel, mappingsVersion)
+
+    accessTransformer(file("src/main/resources/fastmc_at.cfg"))
 
     runs {
         create("client") {
