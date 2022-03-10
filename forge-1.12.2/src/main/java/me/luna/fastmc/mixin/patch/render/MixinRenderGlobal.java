@@ -1,11 +1,12 @@
 package me.luna.fastmc.mixin.patch.render;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import kotlinx.coroutines.CoroutineScope;
-import kotlinx.coroutines.channels.Channel;
 import kotlinx.coroutines.channels.SendChannel;
 import me.luna.fastmc.mixin.IPatchedRenderGlobal;
 import me.luna.fastmc.mixin.IPatchedVisGraph;
 import me.luna.fastmc.shared.util.DoubleBufferedCollection;
+import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.util.ExtensionsKt;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.multiplayer.WorldClient;
@@ -20,6 +21,7 @@ import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -31,7 +33,6 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,7 +48,13 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
     @Shadow
     private List<RenderGlobal.ContainerLocalRenderInformation> renderInfos;
-    private final DoubleBufferedCollection<List<TileEntity>> renderTileEntities = new DoubleBufferedCollection<>(new ArrayList<>());
+    private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntities = new DoubleBufferedCollection<>(new FastObjectArrayList<>());
+
+    @Nullable
+    @Override
+    public RenderChunk getRenderChunkOffset0(@Nullable BlockPos playerPos, @Nullable RenderChunk renderChunkBase, @Nullable EnumFacing facing) {
+        return getRenderChunkOffset(playerPos, renderChunkBase, facing);
+    }
 
     /**
      * @author Luna
@@ -93,24 +100,6 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
         queue.clear();
     }
 
-    @Override
-    public void iterationRecursive0(@NotNull RenderGlobal thisRef, @NotNull CoroutineScope scope, @NotNull SendChannel<? super RenderGlobal.ContainerLocalRenderInformation> actor, @NotNull AtomicInteger counts, @NotNull BlockPos playerPos, boolean flag, int frameCount, @NotNull ICamera camera, @NotNull List<RenderGlobal.ContainerLocalRenderInformation> renderInfos, @NotNull RenderGlobal.ContainerLocalRenderInformation info) {
-        RenderChunk renderChunk = ExtensionsKt.getRenderChunk(info);
-        EnumFacing facing = ExtensionsKt.getFacing(info);
-
-        for (EnumFacing nextFacing : EnumFacing.values()) {
-            RenderChunk nextRenderChunk = this.getRenderChunkOffset(playerPos, renderChunk, nextFacing);
-
-            if ((!flag || !info.hasDirection(nextFacing.getOpposite()))
-                && (!flag || facing == null || renderChunk.getCompiledChunk().isVisible(facing.getOpposite(), nextFacing))
-                && nextRenderChunk != null && nextRenderChunk.setFrameIndex(frameCount) && camera.isBoundingBoxInFrustum(nextRenderChunk.boundingBox)) {
-                RenderGlobal.ContainerLocalRenderInformation nextInfo = thisRef.new ContainerLocalRenderInformation(nextRenderChunk, nextFacing, ExtensionsKt.getCounter(info) + 1);
-                nextInfo.setDirection(ExtensionsKt.getSetFacing(info), nextFacing);
-                iterationRecursive(thisRef, scope, actor, counts, playerPos, flag, frameCount, camera, renderInfos, nextInfo);
-            }
-        }
-    }
-
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
     private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
         for (TileEntity tileEntity : renderTileEntities.get()) {
@@ -128,14 +117,26 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
     @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Lists;newArrayList()Ljava/util/ArrayList;", remap = false))
     private void setupTerrain$Inject$HEAD(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci) {
         renderTileEntities.swap();
+        renderTileEntities.get().ensureCapacity(world.loadedTileEntityList.size());
     }
 
     @ModifyArg(method = "setupTerrain", at = @At(value = "INVOKE", target = "Ljava/util/List;add(Ljava/lang/Object;)Z", remap = false), index = 0)
     private Object setupTerrain$Inject$INVOKE$add$1(Object value) {
         List<TileEntity> list = ExtensionsKt.getRenderChunk((RenderGlobal.ContainerLocalRenderInformation) value).getCompiledChunk().getTileEntities();
         if (!list.isEmpty()) {
-            renderTileEntities.get().addAll(list);
+            FastObjectArrayList<TileEntity> mainList = renderTileEntities.get();
+
+            if (list instanceof ObjectArrayList<?>) {
+                mainList.addAll(((ObjectArrayList<TileEntity>) list));
+            } else {
+                mainList.addAll(list);
+            }
         }
         return value;
+    }
+
+    @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lnet/minecraft/profiler/Profiler;endSection()V", ordinal = 0))
+    private void setupTerrain$Inject$INVOKE$endSection$0(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci) {
+        renderTileEntities.get().trim();
     }
 }

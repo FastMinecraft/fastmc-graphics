@@ -1,5 +1,6 @@
 package me.luna.fastmc.mixin.core.render;
 
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedCompiledChunk;
 import me.luna.fastmc.renderer.TileEntityRenderer;
@@ -11,16 +12,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Mixin(CompiledChunk.class)
 public class MixinCompiledChunk implements IPatchedCompiledChunk {
-    private final List<TileEntity> instancingRenderTileEntities = new ArrayList<>();
+    private final ObjectArrayList<TileEntity> instancingRenderTileEntities = new ObjectArrayList<>();
 
     @NotNull
     @Override
-    public List<TileEntity> getInstancingRenderTileEntities() {
+    public ObjectArrayList<TileEntity> getInstancingRenderTileEntities() {
         return instancingRenderTileEntities;
     }
 
