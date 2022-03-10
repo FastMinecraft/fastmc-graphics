@@ -36,7 +36,6 @@ public abstract class MixinRenderGlobal {
     @Shadow
     @Final
     private Minecraft mc;
-    private final DoubleBufferedCollection<List<TileEntity>> renderTileEntities = new DoubleBufferedCollection<>(new ArrayList<>());
 
     @Redirect(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RenderManager;renderEntityStatic(Lnet/minecraft/entity/Entity;FZ)V"))
     public void renderEntities$Redirect$INVOKE$renderEntityStatic(RenderManager instance, Entity entityIn, float partialTicks, boolean debug) {
@@ -64,35 +63,6 @@ public abstract class MixinRenderGlobal {
         mc.profiler.endStartSection("fastMcTileEntity");
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().render();
         FastMcMod.INSTANCE.getWorldRenderer().postRender();
-    }
-
-    @SuppressWarnings("InvalidInjectorMethodSignature")
-    @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
-    private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
-        for (TileEntity tileEntity : renderTileEntities.get()) {
-            if (!tileEntity.shouldRenderInPass(pass) || !camera.isBoundingBoxInFrustum(tileEntity.getRenderBoundingBox()))
-                continue;
-            TileEntityRendererDispatcher.instance.render(tileEntity, partialTicks, -1);
-        }
-    }
-
-    @Redirect(method = "renderEntities", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/RenderGlobal;renderInfos:Ljava/util/List;", opcode = Opcodes.GETFIELD, ordinal = 1))
-    private List<RenderGlobal.ContainerLocalRenderInformation> renderEntities$Redirect$INVOKE$FIELD$renderInfos$GETFIELD(RenderGlobal instance) {
-        return Collections.emptyList();
-    }
-
-    @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Lists;newArrayList()Ljava/util/ArrayList;", remap = false))
-    private void setupTerrain$Inject$HEAD(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci) {
-        renderTileEntities.swap();
-    }
-
-    @ModifyArg(method = "setupTerrain", at = @At(value = "INVOKE", target = "Ljava/util/List;add(Ljava/lang/Object;)Z", remap = false), index = 0)
-    private Object setupTerrain$Inject$INVOKE$add$1(Object value) {
-        List<TileEntity> list = ((AccessorRenderGlobalContainerLocalRenderInformation) value).getRenderChunk().getCompiledChunk().getTileEntities();
-        if (!list.isEmpty()) {
-            renderTileEntities.get().addAll(list);
-        }
-        return value;
     }
 
     @Inject(method = "loadRenderers", at = @At("RETURN"))
