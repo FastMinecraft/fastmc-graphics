@@ -34,6 +34,7 @@ public class MixinMinecraft {
         fontRenderer.getWrapped().setUnicode(mc.gameSettings.forceUnicodeFont);
 
         FastMcMod.INSTANCE.init(resourceManager, worldRenderer, fontRenderer);
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     }
 
     @Inject(method = "runTick", at = @At("RETURN"))
@@ -50,5 +51,10 @@ public class MixinMinecraft {
         worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
 
         FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer);
+    }
+
+    @Redirect(method = "runGameLoop", at = @At(value = "INVOKE", target = "Ljava/lang/Thread;yield()V", remap = false))
+    public void runGameLoop$Redirect$INVOKE$yield() {
+
     }
 }
