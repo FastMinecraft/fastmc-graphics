@@ -5,6 +5,7 @@
   "package": "me.luna.fastmc.mixin.patch",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
+    "MixinEnumFacing",
     "MixinTextFormatting",
     "entity.MixinEntityDataManager",
     "gui.MixinGuiInventory",
@@ -15,6 +16,7 @@
     "world.MixinBlock",
     "world.MixinChunk",
     "world.MixinWorld",
-    "world.MixinWorldClient"
+    "world.MixinWorldClient",
+    "world.MixinWorldServer"
   ]
 }
