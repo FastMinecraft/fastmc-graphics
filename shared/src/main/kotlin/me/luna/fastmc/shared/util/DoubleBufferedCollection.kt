@@ -1,6 +1,11 @@
 package me.luna.fastmc.shared.util
 
-class DoubleBufferedCollection<T : MutableCollection<*>>(value: T) {
+import java.util.function.Consumer
+
+class DoubleBufferedCollection<T : MutableCollection<*>>(value: T, private val initAction: Consumer<T>) {
+    @Suppress("UNCHECKED_CAST")
+    constructor(value: T) : this(value, DEFAULT_INIT_ACTION as Consumer<T>)
+
     private var delegate = value
     private var swap: T = delegate.javaClass.newInstance()
 
@@ -10,9 +15,15 @@ class DoubleBufferedCollection<T : MutableCollection<*>>(value: T) {
 
     fun swap(): T {
         val temp = delegate
-        swap.clear()
+        initAction.accept(swap)
         delegate = swap
         swap = temp
         return temp
+    }
+
+    private companion object {
+        val DEFAULT_INIT_ACTION = Consumer<MutableCollection<*>> {
+            it.clear()
+        }
     }
 }

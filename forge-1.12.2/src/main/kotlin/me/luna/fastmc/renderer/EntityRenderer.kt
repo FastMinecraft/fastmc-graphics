@@ -1,6 +1,9 @@
 package me.luna.fastmc.renderer
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import me.luna.fastmc.mixin.IPatchedRenderGlobal
 import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
@@ -18,19 +21,29 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
     }
 
     override suspend fun onPostTick(scope: CoroutineScope) {
-        renderEntryList.forEach {
-            it.clear()
-        }
-
-        mc.world?.let { world ->
-            world.loadedEntityList.forEach {
-                renderEntryMap[(it as ITypeID).typeID]?.add(it)
+        scope.launch(Dispatchers.Default) {
+            renderEntryList.forEach {
+                it.clear()
             }
 
-            updateRenderers(scope)
-        } ?: run {
-            renderEntryList.forEach {
-                it.destroyRenderer()
+            mc.world?.let { world ->
+                launch {
+                    (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, world)
+                }
+
+                launch(Dispatchers.Default) {
+                    world.loadedEntityList.forEach {
+                        renderEntryMap[(it as ITypeID).typeID]?.add(it)
+                    }
+
+                    updateRenderers(scope)
+                }
+            } ?: run {
+                scope.launch {
+                    renderEntryList.forEach {
+                        it.destroyRenderer()
+                    }
+                }
             }
         }
     }

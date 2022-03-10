@@ -351,6 +351,7 @@ public abstract class MixinWorld implements IPatchedWorld {
         return getLightFromNeighborsFor(type, pos.getX(), pos.getY(), pos.getZ());
     }
 
+    @Override
     public int getLightFromNeighborsFor(EnumSkyBlock type, int x, int y, int z) {
         if (type == EnumSkyBlock.SKY && !this.provider.hasSkyLight()) {
             return 0;
@@ -394,6 +395,7 @@ public abstract class MixinWorld implements IPatchedWorld {
         }
     }
 
+    @Override
     public int getLightFor(EnumSkyBlock type, int x, int y, int z) {
         if (y < 0) {
             y = 0;
@@ -409,24 +411,29 @@ public abstract class MixinWorld implements IPatchedWorld {
         }
     }
 
+    @Override
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isValid(int x, int y, int z) {
         return !this.isOutsideBuildHeight(y) && x >= -30000000 && z >= -30000000 && x < 30000000 && z < 30000000;
     }
 
+    @Override
     public boolean isOutsideBuildHeight(int y) {
         return y < 0 || y >= 256;
     }
 
+    @Override
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isBlockLoaded(int x, int z) {
         return this.isBlockLoaded(x, z, true);
     }
 
+    @Override
     public boolean isBlockLoaded(int x, int z, boolean allowEmpty) {
         return this.isChunkLoaded(x >> 4, z >> 4, allowEmpty);
     }
 
+    @Override
     public IBlockState getBlockState(int x, int y, int z) {
         if (this.isOutsideBuildHeight(y)) {
             return Blocks.AIR.getDefaultState();

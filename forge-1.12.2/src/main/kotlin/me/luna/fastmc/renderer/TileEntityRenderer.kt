@@ -31,52 +31,57 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 
     override suspend fun onPostTick(scope: CoroutineScope) {
         mc.world?.let {
-            val tempAdding: ArrayList<TileEntity>
-            val tempRemoving: ArrayList<TileEntity>
+            scope.launch(Dispatchers.Default) {
+                val tempAdding: ArrayList<TileEntity>
+                val tempRemoving: ArrayList<TileEntity>
 
-            synchronized(lock) {
-                tempAdding = adding
-                if (tempAdding.isNotEmpty()) adding = ArrayList()
+                synchronized(lock) {
+                    tempAdding = adding
+                    if (tempAdding.isNotEmpty()) adding = ArrayList()
 
-                tempRemoving = removing
-                if (tempRemoving.isNotEmpty()) removing = ArrayList()
-            }
-
-            if (tempRemoving.isNotEmpty()) {
-                val removingGroups = FastIntMap<HashSet<TileEntity>>()
-                tempRemoving.forEach {
-                    removingGroups.getOrPut((it as ITypeID).typeID) {
-                        HashSet()
-                    }.add(it)
+                    tempRemoving = removing
+                    if (tempRemoving.isNotEmpty()) removing = ArrayList()
                 }
 
-                removingGroups.forEach {
-                    renderEntryMap[it.key]?.removeAll(it.value)
-                }
-            }
+                if (tempRemoving.isNotEmpty()) {
+                    val removingGroups = FastIntMap<HashSet<TileEntity>>()
+                    tempRemoving.forEach {
+                        removingGroups.getOrPut((it as ITypeID).typeID) {
+                            HashSet()
+                        }.add(it)
+                    }
 
-            if (tempAdding.isNotEmpty()) {
-                val addingGroups = FastIntMap<ArrayList<TileEntity>>()
-                tempAdding.forEach {
-                    addingGroups.getOrPut((it as ITypeID).typeID) {
-                        ArrayList()
-                    }.add(it)
+                    removingGroups.forEach {
+                        renderEntryMap[it.key]?.removeAll(it.value)
+                    }
                 }
-                addingGroups.forEach {
-                    renderEntryMap[it.key]?.addAll(it.value)
-                }
-            }
 
-            renderEntryList.forEach {
-                it.markDirty()
+                if (tempAdding.isNotEmpty()) {
+                    val addingGroups = FastIntMap<ArrayList<TileEntity>>()
+                    tempAdding.forEach {
+                        addingGroups.getOrPut((it as ITypeID).typeID) {
+                            ArrayList()
+                        }.add(it)
+                    }
+                    addingGroups.forEach {
+                        renderEntryMap[it.key]?.addAll(it.value)
+                    }
+                }
+
+                renderEntryList.forEach {
+                    it.markDirty()
+                }
+
+                updateRenderers(scope)
             }
-            updateRenderers(scope)
         } ?: run {
-            adding = ArrayList()
-            removing = ArrayList()
+            scope.launch {
+                adding = ArrayList()
+                removing = ArrayList()
 
-            renderEntryList.forEach {
-                it.destroyRenderer()
+                renderEntryList.forEach {
+                    it.destroyRenderer()
+                }
             }
         }
     }
