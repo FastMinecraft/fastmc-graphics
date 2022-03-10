@@ -11,13 +11,19 @@ import me.luna.fastmc.shared.font.IFontRendererWrapper;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
 import net.minecraft.client.Minecraft;
+import net.minecraft.profiler.Profiler;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class MixinMinecraft {
+    @Shadow @Final public Profiler profiler;
+
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/OpenGlHelper;initializeTextures()V", shift = At.Shift.AFTER))
     public void init$Inject$INVOKE$initializeTextures(CallbackInfo ci) {
         FastMcMod.INSTANCE.initGLWrapper(new GLWrapper());
@@ -39,7 +45,9 @@ public class MixinMinecraft {
 
     @Inject(method = "runTick", at = @At("RETURN"))
     public void runTick$Inject$RETURN(CallbackInfo ci) {
+        this.profiler.startSection("fastMinecraft");
         FastMcMod.INSTANCE.onPostTick();
+        this.profiler.endSection();
     }
 
     @Inject(method = "refreshResources", at = @At("RETURN"))

@@ -53,25 +53,23 @@ abstract class AbstractRenderer<ET : Any>(
         return renderEntryMap.containsKey((entity as ITypeID).typeID)
     }
 
-    abstract fun onPostTick()
+    abstract suspend fun onPostTick(scope: CoroutineScope)
 
     @OptIn(ObsoleteCoroutinesApi::class)
-    protected fun updateRenderers() {
-        runBlocking {
-            val actor = actor<() -> Unit> {
-                for (block in channel) {
-                    block.invoke()
-                }
+    protected suspend fun updateRenderers(scope: CoroutineScope) {
+        val actor = scope.actor<() -> Unit> {
+            for (block in channel) {
+                block.invoke()
             }
-
-            coroutineScope {
-                for (entry in renderEntryList) {
-                    entry.update(this, actor)
-                }
-            }
-
-            actor.close()
         }
+
+        coroutineScope {
+            for (entry in renderEntryList) {
+                entry.update(this, actor)
+            }
+        }
+
+        actor.close()
     }
 
     open fun render() {

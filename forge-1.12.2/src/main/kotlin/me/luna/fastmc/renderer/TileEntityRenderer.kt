@@ -29,7 +29,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         register(ChestRenderEntry())
     }
 
-    override fun onPostTick() {
+    override suspend fun onPostTick(scope: CoroutineScope) {
         mc.world?.let {
             val tempAdding: ArrayList<TileEntity>
             val tempRemoving: ArrayList<TileEntity>
@@ -70,7 +70,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             renderEntryList.forEach {
                 it.markDirty()
             }
-            updateRenderers()
+            updateRenderers(scope)
         } ?: run {
             adding = ArrayList()
             removing = ArrayList()

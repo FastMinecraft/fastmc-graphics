@@ -1,5 +1,6 @@
 package me.luna.fastmc
 
+import kotlinx.coroutines.runBlocking
 import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.shared.opengl.IGLWrapper
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
@@ -62,6 +63,8 @@ object FastMcMod {
     }
 
     fun onPostTick() {
-        worldRenderer.onPostTick()
+        runBlocking {
+            worldRenderer.onPostTick(this)
+        }
     }
 }

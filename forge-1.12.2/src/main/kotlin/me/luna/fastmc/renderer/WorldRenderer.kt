@@ -1,5 +1,6 @@
 package me.luna.fastmc.renderer
 
+import kotlinx.coroutines.CoroutineScope
 import me.luna.fastmc.shared.opengl.glBindTexture
 import me.luna.fastmc.shared.opengl.glBindVertexArray
 import me.luna.fastmc.shared.opengl.glUniform1f
@@ -9,21 +10,12 @@ import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.util.MathUtils
 import me.luna.fastmc.shared.util.MatrixUtils
 import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.GlStateManager
-import org.lwjgl.opengl.GL11.*
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
-    override fun onPostTick() {
-        mc.profiler.startSection("worldRenderer")
-
-        mc.profiler.startSection("entity")
-        entityRenderer.onPostTick()
-        mc.profiler.endStartSection("tileEntity")
-        tileEntityRenderer.onPostTick()
-        mc.profiler.endSection()
-
-        mc.profiler.endSection()
+    override suspend fun onPostTick(scope: CoroutineScope) {
+        entityRenderer.onPostTick(scope)
+        tileEntityRenderer.onPostTick(scope)
     }
 
     override fun preRender(partialTicks: Float) {

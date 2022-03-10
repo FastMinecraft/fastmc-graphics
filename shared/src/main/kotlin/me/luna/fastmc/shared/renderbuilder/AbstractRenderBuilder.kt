@@ -10,6 +10,7 @@ import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.BufferUtils
+import me.luna.fastmc.shared.util.ParallelUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -77,29 +78,26 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
     suspend fun addAll(entities: List<T>) {
         coroutineScope {
-            var index = 0
-            val parallelSize = 1024
-            val combineThreshold = parallelSize / 2
+            ParallelUtils.splitListIndex(
+                total = entities.size,
+                blockForEach = { start, end ->
+                    launch {
+                        val regionBuffer = buffer.duplicate().order(ByteOrder.nativeOrder())
+                        regionBuffer.position(start * vertexSize)
 
-            while (index < entities.size) {
-                val start = index
-                var end = index + parallelSize
-                val remaining = entities.size - end
-                if (remaining < 0 || remaining < combineThreshold) {
-                    end = entities.size
-                }
-
-                index = end
-
-                launch {
-                    val regionBuffer = buffer.duplicate().order(ByteOrder.nativeOrder())
-                    regionBuffer.position(start * vertexSize)
+                        for (i in start until end) {
+                            add(regionBuffer, entities[i])
+                        }
+                    }
+                },
+                blockForRemaining = { start, end ->
+                    buffer.position(start * vertexSize)
 
                     for (i in start until end) {
-                        add(regionBuffer, entities[i])
+                        add(buffer, entities[i])
                     }
                 }
-            }
+            )
         }
     }
 

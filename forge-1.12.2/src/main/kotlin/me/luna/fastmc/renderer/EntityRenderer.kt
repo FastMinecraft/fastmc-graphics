@@ -1,5 +1,6 @@
 package me.luna.fastmc.renderer
 
+import kotlinx.coroutines.CoroutineScope
 import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
@@ -16,7 +17,7 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
         register<EntityCow, CowRenderBuilder>()
     }
 
-    override fun onPostTick() {
+    override suspend fun onPostTick(scope: CoroutineScope) {
         renderEntryList.forEach {
             it.clear()
         }
@@ -26,7 +27,7 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
                 renderEntryMap[(it as ITypeID).typeID]?.add(it)
             }
 
-            updateRenderers()
+            updateRenderers(scope)
         } ?: run {
             renderEntryList.forEach {
                 it.destroyRenderer()

@@ -1,6 +1,7 @@
 package me.luna.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
+import kotlinx.coroutines.CoroutineScope
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import net.minecraft.entity.Entity
@@ -12,7 +13,7 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 //        register(CowInfo::class.java, CowRenderBuilder::class.java)
     }
 
-    override fun onPostTick() {
+    override suspend fun onPostTick(scope: CoroutineScope) {
         renderEntryList.forEach {
             it.clear()
         }
@@ -25,7 +26,7 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 //                    renderEntryMap[clazz]?.addAll(entities)
 //                }
 
-            updateRenderers()
+            updateRenderers(scope)
         } ?: run {
             renderEntryList.forEach {
                 it.destroyRenderer()

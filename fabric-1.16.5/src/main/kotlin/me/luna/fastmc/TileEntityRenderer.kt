@@ -29,7 +29,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         register(ChestRenderEntry())
     }
 
-    override fun onPostTick() {
+    override suspend fun onPostTick(scope: CoroutineScope) {
         renderEntryList.forEach {
             it.clear()
         }
@@ -42,7 +42,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 //                    renderEntryMap[clazz]?.addAll(tileEntities)
 //                }
 
-            updateRenderers()
+            updateRenderers(scope)
         } ?: run {
             renderEntryList.forEach {
                 it.destroyRenderer()

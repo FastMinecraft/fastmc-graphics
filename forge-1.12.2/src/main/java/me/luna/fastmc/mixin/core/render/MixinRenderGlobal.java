@@ -8,7 +8,7 @@ import me.luna.fastmc.renderer.WorldRenderer;
 import me.luna.fastmc.resource.ResourceManager;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
-import me.luna.fastmc.util.DoubleBufferedCollection;
+import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
@@ -66,6 +66,7 @@ public abstract class MixinRenderGlobal {
         FastMcMod.INSTANCE.getWorldRenderer().postRender();
     }
 
+    @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
     private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
         for (TileEntity tileEntity : renderTileEntities.get()) {
@@ -87,7 +88,10 @@ public abstract class MixinRenderGlobal {
 
     @ModifyArg(method = "setupTerrain", at = @At(value = "INVOKE", target = "Ljava/util/List;add(Ljava/lang/Object;)Z", remap = false), index = 0)
     private Object setupTerrain$Inject$INVOKE$add$1(Object value) {
-        renderTileEntities.get().addAll(((AccessorRenderGlobalContainerLocalRenderInformation) value).getRenderChunk().getCompiledChunk().getTileEntities());
+        List<TileEntity> list = ((AccessorRenderGlobalContainerLocalRenderInformation) value).getRenderChunk().getCompiledChunk().getTileEntities();
+        if (!list.isEmpty()) {
+            renderTileEntities.get().addAll(list);
+        }
         return value;
     }
 

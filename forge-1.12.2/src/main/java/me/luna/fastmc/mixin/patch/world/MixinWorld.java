@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import me.luna.fastmc.mixin.IPatchedChunk;
 import me.luna.fastmc.mixin.IPatchedWorld;
+import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import me.luna.fastmc.shared.util.ITypeID;
 import me.luna.fastmc.shared.util.collection.FastIntMap;
 import me.luna.fastmc.util.RaytraceKt;
@@ -24,7 +25,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldProvider;
-import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.ForgeModContainer;
 import net.minecraftforge.fml.common.FMLLog;
@@ -32,20 +32,18 @@ import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
 import net.minecraftforge.server.timings.TimeTracker;
 import org.jetbrains.annotations.NotNull;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 @Mixin(World.class)
 public abstract class MixinWorld implements IPatchedWorld {
-
     @Shadow
     @Final
     public WorldProvider provider;
@@ -57,6 +55,7 @@ public abstract class MixinWorld implements IPatchedWorld {
     @Final
     public Profiler profiler;
 
+    @Mutable
     @Shadow
     @Final
     private List<TileEntity> addedTileEntityList;
@@ -65,14 +64,7 @@ public abstract class MixinWorld implements IPatchedWorld {
     @Final
     public List<TileEntity> loadedTileEntityList;
 
-    @Shadow
-    @Final
-    private WorldBorder worldBorder;
-
-    @Shadow
-    @Final
-    public List<TileEntity> tickableTileEntities;
-
+    @Mutable
     @Shadow
     @Final
     private List<TileEntity> tileEntitiesToBeRemoved;
@@ -107,12 +99,6 @@ public abstract class MixinWorld implements IPatchedWorld {
     public abstract boolean addTileEntity(TileEntity tile);
 
     @Shadow
-    public abstract void removeTileEntity(BlockPos pos);
-
-    @Shadow
-    public abstract boolean isBlockLoaded(BlockPos pos, boolean allowEmpty);
-
-    @Shadow
     public abstract void onEntityRemoved(Entity entityIn);
 
     @Shadow
@@ -122,39 +108,24 @@ public abstract class MixinWorld implements IPatchedWorld {
     protected abstract void tickPlayers();
 
     @Shadow
-    @Final
-    protected List<Entity> unloadedEntityList;
+    public abstract TileEntity getTileEntity(BlockPos par1);
 
-    private final IntSet unloadedEntitiesOverride = new IntOpenHashSet();
-    private final IntSet removingWeatherEffects = new IntOpenHashSet();
-    private final IntSet removingEntities = new IntOpenHashSet();
-    private final List<Entity> removingEntitiesList = new ArrayList<>();
-    private final Set<TileEntity> removingTileEntity = new LinkedHashSet<>();
+    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(new IntOpenHashSet());
+    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(new IntOpenHashSet());
+    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(new ArrayList<>());
+
     private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
 
     @Override
-    @NotNull
-    public IntSet getUnloadedEntitiesOverride() {
-        return unloadedEntitiesOverride;
-    }
-
-    @Override
-    @NotNull
-    public IntSet getRemovingEntities() {
-        return removingEntities;
-    }
-
-    @NotNull
-    @Override
-    public List<Entity> getRemovingEntitiesList() {
-        return removingEntitiesList;
-    }
-
-    @Override
     public void batchRemoveEntities() {
-        this.loadedEntityList.removeIf(it -> getRemovingEntities().contains(it.getEntityId()));
+        if (getRemovingEntities().isEmpty()) return;
 
-        for (Entity entity : getRemovingEntitiesList()) {
+        IntSet tempSet = removingEntities.get();
+        List<Entity> tempList = removingEntitiesList.get();
+
+        this.loadedEntityList.removeIf(it -> tempSet.contains(it.getEntityId()));
+
+        for (Entity entity : tempList) {
             int chunkCoordX = entity.chunkCoordX;
             int chunkCoordZ = entity.chunkCoordZ;
 
@@ -164,9 +135,6 @@ public abstract class MixinWorld implements IPatchedWorld {
 
             this.onEntityRemoved(entity);
         }
-
-        getRemovingEntities().clear();
-        getRemovingEntitiesList().clear();
     }
 
     /**
@@ -176,6 +144,7 @@ public abstract class MixinWorld implements IPatchedWorld {
     @Overwrite
     @Nullable
     public RayTraceResult rayTraceBlocks(Vec3d vec31, Vec3d vec32, boolean stopOnLiquid, boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock) {
+        //noinspection ConstantConditions
         return RaytraceKt.rayTrace((World) (Object) this, vec31, vec32, stopOnLiquid, ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock);
     }
 
@@ -212,7 +181,10 @@ public abstract class MixinWorld implements IPatchedWorld {
 
         this.profiler.endStartSection("pendingBlockEntities");
         if (!addedTileEntityList.isEmpty()) {
-            for (TileEntity tileEntity : addedTileEntityList) {
+            List<TileEntity> temp = addedTileEntityList;
+            addedTileEntityList = new ArrayList<>();
+
+            for (TileEntity tileEntity : temp) {
                 if (!tileEntity.isInvalid()) {
                     if (!loadedTileEntityList.contains(tileEntity)) {
                         addTileEntity(tileEntity);
@@ -228,17 +200,14 @@ public abstract class MixinWorld implements IPatchedWorld {
                     }
                 }
             }
-
-            addedTileEntityList.clear();
         }
+
         this.profiler.endSection();
 
         this.profiler.endSection();
     }
 
     private void tickWeather() {
-        removingWeatherEffects.clear();
-
         for (Entity entity : weatherEffects) {
             try {
                 if (entity.updateBlocked) continue;
@@ -256,43 +225,33 @@ public abstract class MixinWorld implements IPatchedWorld {
 
                 if (ForgeModContainer.removeErroringEntities) {
                     FMLLog.log.fatal("{}", crashreport.getCompleteReport());
-                    getRemovingEntities().add(entity.getEntityId());
+                    removingWeatherEffects.get().add(entity.getEntityId());
                 } else {
                     throw new ReportedException(crashreport);
                 }
             }
 
             if (entity.isDead) {
-                removingWeatherEffects.add(entity.getEntityId());
+                removingWeatherEffects.get().add(entity.getEntityId());
             }
         }
     }
 
     private void tickRemove() {
-        this.weatherEffects.removeIf(it -> removingWeatherEffects.contains(it.getEntityId()));
-        this.loadedEntityList.removeIf(it -> unloadedEntitiesOverride.contains(it.getEntityId()));
-
-        for (Entity entity : this.unloadedEntityList) {
-            int x = entity.chunkCoordX;
-            int y = entity.chunkCoordZ;
-
-            if (entity.addedToChunk && this.isChunkLoaded(x, y, true)) {
-                this.getChunk(x, y).removeEntity(entity);
-            }
+        if (!removingWeatherEffects.get().isEmpty()) {
+            IntSet temp = removingWeatherEffects.swap();
+            this.weatherEffects.removeIf(it -> temp.contains(it.getEntityId()));
         }
 
-        for (Entity entity : this.unloadedEntityList) {
-            this.onEntityRemoved(entity);
-        }
-
-        unloadedEntityList.clear();
-        unloadedEntitiesOverride.clear();
+        batchRemoveEntities();
     }
 
     private void tickEntity() {
         this.profiler.startSection("tick");
 
-        for (Entity entity : this.loadedEntityList) {
+        List<Entity> temp = this.loadedEntityList;
+        for (int i = 0, entityListSize = temp.size(); i < entityListSize; i++) {
+            Entity entity = temp.get(i);
             Entity ridingEntity = entity.getRidingEntity();
 
             if (ridingEntity != null) {
@@ -316,7 +275,7 @@ public abstract class MixinWorld implements IPatchedWorld {
                     entity.addEntityCrashInfo(crashReportCategory);
                     if (ForgeModContainer.removeErroringEntities) {
                         FMLLog.log.fatal("{}", crashReport.getCompleteReport());
-                        getRemovingEntities().add(entity.getEntityId());
+                        markRemoving(entity);
                     } else {
                         throw new ReportedException(crashReport);
                     }
@@ -329,96 +288,48 @@ public abstract class MixinWorld implements IPatchedWorld {
         this.profiler.endSection();
     }
 
-    private void tickTileEntity() {
-        this.processingLoadedTiles = true; //FML Move above remove to prevent CMEs
+    @Inject(method = "addTileEntity", at = @At("TAIL"))
+    private void addTileEntity$Inject$TAIL(TileEntity tile, CallbackInfoReturnable<Boolean> cir) {
+        if (tile instanceof ITickable) {
+            int id = ((ITypeID) tile).getTypeID();
+            List<TileEntity> list;
 
-        if (!this.tileEntitiesToBeRemoved.isEmpty()) {
-            for (TileEntity tile : tileEntitiesToBeRemoved) {
-                tile.onChunkUnload();
+            list = groupedTickableTileEntity.get(id);
+
+            if (list == null) {
+                list = new ArrayList<>();
+                groupedTickableTileEntity.put(id, list);
             }
 
-            removingTileEntity.addAll(tileEntitiesToBeRemoved);
-
-            tickableTileEntities.removeAll(removingTileEntity);
-            loadedTileEntityList.removeAll(removingTileEntity);
-
-            removingTileEntity.clear();
-            tileEntitiesToBeRemoved.clear();
+            list.add(tile);
         }
+    }
 
-        for (List<TileEntity> list : groupedTickableTileEntity.values()) {
-            list.clear();
+    /**
+     * @author Luna
+     * @reason Optimization
+     */
+    @Overwrite
+    public void unloadEntities(Collection<Entity> entityCollection) {
+        if (entityCollection.isEmpty()) return;
+
+        ArrayList<Entity> list = getRemovingEntitiesList();
+        IntSet set = getRemovingEntities();
+        list.ensureCapacity(list.size() + entityCollection.size());
+
+        for (Entity entity : entityCollection) {
+            list.add(entity);
+            set.add(entity.getEntityId());
         }
+    }
 
-        for (TileEntity tileEntity : tickableTileEntities) {
-            if (tileEntity.isInvalid()) {
-                removingTileEntity.add(tileEntity);
-            } else {
-                int id = ((ITypeID) tileEntity).getTypeID();
-                List<TileEntity> list = groupedTickableTileEntity.get(id);
-
-                if (list == null) {
-                    list = new ArrayList<>();
-                    groupedTickableTileEntity.put(id, list);
-                }
-
-                list.add(tileEntity);
-            }
-        }
-
-        tickableTileEntities.removeAll(removingTileEntity);
-        loadedTileEntityList.removeAll(removingTileEntity);
-
-        for (TileEntity tileEntity : removingTileEntity) {
-            BlockPos pos = tileEntity.getPos();
-
-            if (this.isBlockLoaded(pos)) {
-                //Forge: Bugfix: If we set the tile entity it immediately sets it in the chunk, so we could be desyned
-                Chunk chunk = this.getChunk(pos);
-                if (chunk.getTileEntity(pos, Chunk.EnumCreateEntityType.CHECK) == tileEntity)
-                    chunk.removeTileEntity(pos);
-            }
-        }
-
-        removingTileEntity.clear();
-
-        for (List<TileEntity> list : groupedTickableTileEntity.values()) {
-            if (list.isEmpty()) continue;
-
-            TileEntity first = list.get(0);
-            profiler.func_194340_a(() -> String.valueOf(TileEntity.getKey(first.getClass())));
-
-            for (TileEntity tileEntity : list) {
-                if (!tileEntity.isInvalid() && tileEntity.hasWorld()) {
-                    BlockPos pos = tileEntity.getPos();
-
-                    //Forge: Fix TE's getting an extra tick on the client side....
-                    if (this.isBlockLoaded(pos, false) && worldBorder.contains(pos)) {
-                        try {
-                            TimeTracker.TILE_ENTITY_UPDATE.trackStart(tileEntity);
-                            ((ITickable) tileEntity).update();
-                            TimeTracker.TILE_ENTITY_UPDATE.trackEnd(tileEntity);
-                        } catch (Throwable throwable) {
-                            CrashReport crashReport = CrashReport.makeCrashReport(throwable, "Ticking block entity");
-                            CrashReportCategory crashReportCategory = crashReport.makeCategory("Block entity being ticked");
-                            tileEntity.addInfoToCrashReport(crashReportCategory);
-
-                            if (ForgeModContainer.removeErroringTileEntities) {
-                                FMLLog.log.fatal("{}", crashReport.getCompleteReport());
-                                tileEntity.invalidate();
-                                removeTileEntity(pos);
-                            } else {
-                                throw new ReportedException(crashReport);
-                            }
-                        }
-                    }
-                }
-            }
-
-            profiler.endSection();
-        }
-
-        this.processingLoadedTiles = false;
+    /**
+     * @author Luna
+     * @reason Optimization
+     */
+    @Overwrite
+    public void removeTileEntity(BlockPos pos) {
+        this.getTileEntity(pos).invalidate();
     }
 
     /**
@@ -450,7 +361,7 @@ public abstract class MixinWorld implements IPatchedWorld {
 
             if (!this.isValid(x, y, z)) {
                 return type.defaultLightValue;
-            } else if (!this.isBlockLoaded(x, y, z)) {
+            } else if (!this.isBlockLoaded(x, z)) {
                 return type.defaultLightValue;
             } else if (this.getBlockState(x, y, z).useNeighborBrightness()) {
                 int i1 = this.getLightFor(type, x, y + 1, z);
@@ -477,7 +388,7 @@ public abstract class MixinWorld implements IPatchedWorld {
 
                 return i1;
             } else {
-                IPatchedChunk chunk = (IPatchedChunk) this.getChunk(x, y, z);
+                IPatchedChunk chunk = (IPatchedChunk) this.getChunk(x, z);
                 return chunk.getLightFor(type, x, y, z);
             }
         }
@@ -490,40 +401,88 @@ public abstract class MixinWorld implements IPatchedWorld {
 
         if (!this.isValid(x, y, z)) {
             return type.defaultLightValue;
-        } else if (!this.isBlockLoaded(x, y, z)) {
+        } else if (!this.isBlockLoaded(x, z)) {
             return type.defaultLightValue;
         } else {
-            IPatchedChunk chunk = (IPatchedChunk) this.getChunk(x, y, z);
+            IPatchedChunk chunk = (IPatchedChunk) this.getChunk(x, z);
             return chunk.getLightFor(type, x, y, z);
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isValid(int x, int y, int z) {
-        return !this.isOutsideBuildHeight(x, y, z) && x >= -30000000 && z >= -30000000 && x < 30000000 && z < 30000000;
+        return !this.isOutsideBuildHeight(y) && x >= -30000000 && z >= -30000000 && x < 30000000 && z < 30000000;
     }
 
-    public boolean isOutsideBuildHeight(int x, int y, int z) {
+    public boolean isOutsideBuildHeight(int y) {
         return y < 0 || y >= 256;
     }
 
-    public boolean isBlockLoaded(int x, int y, int z) {
-        return this.isBlockLoaded(x, y, z, true);
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    public boolean isBlockLoaded(int x, int z) {
+        return this.isBlockLoaded(x, z, true);
     }
 
-    public boolean isBlockLoaded(int x, int y, int z, boolean allowEmpty) {
+    public boolean isBlockLoaded(int x, int z, boolean allowEmpty) {
         return this.isChunkLoaded(x >> 4, z >> 4, allowEmpty);
     }
 
-    public Chunk getChunk(int x, int y, int z) {
-        return this.getChunk(x >> 4, z >> 4);
-    }
-
     public IBlockState getBlockState(int x, int y, int z) {
-        if (this.isOutsideBuildHeight(x, y, z)) {
+        if (this.isOutsideBuildHeight(y)) {
             return Blocks.AIR.getDefaultState();
         } else {
-            Chunk chunk = this.getChunk(x, y, z);
+            Chunk chunk = this.getChunk(x, z);
             return chunk.getBlockState(x, y, z);
         }
+    }
+
+    @Override
+    public boolean getProcessingLoadedTiles() {
+        return this.processingLoadedTiles;
+    }
+
+    @Override
+    public void setProcessingLoadedTiles(boolean processingLoadedTiles) {
+        this.processingLoadedTiles = processingLoadedTiles;
+    }
+
+    @NotNull
+    @Override
+    public List<TileEntity> getTileEntitiesToBeRemoved() {
+        return this.tileEntitiesToBeRemoved;
+    }
+
+    @Override
+    public void setTileEntitiesToBeRemoved(@NotNull List<TileEntity> tileEntitiesToBeRemoved) {
+        this.tileEntitiesToBeRemoved = tileEntitiesToBeRemoved;
+    }
+
+    @NotNull
+    @Override
+    public List<TileEntity> getAddedTileEntityList() {
+        return this.addedTileEntityList;
+    }
+
+    @Override
+    public void setAddedTileEntityList(@NotNull List<TileEntity> addedTileEntityList) {
+        this.addedTileEntityList = addedTileEntityList;
+    }
+
+    @NotNull
+    @Override
+    public IntSet getRemovingEntities() {
+        return this.removingEntities.get();
+    }
+
+    @NotNull
+    @Override
+    public ArrayList<Entity> getRemovingEntitiesList() {
+        return this.removingEntitiesList.get();
+    }
+
+    @NotNull
+    @Override
+    public FastIntMap<List<TileEntity>> getGroupedTickableTileEntity() {
+        return this.groupedTickableTileEntity;
     }
 }

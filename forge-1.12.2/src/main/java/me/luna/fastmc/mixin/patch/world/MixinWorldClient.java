@@ -23,23 +23,7 @@ public abstract class MixinWorldClient extends World implements IPatchedWorld {
      */
     @Overwrite
     public void removeAllEntities() {
-        this.loadedEntityList.removeIf(it -> getUnloadedEntitiesOverride().contains(it.getEntityId()));
-
-        for (Entity entity : unloadedEntityList) {
-            int chunkCoordX = entity.chunkCoordX;
-            int chunkCoordZ = entity.chunkCoordZ;
-
-            if (entity.addedToChunk && isChunkLoaded(chunkCoordX, chunkCoordZ, true)) {
-                this.getChunk(chunkCoordX, chunkCoordZ).removeEntity(entity);
-            }
-        }
-
-        for (Entity entity : unloadedEntityList) {
-            this.onEntityRemoved(entity);
-        }
-
-        this.getUnloadedEntitiesOverride().clear();
-        this.unloadedEntityList.clear();
+        batchRemoveEntities();
 
         for (Entity entity : loadedEntityList) {
             Entity ridingEntity = entity.getRidingEntity();
