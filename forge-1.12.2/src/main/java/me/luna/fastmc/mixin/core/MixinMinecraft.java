@@ -7,6 +7,7 @@ import me.luna.fastmc.renderer.FontRendererWrapper;
 import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.renderer.WorldRenderer;
 import me.luna.fastmc.resource.ResourceManager;
+import me.luna.fastmc.shared.FpsDisplay;
 import me.luna.fastmc.shared.font.IFontRendererWrapper;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
@@ -17,7 +18,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
@@ -59,5 +59,10 @@ public class MixinMinecraft {
         worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
 
         FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer);
+    }
+
+    @Inject(method = "runGameLoop", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Minecraft;isFramerateLimitBelowMax()Z", shift = At.Shift.BEFORE))
+    public void runGameLoop$Inject$INVOKE$isFramerateLimitBelowMax(CallbackInfo ci) {
+        FpsDisplay.INSTANCE.onPostRenderTick();
     }
 }

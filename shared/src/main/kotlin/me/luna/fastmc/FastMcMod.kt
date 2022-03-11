@@ -1,7 +1,10 @@
 package me.luna.fastmc
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.luna.fastmc.shared.Config
+import me.luna.fastmc.shared.FpsDisplay
 import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.shared.opengl.IGLWrapper
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
@@ -68,6 +71,7 @@ object FastMcMod {
     fun onPostTick() {
         runBlocking {
             worldRenderer.onPostTick(this)
+            launch(Dispatchers.Default) { FpsDisplay.onPostTick() }
         }
     }
 }
