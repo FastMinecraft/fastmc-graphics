@@ -21,6 +21,10 @@ class VertexAttribute private constructor(private val stride: Int, private val e
             pointer += size * type.size
         }
 
+        fun padding(bytes: Int) {
+            pointer += bytes
+        }
+
         fun build(): VertexAttribute {
             return VertexAttribute(stride, entries)
         }

@@ -1,6 +1,7 @@
 package me.luna.fastmc
 
 import kotlinx.coroutines.runBlocking
+import me.luna.fastmc.shared.Config
 import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.shared.opengl.IGLWrapper
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
@@ -13,6 +14,8 @@ object FastMcMod {
     var isInitialized = false; private set
 
     lateinit var glWrapper: IGLWrapper; private set
+
+    var config = Config(); private set
 
     lateinit var resourceManager: IResourceManager; private set
     lateinit var worldRenderer: AbstractWorldRenderer; private set

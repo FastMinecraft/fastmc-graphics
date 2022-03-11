@@ -32,17 +32,17 @@ abstract class Model(override val resourceName: String, private val textureSizeX
         glDeleteBuffers(vboID)
     }
 
+    private val vertexAttribute = buildAttribute(20) {
+        float(0, 3, GLDataType.GL_FLOAT, false)
+        float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true)
+        float(2, 3, GLDataType.GL_BYTE, false)
+        int(3, 1, GLDataType.GL_UNSIGNED_BYTE)
+    }
+
     companion object {
         fun <T : Model> T.init() :T {
             this.init0()
             return this
-        }
-
-        private val vertexAttribute = buildAttribute(20) {
-            float(0, 3, GLDataType.GL_FLOAT, false)
-            float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true)
-            float(2, 3, GLDataType.GL_BYTE, false)
-            int(3, 3, GLDataType.GL_UNSIGNED_BYTE)
         }
     }
 }
