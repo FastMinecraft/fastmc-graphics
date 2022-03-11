@@ -12,6 +12,8 @@
     "gui.MixinGuiInventory",
     "optifine.MixinConfig",
     "player.MixinPlayerControllerMP",
+    "render.MixinActiveRenderInfo",
+    "render.MixinClippingHelperImpl",
     "render.MixinCompiledChunk",
     "render.MixinRenderGlobal",
     "render.MixinVisGraph",

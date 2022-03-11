@@ -61,8 +61,8 @@ inline fun Float.fastFloor() = (this + FLOOR_FLOAT_F).toInt() - FLOOR_FLOAT_I
 inline fun Double.fastCeil() = FLOOR_DOUBLE_I - (FLOOR_DOUBLE_D - this).toInt()
 inline fun Float.fastCeil() = FLOOR_FLOAT_I - (FLOOR_FLOAT_F - this).toInt()
 
-inline fun Float.toRadian() = this / 180.0f * PI_FLOAT
-inline fun Double.toRadian() = this / 180.0 * PI
+inline fun Float.toRadians() = this / 180.0f * PI_FLOAT
+inline fun Double.toRadians() = this / 180.0 * PI
 
 inline fun Float.toDegree() = this * 180.0f / PI_FLOAT
 inline fun Double.toDegree() = this * 180.0 / PI

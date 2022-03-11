@@ -2,7 +2,7 @@ package me.luna.fastmc.shared.texture
 
 import me.luna.fastmc.shared.util.collection.mapArray
 import me.luna.fastmc.shared.util.fastCeil
-import me.luna.fastmc.shared.util.toRadian
+import me.luna.fastmc.shared.util.toRadians
 import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.geom.AffineTransform
@@ -177,12 +177,12 @@ class TextureTransformer(
         }
 
         fun rotate(degree: Double) {
-            val radian = degree.toRadian()
+            val radian = degree.toRadians()
             val tempTransform = AffineTransform(imageTransform)
             tempTransform.rotate(radian)
             val tempBounds = tempTransform.getBounds()
 
-            val rotRadian = rotation.toRadian()
+            val rotRadian = rotation.toRadians()
             val sin = sin(rotRadian)
             val cos = cos(rotRadian)
 
