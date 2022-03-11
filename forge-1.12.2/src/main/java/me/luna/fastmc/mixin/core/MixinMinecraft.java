@@ -60,9 +60,4 @@ public class MixinMinecraft {
 
         FastMcMod.INSTANCE.reloadResource(resourceManager, worldRenderer);
     }
-
-    @Redirect(method = "runGameLoop", at = @At(value = "INVOKE", target = "Ljava/lang/Thread;yield()V", remap = false))
-    public void runGameLoop$Redirect$INVOKE$yield() {
-
-    }
 }
