@@ -2,6 +2,7 @@ package me.luna.fastmc.shared.renderer
 
 import kotlinx.coroutines.CoroutineScope
 import org.joml.Matrix4f
+import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractWorldRenderer : IRenderer {
     lateinit var tileEntityRenderer: AbstractTileEntityRenderer<*>; private set
@@ -27,7 +28,7 @@ abstract class AbstractWorldRenderer : IRenderer {
         modelViewMatrix = modelView
     }
 
-    abstract suspend fun onPostTick(scope: CoroutineScope)
+    abstract fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope)
 
     abstract fun preRender(partialTicks: Float)
 

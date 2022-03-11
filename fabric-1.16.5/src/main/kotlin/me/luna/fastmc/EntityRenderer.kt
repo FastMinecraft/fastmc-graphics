@@ -1,11 +1,12 @@
 package me.luna.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import net.minecraft.entity.Entity
 import org.lwjgl.opengl.GL11.*
+import kotlin.coroutines.CoroutineContext
 
 class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
     AbstractEntityRenderer<Entity>(worldRenderer) {
@@ -13,12 +14,13 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 //        register(CowInfo::class.java, CowRenderBuilder::class.java)
     }
 
-    override suspend fun onPostTick(scope: CoroutineScope) {
-        renderEntryList.forEach {
-            it.clear()
-        }
+    override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
+        parentScope.launch(Dispatchers.Default) {
+            renderEntryList.forEach {
+                it.clear()
+            }
 
-        mc.world?.let { world ->
+            mc.world?.let { world ->
 //            world.entities
 //                .groupBy {
 //                    it::class.java
@@ -26,10 +28,13 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 //                    renderEntryMap[clazz]?.addAll(entities)
 //                }
 
-            updateRenderers(scope)
-        } ?: run {
-            renderEntryList.forEach {
-                it.destroyRenderer()
+                updateRenderers(mainThreadContext, true)
+            } ?: run {
+                withContext(mainThreadContext) {
+                    renderEntryList.forEach {
+                        it.destroyRenderer()
+                    }
+                }
             }
         }
     }

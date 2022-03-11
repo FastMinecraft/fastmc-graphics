@@ -10,7 +10,10 @@ import me.luna.fastmc.util.ExtensionsKt;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;
+import net.minecraft.client.renderer.ChunkRenderContainer;
 import net.minecraft.client.renderer.RenderGlobal;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.chunk.ChunkRenderDispatcher;
 import net.minecraft.client.renderer.chunk.RenderChunk;
 import net.minecraft.client.renderer.chunk.VisGraph;
 import net.minecraft.client.renderer.culling.ICamera;
@@ -18,6 +21,7 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.entity.Entity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.chunk.Chunk;
@@ -65,6 +69,20 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
     @Shadow
     protected abstract boolean isOutlineActive(Entity entityIn, Entity viewer, ICamera camera);
+
+    @Shadow
+    private ChunkRenderContainer renderContainer;
+    @Shadow
+    private double prevRenderSortX;
+    @Shadow
+    private double prevRenderSortY;
+    @Shadow
+    private double prevRenderSortZ;
+    @Shadow
+    private ChunkRenderDispatcher renderDispatcher;
+
+    @Shadow
+    protected abstract void renderBlockLayer(BlockRenderLayer blockLayerIn);
 
     private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
     private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
@@ -194,5 +212,61 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
                 list2.add(it);
             }
         }
+    }
+
+    /**
+     * @author Luna
+     * @reason Lambda optimization
+     */
+    @Overwrite
+    public int renderBlockLayer(BlockRenderLayer blockLayerIn, double partialTicks, int pass, Entity entityIn) {
+        RenderHelper.disableStandardItemLighting();
+
+        if (blockLayerIn == BlockRenderLayer.TRANSLUCENT) {
+            this.mc.profiler.startSection("translucent_sort");
+            double d0 = entityIn.posX - this.prevRenderSortX;
+            double d1 = entityIn.posY - this.prevRenderSortY;
+            double d2 = entityIn.posZ - this.prevRenderSortZ;
+
+            if (d0 * d0 + d1 * d1 + d2 * d2 > 1.0D) {
+                this.prevRenderSortX = entityIn.posX;
+                this.prevRenderSortY = entityIn.posY;
+                this.prevRenderSortZ = entityIn.posZ;
+                int k = 0;
+
+                for (RenderGlobal.ContainerLocalRenderInformation info : this.renderInfos) {
+                    RenderChunk renderChunk = ExtensionsKt.getRenderChunk(info);
+                    if (renderChunk.compiledChunk.isLayerStarted(blockLayerIn) && k++ < 15) {
+                        this.renderDispatcher.updateTransparencyLater(renderChunk);
+                    }
+                }
+            }
+
+            this.mc.profiler.endSection();
+        }
+
+        this.mc.profiler.startSection("filterempty");
+
+        int count = 0;
+
+        boolean flag = blockLayerIn == BlockRenderLayer.TRANSLUCENT;
+        int start = flag ? this.renderInfos.size() - 1 : 0;
+        int end = flag ? -1 : this.renderInfos.size();
+        int step = flag ? -1 : 1;
+
+        for (int i = start; i != end; i += step) {
+            RenderChunk renderchunk = ExtensionsKt.getRenderChunk(this.renderInfos.get(i));
+
+            if (!renderchunk.getCompiledChunk().isLayerEmpty(blockLayerIn)) {
+                ++count;
+                this.renderContainer.addRenderChunk(renderchunk, blockLayerIn);
+            }
+        }
+
+        this.mc.profiler.endStartSection(blockLayerIn.toString());
+        this.renderBlockLayer(blockLayerIn);
+        this.mc.profiler.endSection();
+
+        return count;
     }
 }

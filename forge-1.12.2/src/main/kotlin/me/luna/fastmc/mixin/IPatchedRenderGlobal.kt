@@ -172,7 +172,7 @@ interface IPatchedRenderGlobal {
         queue: Queue<RenderInfo>
     ) {
         runBlocking {
-            val actor = actor<RenderInfo>(capacity = ParallelUtils.CPU_THREADS * 6) {
+            val actor = actor<RenderInfo>(capacity = ParallelUtils.CPU_THREADS * 6 * 10) {
                 for (info in channel) {
                     renderInfos.add(info)
                 }

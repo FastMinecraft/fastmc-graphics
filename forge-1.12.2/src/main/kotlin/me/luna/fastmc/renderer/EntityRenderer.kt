@@ -3,6 +3,7 @@ package me.luna.fastmc.renderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.mixin.IPatchedRenderGlobal
 import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
@@ -13,6 +14,7 @@ import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.entity.Entity
 import net.minecraft.entity.passive.EntityCow
 import org.lwjgl.opengl.GL11.*
+import kotlin.coroutines.CoroutineContext
 
 class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
     AbstractEntityRenderer<Entity>(worldRenderer) {
@@ -20,30 +22,30 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
         register<EntityCow, CowRenderBuilder>()
     }
 
-    override suspend fun onPostTick(scope: CoroutineScope) {
-        scope.launch(Dispatchers.Default) {
+    override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
+        parentScope.launch(Dispatchers.Default) {
             renderEntryList.forEach {
                 it.clear()
             }
 
             mc.world?.let { world ->
-                launch {
-                    (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, world)
+                world.loadedEntityList.forEach {
+                    renderEntryMap[(it as ITypeID).typeID]?.add(it)
                 }
 
-                launch(Dispatchers.Default) {
-                    world.loadedEntityList.forEach {
-                        renderEntryMap[(it as ITypeID).typeID]?.add(it)
-                    }
-
-                    updateRenderers(scope)
-                }
+                updateRenderers(mainThreadContext, false)
             } ?: run {
-                scope.launch {
+                withContext(mainThreadContext) {
                     renderEntryList.forEach {
                         it.destroyRenderer()
                     }
                 }
+            }
+        }
+
+        mc.world?.let {
+            parentScope.launch(Dispatchers.Default) {
+                (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, it)
             }
         }
     }

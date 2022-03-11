@@ -1,14 +1,13 @@
 package me.luna.fastmc.shared.renderer
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.channels.actor
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.IInfo
 import me.luna.fastmc.shared.util.ClassIDRegistry
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import org.joml.Matrix4f
+import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractRenderer<ET : Any>(
     protected val worldRenderer: AbstractWorldRenderer,
@@ -53,23 +52,18 @@ abstract class AbstractRenderer<ET : Any>(
         return renderEntryMap.containsKey((entity as ITypeID).typeID)
     }
 
-    abstract suspend fun onPostTick(scope: CoroutineScope)
+    abstract fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope)
 
     @OptIn(ObsoleteCoroutinesApi::class)
-    protected suspend fun updateRenderers(scope: CoroutineScope) {
-        val actor = scope.actor<() -> Unit> {
-            for (block in channel) {
-                block.invoke()
-            }
-        }
-
+    protected suspend fun updateRenderers(mainThreadContext: CoroutineContext, force: Boolean) {
         coroutineScope {
             for (entry in renderEntryList) {
-                entry.update(this, actor)
+                if (force) entry.markDirty()
+                launch(Dispatchers.Default) {
+                    entry.update(mainThreadContext, this)
+                }
             }
         }
-
-        actor.close()
     }
 
     open fun render() {
@@ -89,7 +83,7 @@ abstract class AbstractRenderer<ET : Any>(
 
         abstract fun removeAll(collection: Collection<E>)
 
-        abstract fun update(scope: CoroutineScope, actor: SendChannel<() -> Unit>)
+        abstract suspend fun update(mainThreadContext: CoroutineContext, parentScope: CoroutineScope)
 
         abstract fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double)
 
@@ -133,26 +127,25 @@ abstract class AbstractRenderer<ET : Any>(
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun update(
-            scope: CoroutineScope,
-            actor: SendChannel<() -> Unit>
+        override suspend fun update(
+            mainThreadContext: CoroutineContext,
+            parentScope: CoroutineScope
         ) {
             if (!dirty) return
-
             if (entities.isEmpty()) {
-                destroyRenderer()
+                withContext(mainThreadContext) {
+                    destroyRenderer()
+                }
             } else {
                 dirty = false
-                scope.launch(Dispatchers.Default) {
-                    val builder = builderClass.newInstance()
+                val builder = builderClass.newInstance()
 
-                    builder.init(this@AbstractRenderer, entities.size)
-                    builder.addAll(entities as List<T>)
+                builder.init(this@AbstractRenderer, entities.size)
+                builder.addAll(entities as List<T>)
 
-                    actor.send {
-                        renderer?.destroy()
-                        renderer = builder.build()
-                    }
+                withContext(mainThreadContext) {
+                    renderer?.destroy()
+                    renderer = builder.build()
                 }
             }
         }

@@ -70,7 +70,7 @@ object FastMcMod {
 
     fun onPostTick() {
         runBlocking {
-            worldRenderer.onPostTick(this)
+            worldRenderer.onPostTick(this.coroutineContext, this)
             launch(Dispatchers.Default) { FpsDisplay.onPostTick() }
         }
     }

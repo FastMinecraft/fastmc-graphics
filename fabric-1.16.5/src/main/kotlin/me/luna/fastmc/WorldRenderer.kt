@@ -2,6 +2,8 @@ package me.luna.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.opengl.glBindTexture
 import me.luna.fastmc.shared.opengl.glBindVertexArray
 import me.luna.fastmc.shared.opengl.glUniform1f
@@ -10,11 +12,13 @@ import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.util.MatrixUtils
 import org.lwjgl.opengl.GL11.*
+import kotlin.coroutines.CoroutineContext
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
-    override suspend fun onPostTick(scope: CoroutineScope) {
-        tileEntityRenderer.onPostTick(scope)
+    override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
+        parentScope.launch(Dispatchers.Default) { entityRenderer.onPostTick(mainThreadContext, this) }
+        parentScope.launch(Dispatchers.Default) { tileEntityRenderer.onPostTick(mainThreadContext, this) }
     }
 
     override fun preRender(partialTicks: Float) {
