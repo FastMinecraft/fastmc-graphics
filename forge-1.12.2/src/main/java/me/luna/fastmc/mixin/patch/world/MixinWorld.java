@@ -329,7 +329,10 @@ public abstract class MixinWorld implements IPatchedWorld {
      */
     @Overwrite
     public void removeTileEntity(BlockPos pos) {
-        this.getTileEntity(pos).invalidate();
+        TileEntity tileEntity = this.getTileEntity(pos);
+        if (tileEntity != null) {
+            tileEntity.invalidate();
+        }
     }
 
     /**
@@ -352,7 +355,7 @@ public abstract class MixinWorld implements IPatchedWorld {
     }
 
     @Override
-    public int getLightFromNeighborsFor(EnumSkyBlock type, int x, int y, int z) {
+    public int getLightFromNeighborsFor(@NotNull EnumSkyBlock type, int x, int y, int z) {
         if (type == EnumSkyBlock.SKY && !this.provider.hasSkyLight()) {
             return 0;
         } else {
@@ -396,7 +399,7 @@ public abstract class MixinWorld implements IPatchedWorld {
     }
 
     @Override
-    public int getLightFor(EnumSkyBlock type, int x, int y, int z) {
+    public int getLightFor(@NotNull EnumSkyBlock type, int x, int y, int z) {
         if (y < 0) {
             y = 0;
         }
@@ -434,7 +437,7 @@ public abstract class MixinWorld implements IPatchedWorld {
     }
 
     @Override
-    public IBlockState getBlockState(int x, int y, int z) {
+    public @NotNull IBlockState getBlockState(int x, int y, int z) {
         if (this.isOutsideBuildHeight(y)) {
             return Blocks.AIR.getDefaultState();
         } else {
