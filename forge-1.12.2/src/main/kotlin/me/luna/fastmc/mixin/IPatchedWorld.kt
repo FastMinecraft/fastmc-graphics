@@ -52,7 +52,7 @@ interface IPatchedWorld {
 
         runBlocking {
             val mainContext = this.coroutineContext
-            val anyInvalid = booleanArrayOf(false)
+            val anyInvalidAll = booleanArrayOf(false)
 
             coroutineScope {
                 for (list in groupedTickableTileEntity.values) {
@@ -60,14 +60,14 @@ interface IPatchedWorld {
                     val first = list[0]
 
                     if (first is IParallelUpdate) {
-                        updateParallel(mainContext, anyInvalid, list)
+                        updateParallel(this, mainContext, anyInvalidAll, list)
                     } else {
-                        updateSerial(mainContext, anyInvalid, list)
+                        updateSerial(this, mainContext, anyInvalidAll, list)
                     }
                 }
             }
 
-            if (anyInvalid[0]) {
+            if (anyInvalidAll[0]) {
                 launch(Dispatchers.Default) { addedTileEntityList.removeIf { it.isInvalid } }
                 launch(Dispatchers.Default) { world.tickableTileEntities.removeIf { it.isInvalid } }
                 launch(Dispatchers.Default) { world.loadedTileEntityList.removeIf { it.isInvalid } }
@@ -77,12 +77,15 @@ interface IPatchedWorld {
         processingLoadedTiles = false
     }
 
-    fun CoroutineScope.updateParallel(
+    fun updateParallel(
+        scope: CoroutineScope,
         mainContext: CoroutineContext,
         anyInvalid: BooleanArray,
         list: MutableList<TileEntity>
     ) {
-        launch(Dispatchers.Default) {
+        scope.launch(Dispatchers.Default) outer@{
+            val anyInvalidGroup = booleanArrayOf(false)
+
             coroutineScope {
                 ParallelUtils.splitListIndex(
                     total = list.size,
@@ -92,36 +95,56 @@ interface IPatchedWorld {
                             val parallelCommand = ArrayList<Runnable>()
 
                             for (i in start until end) {
-                                updateParallelTileEntity(anyInvalid, mainThreadCommand, parallelCommand, list[i])
+                                updateParallelTileEntity(
+                                    anyInvalid,
+                                    anyInvalidGroup,
+                                    mainThreadCommand,
+                                    parallelCommand,
+                                    list[i]
+                                )
                             }
 
-                            this@updateParallel.launch(mainContext) {
+                            this@outer.launch(mainContext) {
                                 mainThreadCommand.forEach {
                                     it.run()
                                 }
 
-                                handleParallelCommand(parallelCommand)
+                                withContext(Dispatchers.Default) {
+                                    ParallelUtils.splitListIndex(
+                                        parallelCommand.size,
+                                        blockForEach = { start, end ->
+                                            launch(Dispatchers.Default) {
+                                                for (i in start until end) {
+                                                    parallelCommand[i].run()
+                                                }
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
                 )
             }
 
-            list.removeIf { it.isInvalid }
+            if (anyInvalidGroup[0]) list.removeIf { it.isInvalid }
         }
     }
 
     fun updateParallelTileEntity(
         anyInvalid: BooleanArray,
+        anyInvalidGroup: BooleanArray,
         mainThreadCommand: MutableList<Runnable>,
         parallelCommand: MutableList<Runnable>,
-        tileEntity: TileEntity) {
+        tileEntity: TileEntity
+    ) {
         if (tileEntity.isInvalid) {
             anyInvalid[0] = true
+            anyInvalidGroup[0] = true
         } else if (tileEntity.hasWorld()) {
             val pos = tileEntity.pos
 
-            if (world.isBlockLoaded(pos, false) && world.worldBorder.contains(pos)) {
+            if (world.worldBorder.contains(pos) && world.isBlockLoaded(pos, false)) {
                 try {
                     (tileEntity as IParallelUpdate).updateParallel(mainThreadCommand, parallelCommand)
                 } catch (throwable: Throwable) {
@@ -143,37 +166,20 @@ interface IPatchedWorld {
         }
     }
 
-    fun CoroutineScope.handleParallelCommand(
-        commands: MutableList<Runnable>
-    ) {
-        launch(Dispatchers.Default) {
-            ParallelUtils.splitListIndex(
-                commands.size,
-                blockForEach = { start, end ->
-                    launch {
-                        for (i in start until end) {
-                            commands[i].run()
-                        }
-                    }
-                }
-            )
-        }
-    }
-
-    fun CoroutineScope.updateSerial(
+    fun updateSerial(
+        scope: CoroutineScope,
         mainContext: CoroutineContext,
         anyInvalid: BooleanArray,
         list: MutableList<TileEntity>
     ) {
-        launch(mainContext) {
+        scope.launch(mainContext) {
             list.removeIf { tileEntity ->
                 if (tileEntity.isInvalid) {
                     anyInvalid[0] = true
                 } else if (tileEntity.hasWorld()) {
                     val pos = tileEntity.pos
 
-                    //Forge: Fix TE's getting an extra tick on the client side....
-                    if (world.isBlockLoaded(pos, false) && world.worldBorder.contains(pos)) {
+                    if (world.worldBorder.contains(pos) && world.isBlockLoaded(pos, false)) {
                         try {
                             TimeTracker.TILE_ENTITY_UPDATE.trackStart(tileEntity)
                             (tileEntity as ITickable).update()
