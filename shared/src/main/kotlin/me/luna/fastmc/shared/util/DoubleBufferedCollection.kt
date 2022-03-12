@@ -13,13 +13,22 @@ class DoubleBufferedCollection<T : MutableCollection<*>>(value: T, private val i
         return delegate
     }
 
-    fun swap(): T {
+    fun getAndSwap(): T {
         val temp = delegate
         initAction.accept(swap)
         delegate = swap
         swap = temp
-        return temp
+        return swap
     }
+
+    fun swapAndGet(): T {
+        val temp = delegate
+        initAction.accept(swap)
+        delegate = swap
+        swap = temp
+        return delegate
+    }
+
 
     private companion object {
         val DEFAULT_INIT_ACTION = Consumer<MutableCollection<*>> {

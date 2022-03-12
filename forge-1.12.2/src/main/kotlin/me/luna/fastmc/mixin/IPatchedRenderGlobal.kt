@@ -1,30 +1,17 @@
 package me.luna.fastmc.mixin
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.SendChannel
-import kotlinx.coroutines.channels.actor
 import me.luna.fastmc.mixin.accessor.AccessorRenderGlobal
 import me.luna.fastmc.shared.util.DoubleBufferedCollection
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import me.luna.fastmc.shared.util.fastFloor
-import me.luna.fastmc.util.counter
-import me.luna.fastmc.util.facing
 import me.luna.fastmc.util.renderChunk
-import me.luna.fastmc.util.setFacing
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.RenderGlobal
-import net.minecraft.client.renderer.chunk.RenderChunk
-import net.minecraft.client.renderer.culling.ICamera
 import net.minecraft.entity.Entity
 import net.minecraft.entity.EntityLivingBase
-import net.minecraft.util.EnumFacing
-import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
-import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.IntUnaryOperator
-import net.minecraft.client.renderer.RenderGlobal.ContainerLocalRenderInformation as RenderInfo
 
 interface IPatchedRenderGlobal {
     val renderEntityList: DoubleBufferedCollection<FastObjectArrayList<Entity>>
@@ -34,7 +21,7 @@ interface IPatchedRenderGlobal {
         this as AccessorRenderGlobal
         world as IPatchedWorld
 
-        renderEntityList.swap()
+        renderEntityList.swapAndGet()
         val mainList = renderEntityList.get()
         mainList.ensureCapacity(world.loadedEntityList.size)
 

@@ -1,12 +1,16 @@
 package me.luna.fastmc.mixin.patch.render;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import me.luna.fastmc.mixin.IPatchedChunkRenderContainer;
 import me.luna.fastmc.mixin.IPatchedRenderGlobal;
 import me.luna.fastmc.mixin.IPatchedVisGraph;
+import me.luna.fastmc.mixin.accessor.AccessorRenderChunk;
 import me.luna.fastmc.shared.util.DoubleBuffered;
 import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import me.luna.fastmc.shared.util.MathUtils;
+import me.luna.fastmc.shared.util.ParallelUtils;
+import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.util.ExtensionsKt;
 import net.minecraft.block.state.IBlockState;
@@ -94,6 +98,7 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             it[i].clearFast();
         }
     });
+    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
 
     private static FastObjectArrayList<RenderChunk>[] getArray() {
         int size = BlockRenderLayer.values().length;
@@ -154,18 +159,22 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
     private void setupTerrain$Inject$INVOKE$endStartSection$5(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci, double d0, double d1, double d2, double d3, double d4, double d5, BlockPos blockpos1, RenderChunk renderchunk, BlockPos blockpos, boolean flag) {
         ci.cancel();
 
-        Set<RenderChunk> oldSet = this.chunksToUpdate;
-        Set<RenderChunk> newSet = new LinkedHashSet<>();
+        ExtendedBitSet oldSet = chunksToUpdateBitSet.get();
+        ExtendedBitSet newSet = chunksToUpdateBitSet.swapAndGet();
+        FastObjectArrayList<RenderChunk> list = new FastObjectArrayList<>();
 
         for (RenderGlobal.ContainerLocalRenderInformation renderInfo : this.renderInfos) {
             RenderChunk renderChunk = ExtensionsKt.getRenderChunk(renderInfo);
+            int index = ((AccessorRenderChunk) renderChunk).getIndex();
 
-            if (renderChunk.needsUpdate() || oldSet.contains(renderChunk)) {
+            if (renderChunk.needsUpdate() || oldSet.contains(index)) {
                 BlockPos blockPos = renderChunk.getPosition();
                 boolean flag3 = blockpos1.distanceSq(blockPos.getX() + 8, blockPos.getY() + 8, blockPos.getZ() + 8) < 768.0D;
 
                 if (net.minecraftforge.common.ForgeModContainer.alwaysSetupTerrainOffThread || (!renderChunk.needsImmediateUpdate() && !flag3)) {
-                    newSet.add(renderChunk);
+                    if (newSet.add(index)) {
+                        list.add(renderChunk);
+                    }
                 } else {
                     this.mc.profiler.startSection("build near");
                     this.renderDispatcher.updateChunkNow(renderChunk);
@@ -176,16 +185,62 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             }
         }
 
-        newSet.addAll(oldSet);
-        this.chunksToUpdate = newSet;
+        for (RenderChunk renderChunk : this.chunksToUpdate) {
+            int index = ((AccessorRenderChunk) renderChunk).getIndex();
+            if (newSet.add(index)) {
+                list.add(renderChunk);
+            }
+        }
+
+        oldSet.clear();
+        list.trim();
+
+        this.chunksToUpdate = new ObjectArraySet<>(list.elements());
         this.mc.profiler.endSection();
     }
 
-    @Inject(method = "updateChunks", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkRenderDispatcher;updateChunkNow(Lnet/minecraft/client/renderer/chunk/RenderChunk;)Z", shift = At.Shift.AFTER))
-    private void updateChunks$Inject$INVOKE$updateChunkNow(long finishTimeNano, CallbackInfo ci) {
-        this.displayListEntitiesDirty = true;
+    /**
+     * @author Luna
+     * @reason Chunk update optimization
+     */
+    @Overwrite
+    public void updateChunks(long finishTimeNano) {
+        this.displayListEntitiesDirty |= this.renderDispatcher.runChunkUploads(finishTimeNano);
+
+        if (!this.chunksToUpdate.isEmpty()) {
+            int count = ParallelUtils.CPU_THREADS;
+            boolean finish;
+
+            Iterator<RenderChunk> iterator = this.chunksToUpdate.iterator();
+
+            while (iterator.hasNext()) {
+                RenderChunk renderChunk = iterator.next();
+                boolean updated;
+
+                if (renderChunk.needsImmediateUpdate()) {
+                    updated = this.renderDispatcher.updateChunkNow(renderChunk);
+                    finish = updated && System.nanoTime() > finishTimeNano;
+                } else {
+                    updated = this.renderDispatcher.updateChunkLater(renderChunk);
+                    finish = updated && --count == 0;
+                }
+
+                if (!updated) {
+                    break;
+                }
+
+                renderChunk.clearNeedsUpdate();
+                iterator.remove();
+                chunksToUpdateBitSet.get().remove(((AccessorRenderChunk) renderChunk).getIndex());
+
+                if (finish) {
+                    break;
+                }
+            }
+        }
     }
 
+    @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
     private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
         for (TileEntity tileEntity : renderTileEntityList.get()) {
@@ -202,7 +257,7 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
     @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lcom/google/common/collect/Lists;newArrayList()Ljava/util/ArrayList;", remap = false))
     private void setupTerrain$Inject$HEAD(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci) {
-        renderTileEntityList.swap();
+        renderTileEntityList.getAndSwap();
         int entityCapacity = world.loadedTileEntityList.size();
         entityCapacity = MathUtils.ceilToPOT(entityCapacity + entityCapacity / 2);
 

@@ -2,7 +2,11 @@ package me.luna.fastmc.shared.util.collection
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 
-class FastObjectArrayList<E> : ObjectArrayList<E>() {
+class FastObjectArrayList<E> : ObjectArrayList<E> {
+    constructor() : super()
+    constructor(c: Collection<E>) : super(c)
+    constructor(capacity: Int) : super(capacity)
+
     val capacity: Int
         get() = this.a.size
 

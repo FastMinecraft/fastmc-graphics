@@ -65,8 +65,8 @@ public abstract class MixinWorldServer extends World {
     private void sendQueuedBlockEvents() {
         if (blockEventDataList.get().isEmpty()) return;
 
-        blockEventDataSet.swap();
-        List<BlockEventData> temp = blockEventDataList.swap();
+        blockEventDataSet.getAndSwap();
+        List<BlockEventData> temp = blockEventDataList.getAndSwap();
 
         for (BlockEventData blockEventData : temp) {
             if (this.fireBlockEvent(blockEventData)) {

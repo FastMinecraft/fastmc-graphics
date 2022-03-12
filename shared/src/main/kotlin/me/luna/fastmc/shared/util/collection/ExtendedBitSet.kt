@@ -36,6 +36,12 @@ class ExtendedBitSet : MutableSet<Int> {
     }
 
     override fun clear() {
+        for (i in bitArray.indices) {
+            bitArray[i] = 0L
+        }
+    }
+
+    fun clearFast() {
         bitArray = EMPTY_LONG_ARRAY
     }
 
@@ -44,7 +50,7 @@ class ExtendedBitSet : MutableSet<Int> {
         val index = element shr 6
 
         val prev = getBit(index)
-        val result = bit and bit
+        val result = prev xor bit
         bitArray[index] = result
 
         return result != prev

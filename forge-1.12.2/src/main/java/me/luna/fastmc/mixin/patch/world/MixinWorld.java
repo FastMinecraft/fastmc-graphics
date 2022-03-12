@@ -239,7 +239,7 @@ public abstract class MixinWorld implements IPatchedWorld {
 
     private void tickRemove() {
         if (!removingWeatherEffects.get().isEmpty()) {
-            IntSet temp = removingWeatherEffects.swap();
+            IntSet temp = removingWeatherEffects.getAndSwap();
             this.weatherEffects.removeIf(it -> temp.contains(it.getEntityId()));
         }
 

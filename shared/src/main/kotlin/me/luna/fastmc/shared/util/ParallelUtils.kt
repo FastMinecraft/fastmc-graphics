@@ -3,6 +3,7 @@ package me.luna.fastmc.shared.util
 import kotlin.math.max
 
 object ParallelUtils {
+    @JvmField
     val CPU_THREADS = Runtime.getRuntime().availableProcessors()
     const val DEFAULT_MIN_SIZE = 128
 
