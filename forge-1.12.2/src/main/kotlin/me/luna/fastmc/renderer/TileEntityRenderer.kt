@@ -41,36 +41,32 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                     if (tempRemoving.isNotEmpty()) removing = ArrayList()
                 }
 
-                if (tempRemoving.isNotEmpty()) {
-                    val removingGroups = FastIntMap<HashSet<TileEntity>>()
-                    tempRemoving.forEach {
-                        removingGroups.getOrPut((it as ITypeID).typeID) {
-                            HashSet()
-                        }.add(it)
-                    }
+                val removingGroups = FastIntMap<HashSet<TileEntity>>()
+                val addingGroups = FastIntMap<ArrayList<TileEntity>>()
 
-                    removingGroups.forEach {
-                        renderEntryMap[it.key]?.removeAll(it.value)
-                    }
+                tempRemoving.forEach {
+                    removingGroups.getOrPut((it as ITypeID).typeID) {
+                        HashSet()
+                    }.add(it)
                 }
 
-                if (tempAdding.isNotEmpty()) {
-                    val addingGroups = FastIntMap<ArrayList<TileEntity>>()
-                    tempAdding.forEach {
-                        addingGroups.getOrPut((it as ITypeID).typeID) {
-                            ArrayList()
-                        }.add(it)
-                    }
-                    addingGroups.forEach {
-                        renderEntryMap[it.key]?.addAll(it.value)
-                    }
+                tempAdding.forEach {
+                    addingGroups.getOrPut((it as ITypeID).typeID) {
+                        ArrayList()
+                    }.add(it)
                 }
 
-                renderEntryList.forEach {
-                    it.markDirty()
-                }
+                coroutineScope {
+                    for ((id, entry) in renderEntryMap) {
+                        launch(Dispatchers.Default) {
+                            removingGroups[id]?.let { removing -> entry.removeAll(removing) }
+                            addingGroups[id]?.let { adding -> entry.addAll(adding) }
 
-                updateRenderers(mainThreadContext, false)
+                            entry.markDirty()
+                            entry.update(mainThreadContext, this)
+                        }
+                    }
+                }
             } ?: run {
                 withContext(mainThreadContext) {
                     adding = ArrayList()

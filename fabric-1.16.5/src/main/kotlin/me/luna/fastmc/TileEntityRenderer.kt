@@ -1,10 +1,7 @@
 package me.luna.fastmc
 
 import com.mojang.blaze3d.systems.RenderSystem
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.LargeChestRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.SmallChestRenderBuilder
@@ -45,7 +42,14 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 //                    renderEntryMap[clazz]?.addAll(tileEntities)
 //                }
 
-                    updateRenderers(mainThreadContext, true)
+                    coroutineScope {
+                        for (entry in renderEntryList) {
+                            launch(Dispatchers.Default) {
+                                entry.markDirty()
+                                entry.update(mainThreadContext, this)
+                            }
+                        }
+                    }
                 } ?: run {
                     withContext(mainThreadContext) {
                         renderEntryList.forEach {

@@ -16,12 +16,13 @@ import java.util.*;
 
 @Mixin(RenderChunk.class)
 public abstract class MixinRenderChunk {
-    @Shadow public abstract CompiledChunk getCompiledChunk();
+    @Shadow
+    public abstract CompiledChunk getCompiledChunk();
 
     @Inject(method = "stopCompileTask", at = @At("HEAD"))
     private void stopCompileTask$Inject$HEAD(CallbackInfo ci) {
         ((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer())
-            .updateEntities(Collections.emptyList(), this.getCompiledChunk().getTileEntities());
+            .updateEntities(Collections.emptyList(), ((IPatchedCompiledChunk) this.getCompiledChunk()).getInstancingRenderTileEntities());
     }
 
     @Inject(method = "setCompiledChunk", at = @At("HEAD"))

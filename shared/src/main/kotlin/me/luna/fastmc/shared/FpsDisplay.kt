@@ -19,10 +19,6 @@ object FpsDisplay {
     fun onPostRenderTick() {
         val current = System.nanoTime()
 
-        shortFps.removeIf {
-            it.first <= current
-        }
-
         shortFps.add(current + 1_000_000_000 to (current - lastRender).toInt())
 
         lastRender = current
@@ -30,6 +26,10 @@ object FpsDisplay {
 
     fun onPostTick() {
         val current = System.nanoTime()
+
+        shortFps.removeIf {
+            it.first <= current
+        }
 
         val millisSum = shortFps.sumOf {
             it.second.toDouble() / 1_000_000.0

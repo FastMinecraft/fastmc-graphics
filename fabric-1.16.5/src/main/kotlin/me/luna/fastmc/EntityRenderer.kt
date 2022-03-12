@@ -28,7 +28,14 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 //                    renderEntryMap[clazz]?.addAll(entities)
 //                }
 
-                updateRenderers(mainThreadContext, true)
+                coroutineScope {
+                    for (entry in renderEntryList) {
+                        launch(Dispatchers.Default) {
+                            entry.markDirty()
+                            entry.update(mainThreadContext, this)
+                        }
+                    }
+                }
             } ?: run {
                 withContext(mainThreadContext) {
                     renderEntryList.forEach {

@@ -1,9 +1,6 @@
 package me.luna.fastmc.renderer
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import me.luna.fastmc.mixin.IPatchedRenderGlobal
 import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
@@ -33,7 +30,14 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
                     renderEntryMap[(it as ITypeID).typeID]?.add(it)
                 }
 
-                updateRenderers(mainThreadContext, false)
+                coroutineScope {
+                    for (entry in renderEntryList) {
+                        launch(Dispatchers.Default) {
+                            entry.markDirty()
+                            entry.update(mainThreadContext, this)
+                        }
+                    }
+                }
             } ?: run {
                 withContext(mainThreadContext) {
                     renderEntryList.forEach {
