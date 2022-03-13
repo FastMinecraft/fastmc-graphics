@@ -12,7 +12,8 @@
     "tileentity.MixinBlockEntity",
     "tileentity.MixinChestBlockEntity",
     "tileentity.MixinEnderChestBlockEntity",
-    "tileentity.MixinShulkerBoxBlockEntity"
+    "tileentity.MixinShulkerBoxBlockEntity",
+    "tileentity.MixinTrappedChestBlockEntity"
   ],
   "injectors": {
     "defaultRequire": 1
