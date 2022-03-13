@@ -14,8 +14,12 @@ import kotlin.coroutines.CoroutineContext
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) { entityRenderer.onPostTick(mainThreadContext, this) }
-        parentScope.launch(Dispatchers.Default) { tileEntityRenderer.onPostTick(mainThreadContext, this) }
+        parentScope.launch(Dispatchers.Default) {
+            entityRenderer.onPostTick(mainThreadContext, this)
+        }
+        parentScope.launch(Dispatchers.Default) {
+            tileEntityRenderer.onPostTick(mainThreadContext, this)
+        }
     }
 
     override fun preRender(partialTicks: Float) {

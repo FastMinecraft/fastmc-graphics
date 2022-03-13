@@ -1,9 +1,15 @@
-package me.luna.fastmc
+package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.*
+import me.luna.fastmc.EntityCow
+import me.luna.fastmc.Minecraft
+import me.luna.fastmc.endSection
+import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.util.ITypeID
+import me.luna.fastmc.startSection
 import net.minecraft.entity.Entity
 import org.lwjgl.opengl.GL11.*
 import kotlin.coroutines.CoroutineContext
@@ -11,7 +17,7 @@ import kotlin.coroutines.CoroutineContext
 class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
     AbstractEntityRenderer<Entity>(worldRenderer) {
     init {
-//        register(CowInfo::class.java, CowRenderBuilder::class.java)
+        register<EntityCow, CowRenderBuilder>()
     }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
@@ -21,12 +27,10 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
             }
 
             mc.world?.let { world ->
-//            world.entities
-//                .groupBy {
-//                    it::class.java
-//                }.forEach { (clazz, entities) ->
-//                    renderEntryMap[clazz]?.addAll(entities)
-//                }
+                world.entities
+                    .forEach {
+                        renderEntryMap[(it as ITypeID).typeID]?.add(it)
+                    }
 
                 coroutineScope {
                     for (entry in renderEntryList) {

@@ -1,9 +1,9 @@
 package me.luna.fastmc.mixin.core.render;
 
 import me.luna.fastmc.AdaptersKt;
-import me.luna.fastmc.EntityRenderer;
+import me.luna.fastmc.renderer.EntityRenderer;
 import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.TileEntityRenderer;
+import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.resource.ResourceManager;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
@@ -30,9 +30,11 @@ import java.util.List;
 @Mixin(value = WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinWorldRenderer {
     @Shadow @Final private MinecraftClient client;
+    private boolean first = true;
 
     @Inject(method = "setWorld", at = @At("HEAD"))
     public void setWorld$Inject$HEAD(CallbackInfo ci) {
+        if (first) return;
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().clear();
     }
 
@@ -77,9 +79,14 @@ public abstract class MixinWorldRenderer {
 
     @Inject(method = "reload()V", at = @At("RETURN"))
     public void refreshResources$Inject$RETURN(CallbackInfo ci) {
+        if (first) {
+            first = false;
+            return;
+        }
         MinecraftClient mc = this.client;
+
         IResourceManager resourceManager = new ResourceManager(mc);
-        AbstractWorldRenderer worldRenderer = new me.luna.fastmc.WorldRenderer(mc, resourceManager);
+        AbstractWorldRenderer worldRenderer = new me.luna.fastmc.renderer.WorldRenderer(mc, resourceManager);
 
         worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
 

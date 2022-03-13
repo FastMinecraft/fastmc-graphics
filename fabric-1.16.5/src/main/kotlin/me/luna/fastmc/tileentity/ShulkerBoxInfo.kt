@@ -3,9 +3,13 @@ package me.luna.fastmc.tileentity
 import me.luna.fastmc.TileEntityShulkerBox
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IShulkerBoxInfo
 import net.minecraft.block.ShulkerBoxBlock
+import net.minecraft.state.property.EnumProperty
+import net.minecraft.util.math.Direction
 
-class ShulkerBoxInfo : DirectionalTileEntityInfo<TileEntityShulkerBox>(ShulkerBoxBlock.FACING),
-    IShulkerBoxInfo<TileEntityShulkerBox> {
+interface ShulkerBoxInfo : DirectionalTileEntityInfo<TileEntityShulkerBox>, IShulkerBoxInfo<TileEntityShulkerBox> {
+    override val property: EnumProperty<Direction>
+        get() = ShulkerBoxBlock.FACING
+
     override val color: Int
         get() = entity.color?.id ?: 16
 

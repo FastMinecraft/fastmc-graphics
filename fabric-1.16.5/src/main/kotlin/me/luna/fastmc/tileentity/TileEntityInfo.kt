@@ -6,9 +6,7 @@ import me.luna.fastmc.util.blockState
 import net.minecraft.block.BlockState
 import net.minecraft.client.render.WorldRenderer
 
-open class TileEntityInfo<E : TileEntity> : ITileEntityInfo<E> {
-    override lateinit var entity: E
-
+interface TileEntityInfo<E : TileEntity> : ITileEntityInfo<E> {
     override val posX: Int
         get() = entity.pos.x
 

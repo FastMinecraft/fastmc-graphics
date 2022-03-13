@@ -239,8 +239,8 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             largeChestRenderer?.destroy()
             smallChestRenderer = null
             largeChestRenderer = null
-            smallDirty = false
-            largeDirty = false
+            smallDirty = true
+            largeDirty = true
         }
 
         override fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double) {

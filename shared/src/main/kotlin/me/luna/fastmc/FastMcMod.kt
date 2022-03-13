@@ -26,6 +26,7 @@ object FastMcMod {
 
     fun initGLWrapper(glWrapper: IGLWrapper) {
         this.glWrapper = glWrapper
+        logger.info("GL Wrapper initialized")
     }
 
     fun init(
@@ -33,7 +34,7 @@ object FastMcMod {
         worldRenderer: AbstractWorldRenderer,
         fontRenderer: IFontRendererWrapper,
     ) {
-        if (isInitialized) error("Already initialized!")
+        if (isInitialized) error("Already initialized")
 
         this.resourceManager = resourceManager
         this.worldRenderer = worldRenderer

@@ -4,8 +4,13 @@ import me.luna.fastmc.TileEntityChest
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import net.minecraft.block.ChestBlock
 import net.minecraft.block.entity.TrappedChestBlockEntity
+import net.minecraft.state.property.EnumProperty
+import net.minecraft.util.math.Direction
 
-class ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>(ChestBlock.FACING), IChestInfo<TileEntityChest> {
+interface ChestInfo : HDirectionalTileEntityInfo<TileEntityChest>, IChestInfo<TileEntityChest> {
+    override val property: EnumProperty<Direction>
+        get() = ChestBlock.FACING
+
     override val isTrap: Boolean
         get() = entity is TrappedChestBlockEntity
 

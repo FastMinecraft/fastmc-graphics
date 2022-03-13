@@ -1,6 +1,8 @@
-package me.luna.fastmc
+package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
+import me.luna.fastmc.Minecraft
+import me.luna.fastmc.ResourceLocation
 import me.luna.fastmc.resource.toBufferedImage
 import me.luna.fastmc.shared.font.FontRenderer
 import me.luna.fastmc.shared.font.IFontRendererWrapper

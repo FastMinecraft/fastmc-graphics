@@ -4,8 +4,13 @@ import me.luna.fastmc.TileEntityBed
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IBedInfo
 import net.minecraft.block.BedBlock
 import net.minecraft.block.enums.BedPart
+import net.minecraft.state.property.EnumProperty
+import net.minecraft.util.math.Direction
 
-class BedInfo : HDirectionalTileEntityInfo<TileEntityBed>(BedBlock.FACING), IBedInfo<TileEntityBed> {
+interface BedInfo : HDirectionalTileEntityInfo<TileEntityBed>, IBedInfo<TileEntityBed> {
+    override val property: EnumProperty<Direction>
+        get() = BedBlock.FACING
+
     override val color: Int
         get() = entity.color.id
 

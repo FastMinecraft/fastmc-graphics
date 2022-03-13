@@ -5,7 +5,14 @@
   "package": "me.luna.fastmc.mixin.core",
   "client": [
     "MixinMinecraftClient",
-    "render.MixinWorldRenderer"
+    "entity.MixinEntity",
+    "entity.MixinEntityCow",
+    "render.MixinWorldRenderer",
+    "tileentity.MixinBedBlockEntity",
+    "tileentity.MixinBlockEntity",
+    "tileentity.MixinChestBlockEntity",
+    "tileentity.MixinEnderChestBlockEntity",
+    "tileentity.MixinShulkerBoxBlockEntity"
   ],
   "injectors": {
     "defaultRequire": 1

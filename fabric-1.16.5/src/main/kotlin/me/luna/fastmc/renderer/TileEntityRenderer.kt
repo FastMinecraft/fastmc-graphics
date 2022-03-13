@@ -1,13 +1,14 @@
-package me.luna.fastmc
+package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.*
+import me.luna.fastmc.*
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.luna.fastmc.shared.renderbuilder.tileentity.LargeChestRenderBuilder
-import me.luna.fastmc.shared.renderbuilder.tileentity.SmallChestRenderBuilder
+import me.luna.fastmc.shared.renderbuilder.tileentity.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.tileentity.ChestInfo
 import me.luna.fastmc.util.blockState
 import me.luna.fastmc.util.getPropertyOrDefault
@@ -20,41 +21,37 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
 
     init {
-//        register(BedRenderBuilder::class.java)
-//        register(EnderChestRenderBuilder::class.java)
-//        register(ShulkerBoxRenderBuilder::class.java)
+        register<TileEntityBed, BedRenderBuilder>()
+        register<TileEntityShulkerBox, ShulkerBoxRenderBuilder>()
+        register<TileEntityEnderChest, EnderChestRenderBuilder>()
 
         register(ChestRenderEntry())
     }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
         parentScope.launch(Dispatchers.Default) {
-            launch(Dispatchers.Default) {
-                renderEntryList.forEach {
-                    it.clear()
-                }
+            renderEntryList.forEach {
+                it.clear()
+            }
 
-                mc.world?.let { world ->
-//            world.loadedTileEntityList
-//                .groupBy {
-//                    it::class.java
-//                }.forEach { (clazz, tileEntities) ->
-//                    renderEntryMap[clazz]?.addAll(tileEntities)
-//                }
+            mc.world?.let { world ->
+                world.loadedTileEntityList
+                    .forEach {
+                        renderEntryMap[(it as ITypeID).typeID]?.add(it)
+                    }
 
-                    coroutineScope {
-                        for (entry in renderEntryList) {
-                            launch(Dispatchers.Default) {
-                                entry.markDirty()
-                                entry.update(mainThreadContext, this)
-                            }
+                coroutineScope {
+                    for (entry in renderEntryList) {
+                        launch(Dispatchers.Default) {
+                            entry.markDirty()
+                            entry.update(mainThreadContext, this)
                         }
                     }
-                } ?: run {
-                    withContext(mainThreadContext) {
-                        renderEntryList.forEach {
-                            it.destroyRenderer()
-                        }
+                }
+            } ?: run {
+                withContext(mainThreadContext) {
+                    renderEntryList.forEach {
+                        it.destroyRenderer()
                     }
                 }
             }
@@ -77,16 +74,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 
     private inner class ChestRenderEntry : AbstractRenderEntry<TileEntityChest, ChestInfo>() {
         private var smallChestRenderer: AbstractRenderBuilder.Renderer? = null
-            set(value) {
-                field?.destroy()
-                field = value
-            }
-
         private var largeChestRenderer: AbstractRenderBuilder.Renderer? = null
-            set(value) {
-                field?.destroy()
-                field = value
-            }
 
         private val smallChest = ArrayList<TileEntityChest>()
         private val largeChest = ArrayList<TileEntityChest>()
@@ -154,44 +142,49 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             mainThreadContext: CoroutineContext,
             parentScope: CoroutineScope
         ) {
-            parentScope.launch(Dispatchers.Default) {
-                if (smallDirty) {
-                    smallDirty = false
+            coroutineScope {
+                val smallDirty = this@ChestRenderEntry.smallDirty
+                this@ChestRenderEntry.smallDirty = false
 
+                val largeDirty = this@ChestRenderEntry.largeDirty
+                this@ChestRenderEntry.largeDirty = false
+
+                if (smallDirty) {
                     if (smallChest.isEmpty()) {
                         withContext(mainThreadContext) {
+                            smallChestRenderer?.destroy()
                             smallChestRenderer = null
                         }
                     } else {
-                        val builder = SmallChestRenderBuilder()
-                        builder.init(this@TileEntityRenderer, smallChest.size)
-                        @Suppress("UNCHECKED_CAST")
-                        builder.addAll(smallChest as List<IChestInfo<*>>)
-                        withContext(mainThreadContext) {
-                            smallChestRenderer?.destroy()
-                            smallChestRenderer = builder.build()
+                        launch(Dispatchers.Default) {
+                            val builder = SmallChestRenderBuilder()
+                            builder.init(this@TileEntityRenderer, smallChest.size)
+                            @Suppress("UNCHECKED_CAST")
+                            builder.addAll(smallChest as List<IChestInfo<*>>)
+                            withContext(mainThreadContext) {
+                                smallChestRenderer?.destroy()
+                                smallChestRenderer = builder.build()
+                            }
                         }
                     }
                 }
-            }
 
-            parentScope.launch(Dispatchers.Default) {
                 if (largeDirty) {
-                    largeDirty = false
-
                     if (largeChest.isEmpty()) {
                         withContext(mainThreadContext) {
+                            largeChestRenderer?.destroy()
                             largeChestRenderer = null
                         }
                     } else {
-                        largeDirty = false
-                        val builder = LargeChestRenderBuilder()
-                        builder.init(this@TileEntityRenderer, largeChest.size)
-                        @Suppress("UNCHECKED_CAST")
-                        builder.addAll(largeChest as List<IChestInfo<*>>)
-                        withContext(mainThreadContext) {
-                            largeChestRenderer?.destroy()
-                            largeChestRenderer = builder.build()
+                        launch(Dispatchers.Default) {
+                            val builder = LargeChestRenderBuilder()
+                            builder.init(this@TileEntityRenderer, largeChest.size)
+                            @Suppress("UNCHECKED_CAST")
+                            builder.addAll(largeChest as List<IChestInfo<*>>)
+                            withContext(mainThreadContext) {
+                                largeChestRenderer?.destroy()
+                                largeChestRenderer = builder.build()
+                            }
                         }
                     }
                 }

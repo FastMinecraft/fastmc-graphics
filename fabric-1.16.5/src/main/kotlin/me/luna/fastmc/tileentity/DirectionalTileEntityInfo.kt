@@ -6,8 +6,9 @@ import me.luna.fastmc.util.getPropertyOrDefault
 import net.minecraft.state.property.EnumProperty
 import net.minecraft.util.math.Direction
 
-open class DirectionalTileEntityInfo<E : TileEntity>(private val property: EnumProperty<Direction>) :
-    TileEntityInfo<E>(), IDirectionalTileEntityInfo<E> {
+interface DirectionalTileEntityInfo<E : TileEntity> : TileEntityInfo<E>, IDirectionalTileEntityInfo<E> {
+    val property: EnumProperty<Direction>
+
     override val direction: Int
         get() = blockState.getPropertyOrDefault(property, Direction.SOUTH).id
 }

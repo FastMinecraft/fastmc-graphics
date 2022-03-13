@@ -1,9 +1,10 @@
-package me.luna.fastmc
+package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import me.luna.fastmc.Minecraft
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
@@ -13,9 +14,14 @@ import kotlin.coroutines.CoroutineContext
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
+
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) { entityRenderer.onPostTick(mainThreadContext, this) }
-        parentScope.launch(Dispatchers.Default) { tileEntityRenderer.onPostTick(mainThreadContext, this) }
+        parentScope.launch(Dispatchers.Default) {
+            entityRenderer.onPostTick(mainThreadContext, this)
+        }
+        parentScope.launch(Dispatchers.Default) {
+            tileEntityRenderer.onPostTick(mainThreadContext, this)
+        }
     }
 
     override fun preRender(partialTicks: Float) {

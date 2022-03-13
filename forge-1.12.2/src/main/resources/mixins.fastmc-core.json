@@ -17,7 +17,6 @@
     "tileentity.MixinTileEntityBed",
     "tileentity.MixinTileEntityChest",
     "tileentity.MixinTileEntityEnderChest",
-    "tileentity.MixinTileEntityShulkerBox",
-    "world.MixinWorld"
+    "tileentity.MixinTileEntityShulkerBox"
   ]
 }

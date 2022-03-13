@@ -127,6 +127,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
         model.attachVbo(vao)
         vao.attachVbo(vbo)
+
         return SingleTextureRenderer(renderInfo(shader, vao, listOf(vbo), model), texture)
     }
 

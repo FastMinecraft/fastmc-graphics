@@ -5,6 +5,7 @@ import net.minecraft.block.ChestBlock
 import net.minecraft.block.entity.*
 import net.minecraft.client.MinecraftClient
 import net.minecraft.entity.Entity
+import net.minecraft.entity.passive.CowEntity
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.Matrix4f
 import net.minecraft.util.profiler.Profiler
@@ -60,5 +61,7 @@ typealias TileEntityBed = BedBlockEntity
 typealias TileEntityChest = ChestBlockEntity
 typealias TileEntityEnderChest = EnderChestBlockEntity
 typealias TileEntityShulkerBox = ShulkerBoxBlockEntity
+
+typealias EntityCow = CowEntity
 
 typealias ResourceLocation = Identifier

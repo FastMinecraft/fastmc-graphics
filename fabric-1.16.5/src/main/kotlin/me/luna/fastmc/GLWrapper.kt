@@ -7,8 +7,10 @@ import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
 class GLWrapper : IGLWrapper {
-    override val rowMajor = false
-    override val lightMapUnit = 1
+    override val rowMajor: Boolean
+        get() = true
+    override val lightMapUnit: Int
+        get() = 2
 
 
     // GL11

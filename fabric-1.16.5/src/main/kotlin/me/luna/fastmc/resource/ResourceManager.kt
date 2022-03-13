@@ -2,6 +2,7 @@ package me.luna.fastmc.resource
 
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.model.Model.Companion.init
+import me.luna.fastmc.shared.model.entity.ModelCow
 import me.luna.fastmc.shared.model.tileentity.ModelBed
 import me.luna.fastmc.shared.model.tileentity.ModelChest
 import me.luna.fastmc.shared.model.tileentity.ModelLargeChest
@@ -16,6 +17,8 @@ import net.minecraft.client.MinecraftClient
 
 class ResourceManager(mc: MinecraftClient) : IResourceManager {
     override val model: ResourceProvider<Model> = ResourceProvider(
+        ModelCow().init(),
+
         ModelBed().init(),
         ModelChest().init(),
         ModelLargeChest().init(),
@@ -23,6 +26,12 @@ class ResourceManager(mc: MinecraftClient) : IResourceManager {
     )
 
     override val entityShader: ResourceProvider<AbstractRenderBuilder.Shader> = ResourceProvider(
+        AbstractRenderBuilder.Shader(
+            "entity/Cow",
+            "/assets/shaders/entity/Cow.vsh",
+            "/assets/shaders/entity/Default.fsh"
+        ),
+
         AbstractRenderBuilder.Shader(
             "tileEntity/EnderChest",
             "/assets/shaders/tileentity/EnderChest.vsh",
