@@ -7,29 +7,26 @@ import java.awt.image.DataBuffer
 import java.nio.ByteBuffer
 
 class DefaultTexture(override val resourceName: String, bufferedImage: BufferedImage) : ITexture {
-    private val id = glGenTextures()
+    override val id = glCreateTextures(GL_TEXTURE_2D)
 
     init {
-        glBindTexture(id)
-
         val width = bufferedImage.width
         val height = bufferedImage.height
         val buffer = BufferUtils.byte(width * height * 4)
 
         bufferedImage.getRGBA(buffer)
-        buffer.rewind()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer)
+        buffer.flip()
+        glTextureStorage2D(id, 1, GL_RGBA8, width, height)
+        glTextureSubImage2D(id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer)
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+        glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-
-        glBindTexture(0)
+        glTextureParameteri(id, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
     }
 
-    fun BufferedImage.getRGBA(buffer: ByteBuffer) {
+    private fun BufferedImage.getRGBA(buffer: ByteBuffer) {
         val numBands = raster.numBands
 
         val data = when (val dataType = raster.dataBuffer.dataType) {

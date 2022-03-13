@@ -1,32 +1,38 @@
 package me.luna.fastmc.shared.opengl
 
-class VertexAttribute private constructor(private val stride: Int, private val entries: List<Entry>) {
-    fun apply() {
+class VertexAttribute private constructor(private val stride: Int, private val divisor: Int, private val entries: List<Entry>) {
+    fun apply(vao: VertexArrayObject, vbo: VertexBufferObject) {
+        val binding = vao.attachVbo(vbo, 0, stride)
+
         entries.forEach {
-            it.apply(stride)
+            it.apply(vao.id, binding)
+        }
+
+        if (divisor != 0) {
+            glVertexArrayBindingDivisor(vao.id, binding, divisor)
         }
     }
 
-    class Builder(private val stride: Int) {
-        private var pointer = 0
+    class Builder(private val stride: Int, private val divisor: Int) {
+        private var offset = 0
         private val entries = ArrayList<Entry>()
 
-        fun int(index: Int, size: Int, type: GLDataType, divisor: Int = 0) {
-            entries.add(IntEntry(index, size, type.glEnum, pointer, divisor))
-            pointer += size * type.size
+        fun int(index: Int, size: Int, type: GLDataType) {
+            entries.add(IntEntry(index, size, type.glEnum, offset))
+            offset += size * type.size
         }
 
-        fun float(index: Int, size: Int, type: GLDataType, normalized: Boolean, divisor: Int = 0) {
-            entries.add(FloatEntry(index, size, type.glEnum, pointer, normalized, divisor))
-            pointer += size * type.size
+        fun float(index: Int, size: Int, type: GLDataType, normalized: Boolean) {
+            entries.add(FloatEntry(index, size, type.glEnum, offset, normalized))
+            offset += size * type.size
         }
 
         fun padding(bytes: Int) {
-            pointer += bytes
+            offset += bytes
         }
 
         fun build(): VertexAttribute {
-            return VertexAttribute(stride, entries)
+            return VertexAttribute(stride, divisor, entries)
         }
     }
 
@@ -34,27 +40,22 @@ class VertexAttribute private constructor(private val stride: Int, private val e
         val index: Int
         val size: Int
         val type: Int
-        val pointer: Int
-        val divisor: Int
+        val offset: Int
 
-        fun apply(stride: Int)
+        fun apply(vaoID: Int, binding: Int)
     }
 
     private class FloatEntry(
         override val index: Int,
         override val size: Int,
         override val type: Int,
-        override val pointer: Int,
-        val normalized: Boolean,
-        override val divisor: Int
+        override val offset: Int,
+        val normalized: Boolean
     ) : Entry {
-        override fun apply(stride: Int) {
-            glVertexAttribPointer(index, size, type, normalized, stride, pointer.toLong())
-
-            glEnableVertexAttribArray(index)
-            if (divisor != 0) {
-                glVertexAttribDivisor(index, divisor)
-            }
+        override fun apply(vaoID: Int, binding: Int) {
+            glEnableVertexArrayAttrib(vaoID, index)
+            glVertexArrayAttribFormat(vaoID, index, size, type, normalized, offset)
+            glVertexArrayAttribBinding(vaoID, index, binding)
         }
     }
 
@@ -62,22 +63,17 @@ class VertexAttribute private constructor(private val stride: Int, private val e
         override val index: Int,
         override val size: Int,
         override val type: Int,
-        override val pointer: Int,
-        override val divisor: Int
+        override val offset: Int
     ) : Entry {
-
-        override fun apply(stride: Int) {
-            glVertexAttribIPointer(index, size, type, stride, pointer.toLong())
-
-            glEnableVertexAttribArray(index)
-            if (divisor != 0) {
-                glVertexAttribDivisor(index, divisor)
-            }
+        override fun apply(vaoID: Int, binding: Int) {
+            glEnableVertexArrayAttrib(vaoID, index)
+            glVertexArrayAttribIFormat(vaoID, index, size, type, offset)
+            glVertexArrayAttribBinding(vaoID, index, binding)
         }
     }
 }
 
 
-inline fun buildAttribute(stride: Int, block: VertexAttribute.Builder.() -> Unit): VertexAttribute {
-    return VertexAttribute.Builder(stride).apply(block).build()
+inline fun buildAttribute(stride: Int, divisor: Int = 0, block: VertexAttribute.Builder.() -> Unit): VertexAttribute {
+    return VertexAttribute.Builder(stride, divisor).apply(block).build()
 }

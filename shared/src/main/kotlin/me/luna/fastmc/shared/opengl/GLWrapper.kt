@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package me.luna.fastmc.shared.opengl
 
 import me.luna.fastmc.FastMcMod.glWrapper
@@ -9,36 +11,18 @@ interface IGLWrapper {
     val lightMapUnit: Int
 
     // GL11
-    fun glGenTextures(): Int
     fun glDeleteTextures(texture: Int)
-    fun glTexParameteri(target: Int, pname: Int, param: Int)
-    fun glTexParameterf(target: Int, pname: Int, param: Float)
-    fun glTexImage2D(
-        target: Int,
-        level: Int,
-        internalformat: Int,
-        width: Int,
-        height: Int,
-        border: Int,
-        format: Int,
-        type: Int,
-        pixels: ByteBuffer?
-    )
-
     fun glBindTexture(texture: Int)
-
+    fun glDrawArrays(mode: Int, first: Int, count: Int)
     fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long)
 
+
     // GL15
-    fun glGenBuffers(): Int
     fun glDeleteBuffers(buffer: Int)
     fun glBindBuffer(target: Int, buffer: Int)
-    fun glBufferData(target: Int, data: ByteBuffer, usage: Int)
+
 
     // GL20
-    fun glEnableVertexAttribArray(index: Int)
-    fun glVertexAttribPointer(index: Int, size: Int, type: Int, normalized: Boolean, stride: Int, pointer: Long)
-
     fun glCreateShader(type: Int): Int
     fun glDeleteShader(shader: Int)
     fun glShaderSource(shader: Int, string: CharSequence)
@@ -47,35 +31,68 @@ interface IGLWrapper {
     fun glGetShaderInfoLog(shader: Int, maxLength: Int): String
     fun glAttachShader(program: Int, shader: Int)
     fun glDetachShader(program: Int, shader: Int)
-
     fun glCreateProgram(): Int
     fun glDeleteProgram(program: Int)
     fun glLinkProgram(program: Int)
     fun glGetProgrami(program: Int, pname: Int): Int
     fun glGetProgramInfoLog(program: Int, maxLength: Int): String
     fun glUseProgram(program: Int)
-
     fun glGetUniformLocation(program: Int, name: CharSequence): Int
-    fun glUniform1i(location: Int, v0: Int)
-    fun glUniform1f(location: Int, v0: Float)
-    fun glUniform3f(location: Int, v0: Float, v1: Float, v2: Float)
-    fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
-    fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer)
 
     // GL30
-    fun glGenerateMipmap(target: Int)
-
-    fun glGenVertexArrays(): Int
-    fun glDeleteVertexArrays(array: Int)
-    fun glVertexAttribIPointer(index: Int, size: Int, type: Int, stride: Int, pointer: Long)
     fun glBindVertexArray(array: Int)
+    fun glDeleteVertexArrays(array: Int)
+    fun glGenerateMipmap(target: Int)
 
 
     // GL31
     fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int)
 
-    // GL33
-    fun glVertexAttribDivisor(index: Int, divisor: Int)
+    // glWrapper
+    fun glProgramUniform1i(program: Int, location: Int, v0: Int)
+    fun glProgramUniform1f(program: Int, location: Int, v0: Float)
+    fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float)
+    fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
+    fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer)
+
+    // GL45
+    fun glCreateVertexArrays(): Int
+    fun glVertexArrayVertexBuffer(vaobj: Int, bindingindex: Int, buffer: Int, offset: Long, stride: Int)
+    fun glVertexArrayElementBuffer(vaobj: Int, buffer: Int)
+    fun glEnableVertexArrayAttrib(vaobj: Int, index: Int)
+    fun glVertexArrayAttribFormat(
+        vaobj: Int,
+        attribindex: Int,
+        size: Int,
+        type: Int,
+        normalized: Boolean,
+        relativeoffset: Int
+    )
+
+    fun glVertexArrayAttribIFormat(vaobj: Int, attribindex: Int, size: Int, type: Int, relativeoffset: Int)
+    fun glVertexArrayBindingDivisor(vaobj: Int, bindingindex: Int, divisor: Int)
+    fun glVertexArrayAttribBinding(vaobj: Int, attribindex: Int, bindingindex: Int)
+
+    fun glCreateBuffers(): Int
+    fun glNamedBufferStorage(buffer: Int, data: ByteBuffer, flags: Int)
+    fun glNamedBufferStorage(buffer: Int, size: Long, flags: Int)
+
+    fun glCreateTextures(target: Int): Int
+    fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int)
+    fun glTextureSubImage2D(
+        texture: Int,
+        level: Int,
+        xoffset: Int,
+        yoffset: Int,
+        width: Int,
+        height: Int,
+        format: Int,
+        type: Int,
+        pixels: ByteBuffer
+    )
+
+    fun glTextureParameteri(texture: Int, pname: Int, param: Int)
+    fun glTextureParameterf(texture: Int, pname: Int, param: Float)
 }
 
 // GL11
@@ -108,25 +125,9 @@ const val GL_REPEAT = 0x2901
 
 const val GL_RGBA8 = 0x8058
 
-fun glGenTextures(): Int = glWrapper.glGenTextures()
 fun glDeleteTextures(texture: Int) = glWrapper.glDeleteTextures(texture)
-fun glTexParameteri(target: Int, pname: Int, param: Int) = glWrapper.glTexParameteri(target, pname, param)
-fun glTexParameterf(target: Int, pname: Int, param: Float) = glWrapper.glTexParameterf(target, pname, param)
-fun glTexImage2D(
-    target: Int,
-    level: Int,
-    internalformat: Int,
-    width: Int,
-    height: Int,
-    border: Int,
-    format: Int,
-    type: Int,
-    pixels: ByteBuffer?
-) =
-    glWrapper.glTexImage2D(target, level, internalformat, width, height, border, format, type, pixels)
-
 fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
-
+fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArrays(mode, first, count)
 fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
     glWrapper.glDrawElements(mode, indices_count, type, indices_buffer_offset)
 
@@ -158,57 +159,41 @@ const val GL_STREAM_DRAW = 0x88E0
 const val GL_STATIC_DRAW = 0x88E4
 const val GL_DYNAMIC_DRAW = 0x88E8
 
-fun glGenBuffers() = glWrapper.glGenBuffers()
-fun glDeleteBuffers(buffer: Int) = glWrapper.glDeleteBuffers(buffer)
-fun glBindBuffer(target: Int, buffer: Int) = glWrapper.glBindBuffer(target, buffer)
-fun glBufferData(target: Int, data: ByteBuffer, usage: Int) = glWrapper.glBufferData(target, data, usage)
-
-
-// GL20
-fun glEnableVertexAttribArray(index: Int) = glWrapper.glEnableVertexAttribArray(index)
-fun glVertexAttribPointer(index: Int, size: Int, type: Int, normalized: Boolean, stride: Int, pointer: Long) =
-    glWrapper.glVertexAttribPointer(index, size, type, normalized, stride, pointer)
+inline fun glDeleteBuffers(buffer: Int) = glWrapper.glDeleteBuffers(buffer)
+inline fun glBindBuffer(target: Int, buffer: Int) = glWrapper.glBindBuffer(target, buffer)
 
 const val GL_FRAGMENT_SHADER = 0x8B30
 const val GL_VERTEX_SHADER = 0x8B31
 const val GL_COMPILE_STATUS = 0x8B81
 
-fun glCreateShader(type: Int) = glWrapper.glCreateShader(type)
-fun glDeleteShader(shader: Int) = glWrapper.glDeleteShader(shader)
-fun glShaderSource(shader: Int, string: CharSequence) = glWrapper.glShaderSource(shader, string)
-fun glCompileShader(shader: Int) = glWrapper.glCompileShader(shader)
-fun glGetShaderi(shader: Int, pname: Int) = glWrapper.glGetShaderi(shader, pname)
-fun glGetShaderInfoLog(shader: Int, maxLength: Int) = glWrapper.glGetShaderInfoLog(shader, maxLength)
-fun glAttachShader(program: Int, shader: Int) = glWrapper.glAttachShader(program, shader)
-fun glDetachShader(program: Int, shader: Int) = glWrapper.glDetachShader(program, shader)
+inline fun glCreateShader(type: Int) = glWrapper.glCreateShader(type)
+inline fun glDeleteShader(shader: Int) = glWrapper.glDeleteShader(shader)
+inline fun glShaderSource(shader: Int, string: CharSequence) = glWrapper.glShaderSource(shader, string)
+inline fun glCompileShader(shader: Int) = glWrapper.glCompileShader(shader)
+inline fun glGetShaderi(shader: Int, pname: Int) = glWrapper.glGetShaderi(shader, pname)
+inline fun glGetShaderInfoLog(shader: Int, maxLength: Int) = glWrapper.glGetShaderInfoLog(shader, maxLength)
+inline fun glAttachShader(program: Int, shader: Int) = glWrapper.glAttachShader(program, shader)
+inline fun glDetachShader(program: Int, shader: Int) = glWrapper.glDetachShader(program, shader)
 
 const val GL_LINK_STATUS = 0x8B82
 
-fun glCreateProgram() = glWrapper.glCreateProgram()
-fun glDeleteProgram(program: Int) = glWrapper.glDeleteProgram(program)
+inline fun glCreateProgram() = glWrapper.glCreateProgram()
+inline fun glDeleteProgram(program: Int) = glWrapper.glDeleteProgram(program)
 
-private var bindProgram = 0
+inline fun glLinkProgram(program: Int) = glWrapper.glLinkProgram(program)
+inline fun glGetProgrami(shader: Int, pname: Int) = glWrapper.glGetProgrami(shader, pname)
+inline fun glGetProgramInfoLog(program: Int, maxLength: Int) = glWrapper.glGetProgramInfoLog(program, maxLength)
 
-fun glLinkProgram(program: Int) = glWrapper.glLinkProgram(program)
-fun glGetProgrami(shader: Int, pname: Int) = glWrapper.glGetProgrami(shader, pname)
-fun glGetProgramInfoLog(program: Int, maxLength: Int) = glWrapper.glGetProgramInfoLog(program, maxLength)
+inline fun glGetUniformLocation(program: Int, name: CharSequence) = glWrapper.glGetUniformLocation(program, name)
 
-fun glGetUniformLocation(program: Int, name: CharSequence) = glWrapper.glGetUniformLocation(program, name)
-fun glUniform1i(location: Int, v0: Int) = glWrapper.glUniform1i(location, v0)
-fun glUniform1f(location: Int, v0: Float) = glWrapper.glUniform1f(location, v0)
-fun glUniform3f(location: Int, v0: Float, v1: Float, v2: Float) = glWrapper.glUniform3f(location, v0, v1, v2)
-fun glUniform4f(location: Int, v0: Float, v1: Float, v2: Float, v3: Float) =
-    glWrapper.glUniform4f(location, v0, v1, v2, v3)
+var bindProgram = 0
 
-fun glUniformMatrix4fv(location: Int, transpose: Boolean, matrices: FloatBuffer) =
-    glWrapper.glUniformMatrix4fv(location, transpose, matrices)
-
-fun glUseProgramForce(program: Int) {
+inline fun glUseProgramForce(program: Int) {
     glWrapper.glUseProgram(program)
     bindProgram = program
 }
 
-fun glUseProgram(program: Int) {
+inline fun glUseProgram(program: Int) {
     if (program != bindProgram) {
         glWrapper.glUseProgram(program)
         bindProgram = program
@@ -219,21 +204,87 @@ fun glUseProgram(program: Int) {
 // GL30
 const val GL_R8 = 0x8229
 const val GL_COMPRESSED_RED = 0x8225
+const val GL_COMPRESSED_RED_RGTC1 = 0x8DBB
 
-fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
+inline fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
 
-fun glGenVertexArrays() = glWrapper.glGenVertexArrays()
-fun glDeleteVertexArrays(array: Int) = glWrapper.glDeleteVertexArrays(array)
-fun glVertexAttribIPointer(index: Int, size: Int, type: Int, stride: Int, pointer: Long) =
-    glWrapper.glVertexAttribIPointer(index, size, type, stride, pointer)
+inline fun glDeleteVertexArrays(array: Int) = glWrapper.glDeleteVertexArrays(array)
 
-fun glBindVertexArray(array: Int) = glWrapper.glBindVertexArray(array)
+inline fun glBindVertexArray(array: Int) = glWrapper.glBindVertexArray(array)
 
 
 // GL31
-fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
+inline fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
     glWrapper.glDrawArraysInstanced(mode, first, count, primcount)
 
 
-// GL33
-fun glVertexAttribDivisor(index: Int, divisor: Int) = glWrapper.glVertexAttribDivisor(index, divisor)
+// GL41
+inline fun glProgramUniform1i(program: Int, location: Int, v0: Int) =
+    glWrapper.glProgramUniform1i(program, location, v0)
+
+inline fun glProgramUniform1f(program: Int, location: Int, v0: Float) =
+    glWrapper.glProgramUniform1f(program, location, v0)
+
+inline fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float) =
+    glWrapper.glProgramUniform3f(program, location, v0, v1, v2)
+
+inline fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float) =
+    glWrapper.glProgramUniform4f(program, location, v0, v1, v2, v3)
+
+inline fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
+    glWrapper.glProgramUniformMatrix4fv(program, location, transpose, matrices)
+
+
+// GL45
+inline fun glCreateVertexArrays(): Int = glWrapper.glCreateVertexArrays()
+inline fun glVertexArrayElementBuffer(vaobj: Int, buffer: Int) = glWrapper.glVertexArrayElementBuffer(vaobj, buffer)
+inline fun glVertexArrayVertexBuffer(vaobj: Int, bindingindex: Int, buffer: Int, offset: Long, stride: Int) =
+    glWrapper.glVertexArrayVertexBuffer(vaobj, bindingindex, buffer, offset, stride)
+
+inline fun glEnableVertexArrayAttrib(vaobj: Int, index: Int) = glWrapper.glEnableVertexArrayAttrib(vaobj, index)
+inline fun glVertexArrayAttribFormat(
+    vaobj: Int,
+    attribindex: Int,
+    size: Int,
+    type: Int,
+    normalized: Boolean,
+    relativeoffset: Int
+) = glWrapper.glVertexArrayAttribFormat(vaobj, attribindex, size, type, normalized, relativeoffset)
+
+inline fun glVertexArrayAttribIFormat(vaobj: Int, attribindex: Int, size: Int, type: Int, relativeoffset: Int) =
+    glWrapper.glVertexArrayAttribIFormat(vaobj, attribindex, size, type, relativeoffset)
+
+inline fun glVertexArrayBindingDivisor(vaobj: Int, bindingindex: Int, divisor: Int) =
+    glWrapper.glVertexArrayBindingDivisor(vaobj, bindingindex, divisor)
+
+inline fun glVertexArrayAttribBinding(vaobj: Int, attribindex: Int, bindingindex: Int) =
+    glWrapper.glVertexArrayAttribBinding(vaobj, attribindex, bindingindex)
+
+inline fun glCreateBuffers(): Int = glWrapper.glCreateBuffers()
+
+inline fun glNamedBufferStorage(buffer: Int, data: ByteBuffer, flags: Int) =
+    glWrapper.glNamedBufferStorage(buffer, data, flags)
+
+inline fun glNamedBufferStorage(buffer: Int, size: Long, flags: Int) =
+    glWrapper.glNamedBufferStorage(buffer, size, flags)
+
+inline fun glCreateTextures(target: Int): Int = glWrapper.glCreateTextures(target)
+
+inline fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int) =
+    glWrapper.glTextureStorage2D(texture, levels, internalformat, width, height)
+
+inline fun glTextureSubImage2D(
+    texture: Int,
+    level: Int,
+    xoffset: Int,
+    yoffset: Int,
+    width: Int,
+    height: Int,
+    format: Int,
+    type: Int,
+    pixels: ByteBuffer
+) = glWrapper.glTextureSubImage2D(texture, level, xoffset, yoffset, width, height, format, type, pixels)
+
+inline fun glTextureParameteri(texture: Int, pname: Int, param: Int) = glWrapper.glTextureParameteri(texture, pname, param)
+
+inline fun glTextureParameterf(texture: Int, pname: Int, param: Float) = glWrapper.glTextureParameterf(texture, pname, param)

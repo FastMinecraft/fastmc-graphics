@@ -117,15 +117,14 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
     private class RenderInfo private constructor(
         private val texture: GlyphTexture,
         private val size: Int,
-        private val vaoID: Int,
-        private val vboID: Int,
-        private val iboID: Int
+        private val vao: VertexArrayObject,
+        private val ibo: IndexBufferObject
     ) {
         fun render(drawShadow: Boolean) {
             texture.bind()
 
-            glBindVertexArray(vaoID)
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID)
+            vao.bind()
+            ibo.bind()
 
             if (drawShadow) {
                 glDrawElements(GL_TRIANGLES, size * 2 * 6, GL_UNSIGNED_SHORT, 0L)
@@ -135,9 +134,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
         }
 
         fun destroy() {
-            glDeleteVertexArrays(vaoID)
-            glDeleteBuffers(vboID)
-            glDeleteBuffers(iboID)
+            vao.destroy()
         }
 
         class Builder(private val texture: GlyphTexture) {
@@ -181,25 +178,16 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                 val vboBuffer = buildVboBuffer()
                 val iboBuffer = buildIboBuffer()
 
-                val vaoID = glGenVertexArrays()
-                val vboID = glGenBuffers()
-                val iboID = glGenBuffers()
+                val vao = VertexArrayObject()
+                val vbo = VertexBufferObject()
+                val ibo = IndexBufferObject()
 
-                glBindVertexArray(vaoID)
+                glNamedBufferStorage(vbo.id, vboBuffer, 0)
+                glNamedBufferStorage(ibo.id, iboBuffer, 0)
 
-                glBindBuffer(GL_ARRAY_BUFFER, vboID)
-                glBufferData(GL_ARRAY_BUFFER, vboBuffer, GL_STATIC_DRAW)
+                vertexAttribute.apply(vao, vbo)
 
-                vertexAttribute.apply()
-
-                glBindBuffer(GL_ARRAY_BUFFER, 0)
-                glBindVertexArray(0)
-
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, iboID)
-                glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboBuffer, GL_STATIC_DRAW)
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
-
-                return RenderInfo(texture, size, vaoID, vboID, iboID)
+                return RenderInfo(texture, size, vao, ibo)
             }
 
             private fun buildVboBuffer(): ByteBuffer {

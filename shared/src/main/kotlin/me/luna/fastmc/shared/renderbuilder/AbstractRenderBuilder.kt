@@ -73,7 +73,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         builtPosZ0 = renderer.renderPosZ
         buffer0 = BufferUtils.byte(size * vertexSize)
 
-        vertexAttribute = buildAttribute(vertexSize) { setupAttribute() }
+        vertexAttribute = buildAttribute(vertexSize, 1) { setupAttribute() }
     }
 
     suspend fun addAll(entities: List<T>) {
@@ -120,26 +120,21 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         val shader = shader.get(resourceManager)
         val model = model.get(resourceManager)
 
-        val vaoID = glGenVertexArrays()
-        val vboID = glGenBuffers()
+        val vao = VertexArrayObject()
+        val vbo = VertexBufferObject()
 
-        glBindBuffer(GL_ARRAY_BUFFER, vboID)
-        glBufferData(GL_ARRAY_BUFFER, buffer, GL_STREAM_DRAW)
+        glNamedBufferStorage(vbo.id, buffer, 0)
 
-        glBindVertexArray(vaoID)
+        model.attachVBO(vao)
+        vertexAttribute.apply(vao, vbo)
 
-        vertexAttribute.apply()
-
-        model.attachVBO()
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
 
-        return SingleTextureRenderer(renderInfo(shader, vaoID, vboID, model), texture)
+        return SingleTextureRenderer(renderInfo(shader, vao, listOf(vbo), model), texture)
     }
 
-    protected fun renderInfo(shader: Shader, vaoID: Int, vboID: Int, model: Model): RenderInfo {
-        return RenderInfo(resourceManager, shader, vaoID, vboID, model.modelSize, size, builtPosX, builtPosY, builtPosZ)
+    protected fun renderInfo(shader: Shader, vao: VertexArrayObject, vboList: List<VertexBufferObject>, model: Model): RenderInfo {
+        return RenderInfo(resourceManager, shader, vao, vboList, model.modelSize, size, builtPosX, builtPosY, builtPosZ)
     }
 
     open class Renderer(
@@ -152,7 +147,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
             shader.updateOffset(builtPosX - renderPosX, builtPosY - renderPosY, builtPosZ - renderPosZ)
             shader.updateModelViewMatrix(modelView)
 
-            glBindVertexArray(vaoID)
+            glBindVertexArray(vao.id)
             glDrawArraysInstanced(GL_TRIANGLES, 0, modelSize, size)
             glBindVertexArray(0)
 
@@ -168,9 +163,10 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         }
 
         fun destroy() {
-            glDeleteVertexArrays(vaoID)
-            glDeleteBuffers(vboID)
-            glDeleteBuffers(vboID)
+            vao.destroyVao()
+            vboList.forEach {
+                it.destroy()
+            }
         }
     }
 
@@ -188,17 +184,15 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         val partialTicksUniform = glGetUniformLocation(id, "partialTicks")
 
         init {
-            bind()
-            glUniform1i(glGetUniformLocation(id, "lightMapTexture"), FastMcMod.glWrapper.lightMapUnit)
-            unbind()
+            glProgramUniform1i(id, glGetUniformLocation(id, "lightMapTexture"), FastMcMod.glWrapper.lightMapUnit)
         }
     }
 
     interface IRenderInfo {
         val resourceManager: IResourceManager
         val shader: Shader
-        val vaoID: Int
-        val vboID: Int
+        val vao: VertexArrayObject
+        val vboList: List<VertexBufferObject>
         val modelSize: Int
         val size: Int
         val builtPosX: Double
@@ -209,8 +203,8 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     class RenderInfo(
         override val resourceManager: IResourceManager,
         override val shader: Shader,
-        override val vaoID: Int,
-        override val vboID: Int,
+        override val vao: VertexArrayObject,
+        override val vboList: List<VertexBufferObject>,
         override val modelSize: Int,
         override val size: Int,
         override val builtPosX: Double,

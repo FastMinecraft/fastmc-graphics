@@ -3,8 +3,8 @@ package me.luna.fastmc.shared.opengl
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.resource.Resource
 
-open class Shader(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) : Resource {
-    val id: Int
+open class Shader(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) : Resource, IGLObject {
+    final override val id: Int
 
     init {
         val vertexShaderID = createShader(vertShaderPath, GL_VERTEX_SHADER)
@@ -54,11 +54,11 @@ open class Shader(final override val resourceName: String, vertShaderPath: Strin
         return id
     }
 
-    fun bind() {
+    final override fun bind() {
         glUseProgram(id)
     }
 
-    fun unbind() {
+    final override fun unbind() {
         glUseProgram(0)
     }
 

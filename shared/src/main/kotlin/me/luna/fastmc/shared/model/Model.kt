@@ -5,31 +5,27 @@ import me.luna.fastmc.shared.resource.Resource
 
 abstract class Model(override val resourceName: String, private val textureSizeX: Int, private val textureSizeZ: Int) :
     Resource {
-    private var vboID = 0
+    private lateinit var vbo: VertexBufferObject
     var modelSize = 0; private set
 
     private fun init0() {
         val builder = ModelBuilder(0, textureSizeX, textureSizeZ)
         builder.buildModel()
 
-        vboID = glGenBuffers()
+        vbo = VertexBufferObject()
         modelSize = builder.vertexSize
 
-        glBindBuffer(GL_ARRAY_BUFFER, vboID)
-        glBufferData(GL_ARRAY_BUFFER, builder.build(), GL_STATIC_DRAW)
-        glBindBuffer(GL_ARRAY_BUFFER, 0)
+        glNamedBufferStorage(vbo.id, builder.build(), 0)
     }
 
     protected abstract fun ModelBuilder.buildModel()
 
-    fun attachVBO() {
-        glBindBuffer(GL_ARRAY_BUFFER, vboID)
-
-        vertexAttribute.apply()
+    fun attachVBO(vao: VertexArrayObject) {
+        vertexAttribute.apply(vao, vbo)
     }
 
     override fun destroy() {
-        glDeleteBuffers(vboID)
+        vbo.destroy()
     }
 
     private val vertexAttribute = buildAttribute(20) {

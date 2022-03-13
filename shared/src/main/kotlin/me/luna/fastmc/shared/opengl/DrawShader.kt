@@ -10,7 +10,7 @@ open class DrawShader(resourceName: String, vertShaderPath: String, fragShaderPa
     private val offsetUniform = glGetUniformLocation(id, "offset")
 
     fun updateOffset(x: Double, y: Double, z: Double) {
-        glUniform3f(offsetUniform, x.toFloat(), y.toFloat(), z.toFloat())
+        glProgramUniform3f(id, offsetUniform, x.toFloat(), y.toFloat(), z.toFloat())
     }
 
     fun updateProjectionMatrix(matrix4f: Matrix4f) {
@@ -24,10 +24,10 @@ open class DrawShader(resourceName: String, vertShaderPath: String, fragShaderPa
     }
 
     fun updateProjectionMatrix() {
-        MatrixUtils.uploadMatrix(projectionUniform)
+        MatrixUtils.uploadMatrix(id, projectionUniform)
     }
 
     fun updateModelViewMatrix() {
-        MatrixUtils.uploadMatrix(modelViewUniform)
+        MatrixUtils.uploadMatrix(id, modelViewUniform)
     }
 }

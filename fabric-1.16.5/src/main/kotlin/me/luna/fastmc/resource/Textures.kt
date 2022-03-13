@@ -8,18 +8,19 @@ import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.texture.TextureUtils
 import net.minecraft.client.MinecraftClient
 import net.minecraft.util.DyeColor
-import org.joml.Matrix4f
 import java.awt.image.BufferedImage
-import java.text.NumberFormat
 import javax.imageio.ImageIO
 
 class ResourceLocationTexture(
     private val mc: MinecraftClient,
     override val resourceName: String,
-    private val ResourceLocation: ResourceLocation
+    private val resourceLocation: ResourceLocation
 ) : ITexture {
+    override val id: Int
+        get() = mc.textureManager.getTexture(resourceLocation)!!.glId
+
     override fun bind() {
-        mc.textureManager.bindTexture(ResourceLocation)
+        mc.textureManager.bindTexture(resourceLocation)
     }
 
     override fun destroy() {

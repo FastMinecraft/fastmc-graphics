@@ -5,7 +5,7 @@ import me.luna.fastmc.shared.opengl.glBindTexture
 import me.luna.fastmc.shared.opengl.glDeleteTextures
 
 class GlyphTexture(
-    val id: Int,
+    override val id: Int,
     val internalID: Int
 ) : ITexture {
     override val resourceName = "fontRenderer/$internalID"

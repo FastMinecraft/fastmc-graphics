@@ -24,12 +24,12 @@ class BedRenderBuilder : TileEntityRenderBuilder<IBedInfo<*>>(20) {
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
     override fun VertexAttribute.Builder.setupAttribute() {
-        float(4, 3, GLDataType.GL_FLOAT, false, 1) // 12
-        float(5, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1) // 2
+        float(4, 3, GLDataType.GL_FLOAT, false) // 12
+        float(5, 2, GLDataType.GL_UNSIGNED_BYTE, true) // 2
 
-        int(6, 1, GLDataType.GL_BYTE, 1) // 1
-        int(7, 1, GLDataType.GL_UNSIGNED_BYTE, 1) // 1
-        int(8, 1, GLDataType.GL_UNSIGNED_BYTE, 1) // 1
+        int(6, 1, GLDataType.GL_BYTE) // 1
+        int(7, 1, GLDataType.GL_UNSIGNED_BYTE) // 1
+        int(8, 1, GLDataType.GL_UNSIGNED_BYTE) // 1
     }
 
     private companion object {

@@ -3,10 +3,7 @@ package me.luna.fastmc.renderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import me.luna.fastmc.shared.opengl.glBindTexture
-import me.luna.fastmc.shared.opengl.glBindVertexArray
-import me.luna.fastmc.shared.opengl.glUniform1f
-import me.luna.fastmc.shared.opengl.glUseProgramForce
+import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.util.MathUtils
@@ -27,8 +24,7 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
         MatrixUtils.putMatrix(projectionMatrix)
 
         resourceManager.entityShader.resources.forEach {
-            it.bind()
-            glUniform1f(it.partialTicksUniform, partialTicks)
+            glProgramUniform1f(it.id, it.partialTicksUniform, partialTicks)
             it.updateProjectionMatrix()
         }
 

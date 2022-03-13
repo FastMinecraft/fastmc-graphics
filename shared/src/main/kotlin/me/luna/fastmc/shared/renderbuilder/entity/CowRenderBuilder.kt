@@ -41,15 +41,15 @@ class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
     override fun VertexAttribute.Builder.setupAttribute() {
-        float(4, 3, GLDataType.GL_FLOAT, false, 1)
-        float(5, 3, GLDataType.GL_FLOAT, false, 1)
-        float(6, 2, GLDataType.GL_UNSIGNED_BYTE, true, 1)
+        float(4, 3, GLDataType.GL_FLOAT, false)
+        float(5, 3, GLDataType.GL_FLOAT, false)
+        float(6, 2, GLDataType.GL_UNSIGNED_BYTE, true)
 
-        float(7, 3, GLDataType.GL_FLOAT, false, 1)
-        float(8, 3, GLDataType.GL_FLOAT, false, 1)
+        float(7, 3, GLDataType.GL_FLOAT, false)
+        float(8, 3, GLDataType.GL_FLOAT, false)
 
-        float(9, 2, GLDataType.GL_FLOAT, false, 1)
-        float(10, 2, GLDataType.GL_FLOAT, false, 1)
+        float(9, 2, GLDataType.GL_FLOAT, false)
+        float(10, 2, GLDataType.GL_FLOAT, false)
     }
 
     private companion object {

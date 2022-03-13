@@ -1,7 +1,7 @@
 package me.luna.fastmc.shared.util
 
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.opengl.glUniformMatrix4fv
+import me.luna.fastmc.shared.opengl.glProgramUniformMatrix4fv
 import org.joml.Matrix4f
 import java.nio.FloatBuffer
 
@@ -17,7 +17,7 @@ object MatrixUtils {
         return Matrix4f(matrixBuffer)
     }
 
-    fun uploadMatrix(location: Int) {
-        glUniformMatrix4fv(location, FastMcMod.glWrapper.rowMajor, matrixBuffer)
+    fun uploadMatrix(programID: Int, location: Int) {
+        glProgramUniformMatrix4fv(programID, location, FastMcMod.glWrapper.rowMajor, matrixBuffer)
     }
 }

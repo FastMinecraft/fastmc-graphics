@@ -17,6 +17,9 @@ class ResourceLocationTexture(
     override val resourceName: String,
     private val resourceLocation: ResourceLocation
 ) : ITexture {
+    override val id: Int
+        get() = mc.renderEngine.getTexture(resourceLocation).glTextureId
+
     override fun bind() {
         mc.renderEngine.bindTexture(resourceLocation)
     }

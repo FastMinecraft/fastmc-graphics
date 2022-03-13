@@ -41,7 +41,7 @@ class FontRenderer(
         var glyphID = 0
         var dirty = true
 
-        var texture = GlyphTexture(glGenTextures(), glyphID++)
+        var texture = GlyphTexture(glCreateTextures(GL_TEXTURE_2D), glyphID++)
         var image = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_ARGB)
         var graphics2D = image.createGraphics()
 
@@ -57,20 +57,20 @@ class FontRenderer(
             image.getAlpha(buffer)
             buffer.flip()
 
-            texture.bind()
-            glTexImage2D(
-                GL_TEXTURE_2D,
+            glTextureStorage2D(texture.id, 1, GL_COMPRESSED_RED_RGTC1, textureSize, textureSize)
+            glTextureSubImage2D(
+                texture.id,
                 0,
-                GL_COMPRESSED_RED,
+                0,
+                0,
                 textureSize,
                 textureSize,
-                0,
                 GL_RED,
                 GL_UNSIGNED_BYTE,
                 buffer
             )
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             textureList.add(texture)
         }
 
@@ -98,7 +98,7 @@ class FontRenderer(
 
                 dirty = false
 
-                texture = GlyphTexture(glGenTextures(), glyphID)
+                texture = GlyphTexture(glCreateTextures(GL_TEXTURE_2D), glyphID)
                 image = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_ARGB)
                 graphics2D = image.createGraphics()
             }
@@ -357,16 +357,14 @@ class FontRenderer(
         private var lastColor = ColorARGB(0)
 
         init {
-            bind()
-            glUniform1i(glGetUniformLocation(id, "texture"), 0)
-            unbind()
+            glProgramUniform1i(id, glGetUniformLocation(id, "texture"), 0)
         }
 
         fun preRender(projection: Matrix4f, modelView: Matrix4f, color: ColorARGB) {
             updateProjectionMatrix(projection)
             updateModelViewMatrix(modelView)
             if (color != lastColor) {
-                glUniform4f(defaultColorUniform, color.rFloat, color.gFloat, color.bFloat, color.aFloat)
+                glProgramUniform4f(id, defaultColorUniform, color.rFloat, color.gFloat, color.bFloat, color.aFloat)
                 lastColor = color
             }
         }
