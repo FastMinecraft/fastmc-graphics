@@ -29,6 +29,10 @@ dependencies {
     }
 }
 
+loom {
+    accessWidener("src/main/resources/FastMinecraft.accesswidener")
+}
+
 tasks {
     processResources {
         filesMatching("fabric.mod.json") {

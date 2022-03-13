@@ -9,5 +9,8 @@
     "AccessorRenderChunk",
     "AccessorRenderGlobal",
     "AccessorRenderGlobalContainerLocalRenderInformation"
+  ],
+  "mixins": [
+    "RebuildTaskAccessor"
   ]
 }

@@ -7,6 +7,8 @@
     "MixinMinecraftClient",
     "entity.MixinEntity",
     "entity.MixinEntityCow",
+    "render.MixinChunkBuilderBuiltChunkRebuildTask",
+    "render.MixinChunkBuilderChunkData",
     "render.MixinWorldRenderer",
     "tileentity.MixinBedBlockEntity",
     "tileentity.MixinBlockEntity",
@@ -17,5 +19,8 @@
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": [
+    "render.MixinChunkBuilderBuiltChunk"
+  ]
 }

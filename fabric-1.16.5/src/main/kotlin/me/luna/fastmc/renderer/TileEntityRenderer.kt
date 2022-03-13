@@ -9,6 +9,7 @@ import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.util.ITypeID
+import me.luna.fastmc.shared.util.collection.FastIntMap
 import me.luna.fastmc.tileentity.ChestInfo
 import me.luna.fastmc.util.blockState
 import me.luna.fastmc.util.getPropertyOrDefault
@@ -30,19 +31,39 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
         parentScope.launch(Dispatchers.Default) {
-            renderEntryList.forEach {
-                it.clear()
-            }
+            mc.world?.let {
+                val tempAdding: ArrayList<TileEntity>
+                val tempRemoving: ArrayList<TileEntity>
 
-            mc.world?.let { world ->
-                world.loadedTileEntityList
-                    .forEach {
-                        renderEntryMap[(it as ITypeID).typeID]?.add(it)
-                    }
+                synchronized(lock) {
+                    tempAdding = adding
+                    if (tempAdding.isNotEmpty()) adding = ArrayList()
+
+                    tempRemoving = removing
+                    if (tempRemoving.isNotEmpty()) removing = ArrayList()
+                }
+
+                val removingGroups = FastIntMap<HashSet<TileEntity>>()
+                val addingGroups = FastIntMap<ArrayList<TileEntity>>()
+
+                tempRemoving.forEach {
+                    removingGroups.getOrPut((it as ITypeID).typeID) {
+                        HashSet()
+                    }.add(it)
+                }
+
+                tempAdding.forEach {
+                    addingGroups.getOrPut((it as ITypeID).typeID) {
+                        ArrayList()
+                    }.add(it)
+                }
 
                 coroutineScope {
-                    for (entry in renderEntryList) {
+                    for ((id, entry) in renderEntryMap) {
                         launch(Dispatchers.Default) {
+                            removingGroups[id]?.let { removing -> entry.removeAll(removing) }
+                            addingGroups[id]?.let { adding -> entry.addAll(adding) }
+
                             entry.markDirty()
                             entry.update(mainThreadContext, this)
                         }
