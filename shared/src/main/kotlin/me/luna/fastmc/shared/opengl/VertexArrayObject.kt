@@ -15,10 +15,10 @@ class VertexArrayObject: IGLObject {
         iboList.add(ibo)
     }
 
-    fun attachVbo(vbo: VertexBufferObject, offset: Long, stride: Int): Int {
+    fun attachVbo(vbo: VertexBufferObject) {
         vboSet.add(vbo)
-        glVertexArrayVertexBuffer(id, vboBinding, vbo.id, offset, stride)
-        return vboBinding++
+        glVertexArrayVertexBuffer(id, vboBinding, vbo.id, 0, vbo.vertexAttribute.stride)
+        vbo.vertexAttribute.apply(this, vboBinding++)
     }
 
     override fun bind() {

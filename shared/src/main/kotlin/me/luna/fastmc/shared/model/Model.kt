@@ -12,7 +12,7 @@ abstract class Model(override val resourceName: String, private val textureSizeX
         val builder = ModelBuilder(0, textureSizeX, textureSizeZ)
         builder.buildModel()
 
-        vbo = VertexBufferObject()
+        vbo = VertexBufferObject(vertexAttribute)
         modelSize = builder.vertexSize
 
         glNamedBufferStorage(vbo.id, builder.build(), 0)
@@ -20,8 +20,8 @@ abstract class Model(override val resourceName: String, private val textureSizeX
 
     protected abstract fun ModelBuilder.buildModel()
 
-    fun attachVBO(vao: VertexArrayObject) {
-        vertexAttribute.apply(vao, vbo)
+    fun attachVbo(vao: VertexArrayObject) {
+        vao.attachVbo(vbo)
     }
 
     override fun destroy() {

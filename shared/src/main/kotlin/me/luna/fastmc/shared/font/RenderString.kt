@@ -78,7 +78,6 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
         }
 
         glBindTexture(0)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0)
         glBindVertexArray(0)
 
         shader.unbind()
@@ -135,6 +134,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
 
         fun destroy() {
             vao.destroy()
+            ibo.destroy()
         }
 
         class Builder(private val texture: GlyphTexture) {
@@ -179,13 +179,13 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                 val iboBuffer = buildIboBuffer()
 
                 val vao = VertexArrayObject()
-                val vbo = VertexBufferObject()
+                val vbo = VertexBufferObject(vertexAttribute)
                 val ibo = IndexBufferObject()
 
                 glNamedBufferStorage(vbo.id, vboBuffer, 0)
                 glNamedBufferStorage(ibo.id, iboBuffer, 0)
 
-                vertexAttribute.apply(vao, vbo)
+                vao.attachVbo(vbo)
 
                 return RenderInfo(texture, size, vao, ibo)
             }

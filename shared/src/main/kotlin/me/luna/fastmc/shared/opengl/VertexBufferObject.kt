@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.opengl
 
-class VertexBufferObject : BufferObject() {
+class VertexBufferObject(val vertexAttribute: VertexAttribute) : BufferObject() {
     override fun bind() {
         glBindBuffer(GL_ARRAY_BUFFER, id)
     }

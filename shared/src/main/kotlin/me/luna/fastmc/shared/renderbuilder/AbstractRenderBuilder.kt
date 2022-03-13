@@ -121,15 +121,12 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         val model = model.get(resourceManager)
 
         val vao = VertexArrayObject()
-        val vbo = VertexBufferObject()
+        val vbo = VertexBufferObject(vertexAttribute)
 
         glNamedBufferStorage(vbo.id, buffer, 0)
 
-        model.attachVBO(vao)
-        vertexAttribute.apply(vao, vbo)
-
-        glBindVertexArray(0)
-
+        model.attachVbo(vao)
+        vao.attachVbo(vbo)
         return SingleTextureRenderer(renderInfo(shader, vao, listOf(vbo), model), texture)
     }
 
@@ -149,7 +146,6 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
             glBindVertexArray(vao.id)
             glDrawArraysInstanced(GL_TRIANGLES, 0, modelSize, size)
-            glBindVertexArray(0)
 
             postRender()
         }

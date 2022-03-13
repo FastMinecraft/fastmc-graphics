@@ -1,9 +1,7 @@
 package me.luna.fastmc.shared.opengl
 
-class VertexAttribute private constructor(private val stride: Int, private val divisor: Int, private val entries: List<Entry>) {
-    fun apply(vao: VertexArrayObject, vbo: VertexBufferObject) {
-        val binding = vao.attachVbo(vbo, 0, stride)
-
+class VertexAttribute private constructor(val stride: Int, private val divisor: Int, private val entries: List<Entry>) {
+    fun apply(vao: VertexArrayObject, binding: Int) {
         entries.forEach {
             it.apply(vao.id, binding)
         }
