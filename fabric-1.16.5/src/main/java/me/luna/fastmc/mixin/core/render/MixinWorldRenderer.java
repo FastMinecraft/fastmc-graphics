@@ -152,14 +152,8 @@ public abstract class MixinWorldRenderer {
     @Shadow
     protected abstract void renderEntity(Entity entity, double cameraX, double cameraY, double cameraZ, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers);
 
-    private boolean first = false;
-
     @Inject(method = "setWorld", at = @At("HEAD"))
     public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
-        if (this.world == null) {
-            first = true;
-            return;
-        }
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().clear();
         FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer().clear();
     }
@@ -510,23 +504,5 @@ public abstract class MixinWorldRenderer {
         immediate.draw(TexturedRenderLayers.getSign());
         immediate.draw(TexturedRenderLayers.getChest());
         this.bufferBuilders.getOutlineVertexConsumers().draw();
-    }
-
-    @Inject(method = "reload()V", at = @At("RETURN"))
-    public void refreshResources$Inject$RETURN(CallbackInfo ci) {
-        if (this.world == null || first) {
-            first = false;
-            return;
-        }
-        MinecraftClient mc = this.client;
-
-        IResourceManager resourceManager = new ResourceManager(mc);
-        FastMcMod.INSTANCE.getLogger().info("Resource manager initialized");
-
-        AbstractWorldRenderer worldRenderer = new me.luna.fastmc.renderer.WorldRenderer(mc, resourceManager);
-        worldRenderer.init(new TileEntityRenderer(mc, worldRenderer), new EntityRenderer(mc, worldRenderer));
-        FastMcMod.INSTANCE.getLogger().info("World renderer initialized");
-
-        FastMcMod.INSTANCE.reloadRenderer(resourceManager, worldRenderer);
     }
 }
