@@ -301,7 +301,7 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
             this.client.getProfiler().pop();
         }
 
-        this.client.getProfiler().push(renderLayer.toString());
+        this.client.getProfiler().push(renderLayer::toString);
         FastObjectArrayList<ChunkBuilder.BuiltChunk> list = filteredRenderInfos.get()[((IPatchedRenderLayer) renderLayer).getIndex()];
 
         AdaptersKt.toJoml(matrixStack.peek().getModel(), original);

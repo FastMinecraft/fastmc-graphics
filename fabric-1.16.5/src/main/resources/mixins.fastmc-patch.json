@@ -6,10 +6,11 @@
   "client": [
     "render.MixinBuiltChunkStorage",
     "render.MixinChunkBuilderBuiltChunk",
+    "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
     "render.MixinRenderLayer",
     "render.MixinWorldRenderer",
-    "render.MixinChunkBuilderBuiltChunkRebuildTask"
+    "render.MixinModelPart"
   ],
   "injectors": {
     "defaultRequire": 1

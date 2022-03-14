@@ -4,6 +4,8 @@ accessible class net/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk$Task
 accessible class net/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk$RebuildTask
 accessible class net/minecraft/client/render/chunk/ChunkBuilder$Result
 accessible class net/minecraft/client/render/WorldRenderer$ChunkInfo
+accessible class net/minecraft/client/model/ModelPart$Quad
+accessible class net/minecraft/client/model/ModelPart$Vertex
 
 accessible field net/minecraft/client/render/RenderPhase PARTICLES_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
 accessible field net/minecraft/client/render/RenderPhase CLOUDS_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
@@ -12,3 +14,4 @@ accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo chunk Lnet/
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo direction Lnet/minecraft/util/math/Direction;
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo cullingState B
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo propagationLevel I
+accessible field net/minecraft/client/model/ModelPart$Cuboid sides [Lnet/minecraft/client/model/ModelPart$Quad;
