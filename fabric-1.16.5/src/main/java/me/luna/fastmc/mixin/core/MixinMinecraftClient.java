@@ -7,6 +7,7 @@ import me.luna.fastmc.renderer.FontRendererWrapper;
 import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.renderer.WorldRenderer;
 import me.luna.fastmc.resource.ResourceManager;
+import me.luna.fastmc.shared.FpsDisplay;
 import me.luna.fastmc.shared.font.IFontRendererWrapper;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
@@ -23,7 +24,8 @@ import java.util.concurrent.CompletableFuture;
 
 @Mixin(MinecraftClient.class)
 public abstract class MixinMinecraftClient {
-    @Shadow public abstract Profiler getProfiler();
+    @Shadow
+    public abstract Profiler getProfiler();
 
     @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer(IZ)V", shift = At.Shift.AFTER))
     public void init$Inject$INVOKE$initializeTextures(CallbackInfo ci) {
@@ -47,11 +49,21 @@ public abstract class MixinMinecraftClient {
         FastMcMod.INSTANCE.init(resourceManager, worldRenderer, fontRenderer);
     }
 
+    @Inject(method = "run", at = @At("HEAD"))
+    public void run$Inject$HEAD(CallbackInfo ci) {
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+    }
+
     @Inject(method = "tick", at = @At("RETURN"))
     public void runTick$Inject$RETURN(CallbackInfo ci) {
         getProfiler().push("fastMinecraft");
         FastMcMod.INSTANCE.onPostTick();
         getProfiler().pop();
+    }
+
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/MinecraftClient;getFramerateLimit()I"))
+    public void runTick$Inject$INVOKE$getFramerateLimit(CallbackInfo ci) {
+        FpsDisplay.INSTANCE.onPostRenderTick();
     }
 
     @Inject(method = "reloadResources", at = @At("RETURN"))
