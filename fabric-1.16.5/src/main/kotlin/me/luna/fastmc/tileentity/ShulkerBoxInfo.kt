@@ -1,6 +1,6 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.TileEntityShulkerBox
+import me.luna.fastmc.util.TileEntityShulkerBox
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IShulkerBoxInfo
 import net.minecraft.block.ShulkerBoxBlock
 import net.minecraft.state.property.EnumProperty

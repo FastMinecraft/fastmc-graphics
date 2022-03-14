@@ -20,4 +20,10 @@ class FastObjectArrayList<E> : ObjectArrayList<E> {
     fun clearFast() {
         size = 0
     }
+
+    fun clearAndTrim() {
+        size = 0
+        @Suppress("UNCHECKED_CAST")
+        a = emptyArray<Any?>() as Array<out E>
+    }
 }

@@ -1,6 +1,6 @@
 package me.luna.fastmc.resource
 
-import me.luna.fastmc.ResourceLocation
+import me.luna.fastmc.util.ResourceLocation
 import me.luna.fastmc.shared.texture.BedTexture
 import me.luna.fastmc.shared.texture.ChestTexture
 import me.luna.fastmc.shared.texture.DefaultTexture

@@ -3,13 +3,14 @@ package me.luna.fastmc.mixin.core.render;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectList;
-import me.luna.fastmc.AdaptersKt;
 import me.luna.fastmc.FastMcMod;
+import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.renderer.EntityRenderer;
 import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.resource.ResourceManager;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
+import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
@@ -36,6 +37,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -45,7 +47,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -154,12 +155,13 @@ public abstract class MixinWorldRenderer {
     private boolean first = false;
 
     @Inject(method = "setWorld", at = @At("HEAD"))
-    public void setWorld$Inject$HEAD(CallbackInfo ci) {
+    public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
         if (this.world == null) {
             first = true;
             return;
         }
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().clear();
+        FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer().clear();
     }
 
     /**
@@ -279,7 +281,7 @@ public abstract class MixinWorldRenderer {
         // Tile entities
         profiler.swap("tileEntities");
         profiler.push("vanilla");
-        renderTileEntityVanilla(matrices, tickDelta, limitTime, renderBlockOutline, camera, gameRenderer, lightmapTextureManager, matrix4f, profiler, renderPosX, renderPosY, renderPosZ, immediate);
+        renderTileEntityVanilla(matrices, tickDelta, renderPosX, renderPosY, renderPosZ, immediate);
         profiler.swap("fastMinecraft");
         renderTileEntityFastMc(matrices, tickDelta, matrix4f, profiler);
         profiler.pop();
@@ -463,33 +465,30 @@ public abstract class MixinWorldRenderer {
     }
 
     @SuppressWarnings("SynchronizeOnNonFinalField")
-    private void renderTileEntityVanilla(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f, Profiler profiler, double renderPosX, double renderPosY, double renderPosZ, VertexConsumerProvider.Immediate immediate) {
-        for (WorldRenderer.ChunkInfo chunkInfo : this.visibleChunks) {
-            List<BlockEntity> list = chunkInfo.chunk.getData().getBlockEntities();
-            for (BlockEntity blockEntity : list) {
-                BlockPos blockPos = blockEntity.getPos();
-                VertexConsumerProvider vertexConsumerProvider = immediate;
+    public void renderTileEntityVanilla(@NotNull MatrixStack matrices, float tickDelta, double renderPosX, double renderPosY, double renderPosZ, @NotNull VertexConsumerProvider.Immediate immediate) {
+        for (BlockEntity blockEntity : ((IPatchedWorldRenderer) this).getRenderTileEntityList()) {
+            BlockPos blockPos = blockEntity.getPos();
+            VertexConsumerProvider vertexConsumerProvider = immediate;
 
-                matrices.push();
-                matrices.translate(blockPos.getX() - renderPosX, blockPos.getY() - renderPosY, blockPos.getZ() - renderPosZ);
+            matrices.push();
+            matrices.translate(blockPos.getX() - renderPosX, blockPos.getY() - renderPosY, blockPos.getZ() - renderPosZ);
 
-                SortedSet<BlockBreakingInfo> sortedSet = this.blockBreakingProgressions.get(blockPos.asLong());
+            SortedSet<BlockBreakingInfo> sortedSet = this.blockBreakingProgressions.get(blockPos.asLong());
 
-                if (sortedSet != null && !sortedSet.isEmpty()) {
-                    int w = sortedSet.last().getStage();
-                    if (w >= 0) {
-                        MatrixStack.Entry blockEntityMatrixEntry = matrices.peek();
-                        VertexConsumer vertexConsumer = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer(ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(w)), blockEntityMatrixEntry.getModel(), blockEntityMatrixEntry.getNormal());
-                        vertexConsumerProvider = (renderLayer) -> {
-                            VertexConsumer vertexConsumer2 = immediate.getBuffer(renderLayer);
-                            return renderLayer.hasCrumbling() ? VertexConsumers.union(vertexConsumer, vertexConsumer2) : vertexConsumer2;
-                        };
-                    }
+            if (sortedSet != null && !sortedSet.isEmpty()) {
+                int w = sortedSet.last().getStage();
+                if (w >= 0) {
+                    MatrixStack.Entry blockEntityMatrixEntry = matrices.peek();
+                    VertexConsumer vertexConsumer = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer(ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(w)), blockEntityMatrixEntry.getModel(), blockEntityMatrixEntry.getNormal());
+                    vertexConsumerProvider = (renderLayer) -> {
+                        VertexConsumer vertexConsumer2 = immediate.getBuffer(renderLayer);
+                        return renderLayer.hasCrumbling() ? VertexConsumers.union(vertexConsumer, vertexConsumer2) : vertexConsumer2;
+                    };
                 }
-
-                BlockEntityRenderDispatcher.INSTANCE.render(blockEntity, tickDelta, matrices, vertexConsumerProvider);
-                matrices.pop();
             }
+
+            BlockEntityRenderDispatcher.INSTANCE.render(blockEntity, tickDelta, matrices, vertexConsumerProvider);
+            matrices.pop();
         }
 
         synchronized (this.noCullingBlockEntities) {

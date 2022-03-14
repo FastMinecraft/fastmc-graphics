@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_8",
   "package": "me.luna.fastmc.mixin.accessor",
   "client": [
-    "AccessorMatrix4f"
+    "AccessorMatrix4f",
+    "AccessorVertexBuffer"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -10,6 +10,7 @@ import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
 import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.entity.RenderManager;
@@ -37,15 +38,22 @@ public abstract class MixinRenderGlobal {
     @Final
     private Minecraft mc;
 
+
+    @Inject(method = "setWorldAndLoadRenderers", at = @At("HEAD"))
+    private void setWorldAndLoadRenderers$Inject$HEAD(WorldClient worldClientIn, CallbackInfo ci) {
+        FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().clear();
+        FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer().clear();
+    }
+
     @Redirect(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RenderManager;renderEntityStatic(Lnet/minecraft/entity/Entity;FZ)V"))
-    public void renderEntities$Redirect$INVOKE$renderEntityStatic(RenderManager instance, Entity entityIn, float partialTicks, boolean debug) {
+    private void renderEntities$Redirect$INVOKE$renderEntityStatic(RenderManager instance, Entity entityIn, float partialTicks, boolean debug) {
         if (!((EntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer()).hasRenderer(entityIn)) {
             instance.renderEntityStatic(entityIn, partialTicks, debug);
         }
     }
 
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/BlockPos$PooledMutableBlockPos;release()V"))
-    public void renderEntities$Inject$INVOKE$release(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci) {
+    private void renderEntities$Inject$INVOKE$release(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci) {
         mc.profiler.endStartSection("fastMcEntity");
         FastMcMod.INSTANCE.getWorldRenderer().preRender(partialTicks);
         FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer().render();
@@ -53,7 +61,7 @@ public abstract class MixinRenderGlobal {
     }
 
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/entity/RenderManager;setRenderOutlines(Z)V", ordinal = 1))
-    public void renderEntities$Inject$INVOKE$setRenderOutlines$1(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci) {
+    private void renderEntities$Inject$INVOKE$setRenderOutlines$1(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci) {
         FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer().render();
         FastMcMod.INSTANCE.getWorldRenderer().postRender();
     }
@@ -66,7 +74,7 @@ public abstract class MixinRenderGlobal {
     }
 
     @Inject(method = "loadRenderers", at = @At("RETURN"))
-    public void refreshResources$Inject$RETURN(CallbackInfo ci) {
+    private void refreshResources$Inject$RETURN(CallbackInfo ci) {
         Minecraft mc = this.mc;
         IResourceManager resourceManager = new ResourceManager(mc);
         AbstractWorldRenderer worldRenderer = new WorldRenderer(mc, resourceManager);

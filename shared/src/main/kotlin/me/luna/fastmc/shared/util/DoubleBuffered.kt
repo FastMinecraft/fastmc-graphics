@@ -12,12 +12,20 @@ class DoubleBuffered<T>(value: T, private var swap: T, private val initAction: C
         return delegate
     }
 
-    fun swap(): T {
+    fun getAndSwap(): T {
         val temp = delegate
         initAction.accept(swap)
         delegate = swap
         swap = temp
-        return temp
+        return swap
+    }
+
+    fun swapAndGet(): T {
+        val temp = delegate
+        initAction.accept(swap)
+        delegate = swap
+        swap = temp
+        return delegate
     }
 
     private companion object {

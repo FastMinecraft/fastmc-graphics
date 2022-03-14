@@ -18,6 +18,6 @@ object MatrixUtils {
     }
 
     fun uploadMatrix(programID: Int, location: Int) {
-        glProgramUniformMatrix4fv(programID, location, FastMcMod.glWrapper.rowMajor, matrixBuffer)
+        glProgramUniformMatrix4fv(programID, location, false, matrixBuffer)
     }
 }

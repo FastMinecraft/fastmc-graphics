@@ -21,6 +21,12 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
         parentScope.launch(Dispatchers.Default) {
+            mc.world?.let {
+                parentScope.launch(Dispatchers.Default) {
+                    (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, it)
+                }
+            }
+
             renderEntryList.forEach {
                 it.clear()
             }
@@ -44,12 +50,6 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
                         it.destroyRenderer()
                     }
                 }
-            }
-        }
-
-        mc.world?.let {
-            parentScope.launch(Dispatchers.Default) {
-                (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, it)
             }
         }
     }

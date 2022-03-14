@@ -15,12 +15,10 @@
     "tileentity.MixinChestBlockEntity",
     "tileentity.MixinEnderChestBlockEntity",
     "tileentity.MixinShulkerBoxBlockEntity",
-    "tileentity.MixinTrappedChestBlockEntity"
+    "tileentity.MixinTrappedChestBlockEntity",
+    "render.MixinChunkBuilderBuiltChunk"
   ],
   "injectors": {
     "defaultRequire": 1
-  },
-  "mixins": [
-    "render.MixinChunkBuilderBuiltChunk"
-  ]
+  }
 }

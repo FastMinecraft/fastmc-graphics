@@ -4,7 +4,7 @@ import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import me.luna.fastmc.Minecraft
+import me.luna.fastmc.util.Minecraft
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager

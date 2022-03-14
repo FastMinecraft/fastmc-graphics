@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(ChunkBuilder.ChunkData.class)
-public class MixinChunkBuilderChunkData implements IPatchedChunkData {
+public abstract class MixinChunkBuilderChunkData implements IPatchedChunkData {
     private final FastObjectArrayList<BlockEntity> instancingRenderTileEntities = new FastObjectArrayList<>();
 
     @NotNull

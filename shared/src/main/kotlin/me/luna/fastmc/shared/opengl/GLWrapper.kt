@@ -7,7 +7,6 @@ import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
 interface IGLWrapper {
-    val rowMajor: Boolean
     val lightMapUnit: Int
 
     // GL11

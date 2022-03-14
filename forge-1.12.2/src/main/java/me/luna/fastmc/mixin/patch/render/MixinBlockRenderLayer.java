@@ -1,4 +1,4 @@
-package me.luna.fastmc.mixin.patch;
+package me.luna.fastmc.mixin.patch.render;
 
 import net.minecraft.util.BlockRenderLayer;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_8",
+  "package": "me.luna.fastmc.mixin.patch",
+  "client": [
+    "render.MixinBuiltChunkStorage",
+    "render.MixinChunkBuilderBuiltChunk",
+    "render.MixinChunkBuilderChunkData",
+    "render.MixinRenderLayer",
+    "render.MixinWorldRenderer",
+    "render.MixinChunkBuilderBuiltChunkRebuildTask"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

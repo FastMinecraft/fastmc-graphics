@@ -1,6 +1,6 @@
 package me.luna.fastmc.mixin.patch.render;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import net.minecraft.client.renderer.chunk.CompiledChunk;
 import net.minecraft.tileentity.TileEntity;
 import org.spongepowered.asm.mixin.Final;
@@ -22,6 +22,6 @@ public class MixinCompiledChunk {
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(CallbackInfo ci) {
-        this.tileEntities = new ObjectArrayList<>();
+        this.tileEntities = new FastObjectArrayList<>();
     }
 }

@@ -93,12 +93,8 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
     private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
     private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
-    private final DoubleBuffered<FastObjectArrayList<RenderChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), it -> {
-        for (int i = 0; i < BlockRenderLayer.values().length; i++) {
-            it[i].clearFast();
-        }
-    });
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBuffered<FastObjectArrayList<RenderChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinRenderGlobal::clearArray);
 
     private static FastObjectArrayList<RenderChunk>[] getArray() {
         int size = BlockRenderLayer.values().length;
@@ -110,6 +106,35 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
         //noinspection unchecked
         return (FastObjectArrayList<RenderChunk>[]) list.toArray(new FastObjectArrayList[size]);
+    }
+
+    private static void clearArray(FastObjectArrayList<RenderChunk>[] array) {
+        for (int i = 0; i < BlockRenderLayer.values().length; i++) {
+            array[i].clearFast();
+        }
+    }
+
+    private static void clearAndTrimArray(FastObjectArrayList<RenderChunk>[] array) {
+        for (int i = 0; i < BlockRenderLayer.values().length; i++) {
+            array[i].clearAndTrim();
+        }
+    }
+
+    @Inject(method = "setWorldAndLoadRenderers", at = @At("HEAD"))
+    private void setWorldAndLoadRenderers$Inject$HEAD(WorldClient worldClientIn, CallbackInfo ci) {
+        if (worldClientIn == null) {
+            renderTileEntityList.get().clearAndTrim();
+            renderTileEntityList.swapAndGet().clearAndTrim();
+
+            renderEntityList.get().clearAndTrim();
+            renderEntityList.swapAndGet().clearAndTrim();
+
+            clearAndTrimArray(filteredRenderInfos.get());
+            clearAndTrimArray(filteredRenderInfos.swapAndGet());
+
+            chunksToUpdateBitSet.get().clearFast();
+            chunksToUpdateBitSet.swapAndGet().clearFast();
+        }
     }
 
     /**
@@ -154,9 +179,8 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
         return true;
     }
 
-    @SuppressWarnings("InvalidInjectorMethodSignature")
-    @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", shift = At.Shift.AFTER, ordinal = 5), locals = LocalCapture.CAPTURE_FAILHARD, cancellable = true)
-    private void setupTerrain$Inject$INVOKE$endStartSection$5(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci, double d0, double d1, double d2, double d3, double d4, double d5, BlockPos blockpos1, RenderChunk renderchunk, BlockPos blockpos, boolean flag) {
+    @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", shift = At.Shift.AFTER, ordinal = 5), cancellable = true)
+    private void setupTerrain$Inject$INVOKE$endStartSection$5(Entity viewEntity, double partialTicks, ICamera camera, int frameCount, boolean playerSpectator, CallbackInfo ci) {
         ci.cancel();
 
         ExtendedBitSet oldSet = chunksToUpdateBitSet.get();
@@ -168,19 +192,8 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             int index = ((AccessorRenderChunk) renderChunk).getIndex();
 
             if (renderChunk.needsUpdate() || oldSet.contains(index)) {
-                BlockPos blockPos = renderChunk.getPosition();
-                boolean flag3 = blockpos1.distanceSq(blockPos.getX() + 8, blockPos.getY() + 8, blockPos.getZ() + 8) < 768.0D;
-
-                if (net.minecraftforge.common.ForgeModContainer.alwaysSetupTerrainOffThread || (!renderChunk.needsImmediateUpdate() && !flag3)) {
-                    if (newSet.add(index)) {
-                        list.add(renderChunk);
-                    }
-                } else {
-                    this.mc.profiler.startSection("build near");
-                    this.renderDispatcher.updateChunkNow(renderChunk);
-                    renderChunk.clearNeedsUpdate();
-                    this.displayListEntitiesDirty = true;
-                    this.mc.profiler.endSection();
+                if (newSet.add(index)) {
+                    list.add(renderChunk);
                 }
             }
         }
@@ -207,40 +220,49 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
     public void updateChunks(long finishTimeNano) {
         this.displayListEntitiesDirty |= this.renderDispatcher.runChunkUploads(finishTimeNano);
 
+        long start = System.nanoTime();
+        int count = 0;
+
         if (!this.chunksToUpdate.isEmpty()) {
-            int count = ParallelUtils.CPU_THREADS;
-            boolean finish;
+            int countAsync = ParallelUtils.CPU_THREADS;
+            boolean finish = false;
 
             Iterator<RenderChunk> iterator = this.chunksToUpdate.iterator();
+            ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
 
-            while (iterator.hasNext()) {
+            while (iterator.hasNext() && (countAsync > 0 || !finish)) {
                 RenderChunk renderChunk = iterator.next();
-                boolean updated;
+                boolean updated = false;
 
                 if (renderChunk.needsImmediateUpdate()) {
-                    updated = this.renderDispatcher.updateChunkNow(renderChunk);
-                    finish = updated && System.nanoTime() > finishTimeNano;
-                } else {
-                    updated = this.renderDispatcher.updateChunkLater(renderChunk);
-                    finish = updated && --count == 0;
+                    if (!finish) {
+                        if (this.renderDispatcher.updateChunkNow(renderChunk)) {
+                            updated = true;
+                            long current = System.nanoTime();
+                            long durationPerChunk = (current - start) / (long) ++count;
+                            long remaining = finishTimeNano - current;
+                            finish = remaining < durationPerChunk;
+                        }
+                    }
+                } else if (countAsync > 0) {
+                    if (this.renderDispatcher.updateChunkLater(renderChunk)) {
+                        updated = true;
+                        countAsync--;
+                    }
+                    finish = updated && --countAsync == 0;
                 }
 
                 if (!updated) {
-                    break;
+                    continue;
                 }
 
                 renderChunk.clearNeedsUpdate();
                 iterator.remove();
-                chunksToUpdateBitSet.get().remove(((AccessorRenderChunk) renderChunk).getIndex());
-
-                if (finish) {
-                    break;
-                }
+                bitSet.remove(((AccessorRenderChunk) renderChunk).getIndex());
             }
         }
     }
 
-    @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
     private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
         for (TileEntity tileEntity : renderTileEntityList.get()) {
@@ -269,7 +291,7 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             renderTileEntityList.ensureCapacity(entityCapacity);
         }
 
-        filteredRenderInfos.swap();
+        filteredRenderInfos.getAndSwap();
         FastObjectArrayList<RenderChunk>[] array = filteredRenderInfos.get();
         int renderInfoSize = this.renderInfos.size();
 
@@ -312,17 +334,13 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
     }
 
     @Redirect(method = "renderEntities", at = @At(value = "FIELD", target = "Lnet/minecraft/client/renderer/RenderGlobal;renderInfos:Ljava/util/List;", opcode = Opcodes.GETFIELD, ordinal = 0))
-    private List<RenderGlobal.ContainerLocalRenderInformation> renderEntities$Redirect$INVOKE$FIELD$renderInfos$GETFIELD$0
-        (RenderGlobal instance) {
+    private List<RenderGlobal.ContainerLocalRenderInformation> renderEntities$Redirect$INVOKE$FIELD$renderInfos$GETFIELD$0(RenderGlobal instance) {
         return Collections.emptyList();
     }
 
     @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "renderEntities", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/util/math/BlockPos$PooledMutableBlockPos;retain()Lnet/minecraft/util/math/BlockPos$PooledMutableBlockPos;"), locals = LocalCapture.CAPTURE_FAILHARD)
-    private void renderEntities$Inject$INVOKE$retain(Entity renderViewEntity, ICamera camera,
-                                                     float partialTicks, CallbackInfo ci, int pass, double d0, double d1, double d2, Entity entity, double d3,
-                                                     double d4, double d5, List<
-        Entity> list, List<Entity> list1, List<Entity> list2, BlockPos.PooledMutableBlockPos mutableBlockPos) {
+    private void renderEntities$Inject$INVOKE$retain(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass, double d0, double d1, double d2, Entity entity, double d3, double d4, double d5, List<Entity> list, List<Entity> list1, List<Entity> list2, BlockPos.PooledMutableBlockPos mutableBlockPos) {
         for (Entity it : this.getRenderEntityList().get()) {
             if (!it.shouldRenderInPass(pass)) continue;
             if (!it.isRidingOrBeingRiddenBy(renderViewEntity)
@@ -360,12 +378,14 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
                 this.prevRenderSortX = entityIn.posX;
                 this.prevRenderSortY = entityIn.posY;
                 this.prevRenderSortZ = entityIn.posZ;
-                int k = 0;
+                int count = 0;
 
                 for (RenderGlobal.ContainerLocalRenderInformation info : this.renderInfos) {
+                    if (count >= 16) break;
                     RenderChunk renderChunk = ExtensionsKt.getRenderChunk(info);
-                    if (renderChunk.compiledChunk.isLayerStarted(blockLayerIn) && k++ < 15) {
+                    if (renderChunk.compiledChunk.isLayerStarted(blockLayerIn)) {
                         this.renderDispatcher.updateTransparencyLater(renderChunk);
+                        count++;
                     }
                 }
             }

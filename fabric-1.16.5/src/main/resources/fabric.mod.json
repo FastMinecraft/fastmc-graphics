@@ -18,7 +18,8 @@
   },
   "mixins": [
     "mixins.fastmc-core.json",
-    "mixins.fastmc-accessor.json"
+    "mixins.fastmc-accessor.json",
+    "mixins.fastmc-patch.json"
   ],
   "depends": {
     "fabricloader": ">=0.11",

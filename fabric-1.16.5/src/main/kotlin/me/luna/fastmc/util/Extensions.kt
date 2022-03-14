@@ -1,6 +1,5 @@
 package me.luna.fastmc.util
 
-import me.luna.fastmc.TileEntity
 import net.minecraft.block.BlockState
 import net.minecraft.state.property.Property
 
