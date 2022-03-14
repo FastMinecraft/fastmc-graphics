@@ -13,25 +13,25 @@ import net.minecraft.world.World
 
 fun Matrix4f.toJoml(): org.joml.Matrix4f {
     @Suppress("CAST_NEVER_SUCCEEDS")
-    val accessor = this as AccessorMatrix4f
+    this as AccessorMatrix4f
 
     return org.joml.Matrix4f(
-        accessor.a00,
-        accessor.a01,
-        accessor.a02,
-        accessor.a03,
-        accessor.a10,
-        accessor.a11,
-        accessor.a12,
-        accessor.a13,
-        accessor.a20,
-        accessor.a21,
-        accessor.a22,
-        accessor.a23,
-        accessor.a30,
-        accessor.a31,
-        accessor.a32,
-        accessor.a33,
+        this.a00,
+        this.a01,
+        this.a02,
+        this.a03,
+        this.a10,
+        this.a11,
+        this.a12,
+        this.a13,
+        this.a20,
+        this.a21,
+        this.a22,
+        this.a23,
+        this.a30,
+        this.a31,
+        this.a32,
+        this.a33,
     )
 }
 
