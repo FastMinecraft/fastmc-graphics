@@ -7,6 +7,8 @@ accessible class net/minecraft/client/render/WorldRenderer$ChunkInfo
 accessible class net/minecraft/client/model/ModelPart$Quad
 accessible class net/minecraft/client/model/ModelPart$Vertex
 
+accessible method net/minecraft/client/render/WorldRenderer$ChunkInfo <init> (Lnet/minecraft/client/render/WorldRenderer;Lnet/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk;Lnet/minecraft/util/math/Direction;I)V
+
 accessible field net/minecraft/client/render/RenderPhase PARTICLES_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
 accessible field net/minecraft/client/render/RenderPhase CLOUDS_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
 accessible field net/minecraft/client/render/RenderPhase WEATHER_TARGET Lnet/minecraft/client/render/RenderPhase$Target;

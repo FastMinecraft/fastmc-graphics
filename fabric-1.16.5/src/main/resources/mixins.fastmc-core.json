@@ -10,7 +10,7 @@
     "render.MixinChunkBuilderBuiltChunk",
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
-    "render.MixinWorldRenderer",
+    "render.MixinCoreWorldRenderer",
     "tileentity.MixinBedBlockEntity",
     "tileentity.MixinBlockEntity",
     "tileentity.MixinChestBlockEntity",

@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
+import me.luna.fastmc.mixin.IPatchedBuiltChunkStorage;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.accessor.AccessorVertexBuffer;
@@ -20,68 +21,74 @@ import net.minecraft.client.render.*;
 import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import static org.lwjgl.opengl.GL11.GL_QUADS;
 
 @Mixin(WorldRenderer.class)
-public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
+public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     private ChunkBuilder chunkBuilder;
-
     @Shadow
     private boolean needsTerrainUpdate;
-
     @Shadow
     private Set<ChunkBuilder.BuiltChunk> chunksToRebuild;
-
+    @Mutable
     @Shadow
     @Final
     private ObjectList<WorldRenderer.ChunkInfo> visibleChunks;
-
     @Shadow
     @Final
     private MinecraftClient client;
-
     @Shadow
     private ClientWorld world;
-
     @Shadow
     private double lastTranslucentSortX;
-
     @Shadow
     private double lastTranslucentSortY;
-
     @Shadow
     private double lastTranslucentSortZ;
-
     @Shadow
     @Final
     private VertexFormat vertexFormat;
+    @Shadow
+    private int viewDistance;
+    @Shadow
+    private double lastCameraChunkUpdateX;
+    @Shadow
+    private double lastCameraChunkUpdateY;
+    @Shadow
+    private double lastCameraChunkUpdateZ;
+    @Shadow
+    private int cameraChunkX;
+    @Shadow
+    private int cameraChunkY;
+    @Shadow
+    private int cameraChunkZ;
+    @Shadow
+    private BuiltChunkStorage chunks;
+
+    @Shadow
+    public abstract void reload();
+
+    @Shadow
+    public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
 
     private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBuffered<FastObjectArrayList<ChunkBuilder.BuiltChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinWorldRenderer::clearArray);
-
-    private final Matrix4f original = new Matrix4f();
-    private final Matrix4f translated = new Matrix4f();
+    private final DoubleBuffered<FastObjectArrayList<ChunkBuilder.BuiltChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinPatchWorldRenderer::clearArray);
 
     private static FastObjectArrayList<ChunkBuilder.BuiltChunk>[] getArray() {
         int size = RenderLayer.getBlockLayers().size();
@@ -107,6 +114,20 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
         }
     }
 
+    private int lastCameraX0 = Integer.MAX_VALUE;
+    private int lastCameraY0 = Integer.MAX_VALUE;
+    private int lastCameraZ0 = Integer.MAX_VALUE;
+    private int lastCameraYaw0 = Integer.MAX_VALUE;
+    private int lastCameraPitch0 = Integer.MAX_VALUE;
+
+    private final Matrix4f original = new Matrix4f();
+    private final Matrix4f translated = new Matrix4f();
+
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
+        this.visibleChunks = new FastObjectArrayList<>(69696);
+    }
+
     @Inject(method = "setWorld", at = @At("HEAD"))
     public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
         if (world == null) {
@@ -121,15 +142,124 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
         }
     }
 
-    @Redirect(method = "setupTerrain", at = @At(value = "INVOKE", target = "Ljava/util/Set;isEmpty()Z", ordinal = 0, remap = false))
-    private boolean setupTerrain$Redirect$INVOKE$isEmpty$0(Set<ChunkBuilder.BuiltChunk> instance) {
-        return true;
+    /**
+     * @author Luna
+     * @reason Setup terrain optimization
+     */
+    @Overwrite
+    private void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator) {
+        WorldRenderer thisRef = (WorldRenderer) (Object) this;
+        IPatchedBuiltChunkStorage patchedChunks = (IPatchedBuiltChunkStorage) this.chunks;
+
+
+        if (this.client.options.viewDistance != this.viewDistance) {
+            this.reload();
+        }
+
+        this.world.getProfiler().push("camera");
+        assert this.client.player != null;
+        double cameraUpdateDeltaX = this.client.player.getX() - this.lastCameraChunkUpdateX;
+        double cameraUpdateDeltaY = this.client.player.getY() - this.lastCameraChunkUpdateY;
+        double cameraUpdateDeltaZ = this.client.player.getZ() - this.lastCameraChunkUpdateZ;
+
+        if (this.cameraChunkX != this.client.player.chunkX
+            || this.cameraChunkY != this.client.player.chunkY
+            || this.cameraChunkZ != this.client.player.chunkZ
+            || cameraUpdateDeltaX * cameraUpdateDeltaX + cameraUpdateDeltaY * cameraUpdateDeltaY + cameraUpdateDeltaZ * cameraUpdateDeltaZ > 16.0D) {
+            this.lastCameraChunkUpdateX = this.client.player.getX();
+            this.lastCameraChunkUpdateY = this.client.player.getY();
+            this.lastCameraChunkUpdateZ = this.client.player.getZ();
+            this.cameraChunkX = this.client.player.chunkX;
+            this.cameraChunkY = this.client.player.chunkY;
+            this.cameraChunkZ = this.client.player.chunkZ;
+            this.chunks.updateCameraPosition(this.client.player.getX(), this.client.player.getZ());
+        }
+
+        Vec3d cameraPos = camera.getPos();
+        this.chunkBuilder.setCameraPosition(cameraPos);
+
+        this.client.getProfiler().swap("culling");
+        BlockPos cameraBlockPos = camera.getBlockPos();
+
+        int cameraPosX0 = cameraBlockPos.getX() >> 1;
+        int cameraPosY0 = cameraBlockPos.getY() >> 1;
+        int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
+        int cameraYaw0 = MathHelper.floor(camera.getYaw() );
+        int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
+
+        if (!hasForcedFrustum
+            && (this.needsTerrainUpdate
+            || cameraPosX0 != this.lastCameraX0
+            || cameraPosY0 != this.lastCameraY0
+            || cameraPosZ0 != this.lastCameraZ0
+            || cameraYaw0 != this.lastCameraYaw0
+            || cameraPitch0 != this.lastCameraPitch0)) {
+            this.lastCameraX0 = cameraPosX0;
+            this.lastCameraY0 = cameraPosY0;
+            this.lastCameraZ0 = cameraPosZ0;
+            this.lastCameraYaw0 = cameraYaw0;
+            this.lastCameraPitch0 = cameraPitch0;
+
+            this.needsTerrainUpdate = false;
+
+            this.visibleChunks.clear();
+            clearRenderLists();
+
+            Entity.setRenderDistanceMultiplier(MathHelper.clamp(this.client.options.viewDistance / 8.0D, 1.0D, 2.5D) * this.client.options.entityDistanceScaling);
+            boolean chunkCulling = this.client.chunkCullingEnabled;
+
+            ChunkBuilder.BuiltChunk builtChunk = patchedChunks.getRenderedChunk(cameraBlockPos);
+            ObjectArrayList<WorldRenderer.ChunkInfo> list = new ObjectArrayList<>();
+
+            if (builtChunk != null) {
+                if (spectator && this.world.getBlockState(cameraBlockPos).isOpaqueFullCube(this.world, cameraBlockPos)) {
+                    chunkCulling = false;
+                }
+
+                builtChunk.setRebuildFrame(frame);
+                list.add(thisRef.new ChunkInfo(builtChunk, null, 0));
+            } else {
+                int chunkY = cameraBlockPos.getY() > 0 ? 248 : 8;
+                int cameraChunkX = cameraBlockPos.getX() >> 4;
+                int cameraChunkZ = cameraBlockPos.getZ() >> 4;
+                Comparator<WorldRenderer.ChunkInfo> comparator = Comparator.comparingInt(it -> {
+                    BlockPos chunkPos = it.chunk.getOrigin();
+                    int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
+                    int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
+                    int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
+                    return diffX * diffX + diffY * diffY + diffZ * diffZ;
+                });
+
+                for (int iChunkX = -this.viewDistance; iChunkX <= this.viewDistance; iChunkX++) {
+                    for (int iChunkZ = -this.viewDistance; iChunkZ <= this.viewDistance; iChunkZ++) {
+                        ChunkBuilder.BuiltChunk builtChunk2 = patchedChunks.getRenderedChunk(cameraChunkX + iChunkX, chunkY, cameraChunkZ + iChunkZ);
+                        if (builtChunk2 != null && frustum.isVisible(builtChunk2.boundingBox)) {
+                            builtChunk2.setRebuildFrame(frame);
+                            list.add(thisRef.new ChunkInfo(builtChunk2, null, 0));
+                        }
+                    }
+                }
+
+                Arrays.sort(list.elements(), 0, list.size(), comparator);
+            }
+
+            this.client.getProfiler().push("iteration");
+            BlockPos cameraChunkBlockPos = new BlockPos(
+                cameraBlockPos.getX() >> 4 << 4,
+                cameraBlockPos.getY() >> 4 << 4,
+                cameraBlockPos.getZ() >> 4 << 4
+            );
+            this.setupTerrainIteration((FastObjectArrayList<WorldRenderer.ChunkInfo>) visibleChunks, renderTileEntityList.get(), filteredRenderInfos.get(), frustum, frame, cameraChunkBlockPos, chunkCulling, list);
+            list.clear();
+            this.client.getProfiler().pop();
+        }
+
+        this.client.getProfiler().swap("rebuildNear");
+        this.rebuildNear();
+        this.client.getProfiler().pop();
     }
 
-    @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiler/Profiler;swap(Ljava/lang/String;)V", shift = At.Shift.AFTER, ordinal = 3), cancellable = true)
-    private void setupTerrain$Inject$INVOKE$swap$3(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator, CallbackInfo ci) {
-        ci.cancel();
-
+    private void rebuildNear() {
         ExtendedBitSet oldSet = chunksToUpdateBitSet.get();
         ExtendedBitSet newSet = chunksToUpdateBitSet.swapAndGet();
         FastObjectArrayList<ChunkBuilder.BuiltChunk> list = new FastObjectArrayList<>();
@@ -156,7 +286,6 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
         list.trim();
 
         this.chunksToRebuild = new ObjectArraySet<>(list.elements());
-        this.client.getProfiler().pop();
     }
 
     /**
@@ -171,13 +300,12 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
         int count = 0;
 
         if (!this.chunksToRebuild.isEmpty()) {
-            int countAsync = ParallelUtils.CPU_THREADS;
             boolean finish = false;
 
             Iterator<ChunkBuilder.BuiltChunk> iterator = this.chunksToRebuild.iterator();
             ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
 
-            while (iterator.hasNext() && (countAsync > 0 || !finish)) {
+            while (iterator.hasNext()) {
                 ChunkBuilder.BuiltChunk builtChunk = iterator.next();
                 boolean updated = false;
 
@@ -190,7 +318,7 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
                         long remaining = limitTime - current;
                         finish = remaining < durationPerChunk;
                     }
-                } else if (--countAsync > 0) {
+                } else {
                     updated = true;
                     builtChunk.scheduleRebuild(this.chunkBuilder);
                 }
@@ -206,38 +334,7 @@ public abstract class MixinWorldRenderer implements IPatchedWorldRenderer {
         }
     }
 
-    @ModifyArg(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectList;add(Ljava/lang/Object;)Z", remap = false), index = 0)
-    private Object setupTerrain$Inject$INVOKE$add$1(Object value) {
-        WorldRenderer.ChunkInfo renderInfo = (WorldRenderer.ChunkInfo) value;
-        ChunkBuilder.BuiltChunk builtChunk = renderInfo.chunk;
-        ChunkBuilder.ChunkData chunkData = builtChunk.getData();
-        List<BlockEntity> list = chunkData.getBlockEntities();
-
-        if (!list.isEmpty()) {
-            FastObjectArrayList<BlockEntity> mainList = renderTileEntityList.get();
-
-            if (list instanceof ObjectArrayList<?>) {
-                mainList.addAll(((FastObjectArrayList<BlockEntity>) list));
-            } else {
-                mainList.addAll(list);
-            }
-        }
-
-        FastObjectArrayList<ChunkBuilder.BuiltChunk>[] array = filteredRenderInfos.get();
-
-        for (int i = 0; i < RenderLayer.getBlockLayers().size(); i++) {
-            RenderLayer layer = RenderLayer.getBlockLayers().get(i);
-            FastObjectArrayList<ChunkBuilder.BuiltChunk> renderInfoList = array[i];
-            if (!chunkData.isEmpty(layer)) {
-                renderInfoList.add(builtChunk);
-            }
-        }
-
-        return value;
-    }
-
-    @Inject(method = "setupTerrain", at = @At(value = "INVOKE", target = "Lit/unimi/dsi/fastutil/objects/ObjectList;clear()V", remap = false))
-    private void setupTerrain$Inject$HEAD(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator, CallbackInfo ci) {
+    private void clearRenderLists() {
         renderTileEntityList.getAndSwap();
         int entityCapacity = world.blockEntities.size();
         entityCapacity = MathUtils.ceilToPOT(entityCapacity + entityCapacity / 2);

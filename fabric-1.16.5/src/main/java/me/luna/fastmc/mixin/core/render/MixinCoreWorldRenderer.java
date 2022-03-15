@@ -5,11 +5,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
-import me.luna.fastmc.renderer.EntityRenderer;
-import me.luna.fastmc.renderer.TileEntityRenderer;
-import me.luna.fastmc.resource.ResourceManager;
-import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
-import me.luna.fastmc.shared.resource.IResourceManager;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -51,7 +46,7 @@ import java.util.Set;
 import java.util.SortedSet;
 
 @Mixin(value = WorldRenderer.class, priority = Integer.MAX_VALUE)
-public abstract class MixinWorldRenderer {
+public abstract class MixinCoreWorldRenderer {
     @Shadow
     @Final
     private MinecraftClient client;
