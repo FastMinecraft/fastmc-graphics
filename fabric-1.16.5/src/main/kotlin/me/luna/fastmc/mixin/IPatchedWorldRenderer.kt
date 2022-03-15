@@ -92,48 +92,19 @@ interface IPatchedWorldRenderer {
         chunkCulling: Boolean,
         chunkInfoList: ObjectArrayList<WorldRenderer.ChunkInfo>
     ) {
-        val queue = ConcurrentLinkedQueue<WorldRenderer.ChunkInfo>()
-        val async = scope.async(Dispatchers.Default) {
-            for (i in chunkInfoList.indices) {
-                val chunkInfo = chunkInfoList[i]
-                val builtChunk = chunkInfo.chunk
-                val chunkData = builtChunk.getData()
-                val list = chunkData.blockEntities
-
-                if (list.isNotEmpty()) {
-                    renderTileEntityList.addAll(list as ObjectArrayList<BlockEntity>)
-                }
-
-                for (layerIndex in RenderLayer.getBlockLayers().indices) {
-                    val layer = RenderLayer.getBlockLayers()[layerIndex]
-                    if (!chunkData.isEmpty(layer)) {
-                        filterRenderInfos[layerIndex].add(builtChunk)
-                    }
-                }
-            }
-        }
-
-        coroutineScope {
-            val counter = AtomicInteger(ParallelUtils.CPU_THREADS * 2)
-
-            for (i in chunkInfoList.indices) {
-                val chunkInfo = chunkInfoList[i]
-                recursiveSetupTerrainIteration(
-                    this,
-                    frustum,
-                    frame,
-                    cameraChunkBlockPos,
-                    chunkCulling,
-                    queue,
-                    counter,
-                    chunkInfo
-                )
-            }
-        }
+        this as WorldRenderer
+        val queue = ConcurrentLinkedQueue(chunkInfoList)
+        val dummy = this.ChunkInfo(null, null, 0)
 
         scope.launch(Dispatchers.Default) {
-            async.await()
-            queue.forEach {
+            var it: WorldRenderer.ChunkInfo?
+            while (true) {
+                do {
+                    it = queue.poll()
+                } while (it == null)
+
+                if (it === dummy) break
+
                 val builtChunk = it.chunk
                 val chunkData = builtChunk.getData()
                 val list = chunkData.blockEntities
@@ -148,13 +119,28 @@ interface IPatchedWorldRenderer {
                         filterRenderInfos[i].add(builtChunk)
                     }
                 }
+
+                visibleChunks.add(it)
             }
         }
 
-        visibleChunks.addAll(chunkInfoList)
-        queue.forEach {
-            visibleChunks.add(it)
+        coroutineScope {
+            val counter = AtomicInteger(ParallelUtils.CPU_THREADS * 2)
+            for (i in chunkInfoList.indices) {
+                recursiveSetupTerrainIteration(
+                    this,
+                    frustum,
+                    frame,
+                    cameraChunkBlockPos,
+                    chunkCulling,
+                    queue,
+                    counter,
+                    chunkInfoList[i]
+                )
+            }
         }
+
+        queue.add(dummy)
     }
 
     fun setupTerrainIteration(
