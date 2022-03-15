@@ -35,10 +35,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
 
-import static org.lwjgl.opengl.GL11.GL_QUADS;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL13.*;
 
 @Mixin(WorldRenderer.class)
 public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
+    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
+    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBuffered<FastObjectArrayList<ChunkBuilder.BuiltChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinPatchWorldRenderer::clearArray);
+    private final Matrix4f original = new Matrix4f();
+    private final Matrix4f translated = new Matrix4f();
     @Shadow
     private ChunkBuilder chunkBuilder;
     @Shadow
@@ -79,16 +85,11 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private int cameraChunkZ;
     @Shadow
     private BuiltChunkStorage chunks;
-
-    @Shadow
-    public abstract void reload();
-
-    @Shadow
-    public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
-
-    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
-    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBuffered<FastObjectArrayList<ChunkBuilder.BuiltChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinPatchWorldRenderer::clearArray);
+    private int lastCameraX0 = Integer.MAX_VALUE;
+    private int lastCameraY0 = Integer.MAX_VALUE;
+    private int lastCameraZ0 = Integer.MAX_VALUE;
+    private int lastCameraYaw0 = Integer.MAX_VALUE;
+    private int lastCameraPitch0 = Integer.MAX_VALUE;
 
     private static FastObjectArrayList<ChunkBuilder.BuiltChunk>[] getArray() {
         int size = RenderLayer.getBlockLayers().size();
@@ -114,14 +115,11 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         }
     }
 
-    private int lastCameraX0 = Integer.MAX_VALUE;
-    private int lastCameraY0 = Integer.MAX_VALUE;
-    private int lastCameraZ0 = Integer.MAX_VALUE;
-    private int lastCameraYaw0 = Integer.MAX_VALUE;
-    private int lastCameraPitch0 = Integer.MAX_VALUE;
+    @Shadow
+    public abstract void reload();
 
-    private final Matrix4f original = new Matrix4f();
-    private final Matrix4f translated = new Matrix4f();
+    @Shadow
+    public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
@@ -184,7 +182,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         int cameraPosX0 = cameraBlockPos.getX() >> 1;
         int cameraPosY0 = cameraBlockPos.getY() >> 1;
         int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
-        int cameraYaw0 = MathHelper.floor(camera.getYaw() );
+        int cameraYaw0 = MathHelper.floor(camera.getYaw());
         int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
 
         if (!hasForcedFrustum
@@ -300,12 +298,13 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         int count = 0;
 
         if (!this.chunksToRebuild.isEmpty()) {
+            int countAsync = ParallelUtils.CPU_THREADS;
             boolean finish = false;
 
             Iterator<ChunkBuilder.BuiltChunk> iterator = this.chunksToRebuild.iterator();
             ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
 
-            while (iterator.hasNext()) {
+            while (iterator.hasNext() && (countAsync > 0 || !finish)) {
                 ChunkBuilder.BuiltChunk builtChunk = iterator.next();
                 boolean updated = false;
 
@@ -318,7 +317,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                         long remaining = limitTime - current;
                         finish = remaining < durationPerChunk;
                     }
-                } else {
+                } else if (--countAsync > 0) {
                     updated = true;
                     builtChunk.scheduleRebuild(this.chunkBuilder);
                 }
@@ -374,9 +373,9 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @SuppressWarnings("deprecation")
     @Overwrite
-    private void renderLayer(RenderLayer renderLayer, MatrixStack matrixStack, double renderPosX, double renderPosY, double renderPosZ) {
-        renderLayer.startDrawing();
-        if (renderLayer == RenderLayer.getTranslucent()) {
+    private void renderLayer(RenderLayer layer, MatrixStack matrixStack, double renderPosX, double renderPosY, double renderPosZ) {
+        layer.startDrawing();
+        if (layer == RenderLayer.getTranslucent()) {
             this.client.getProfiler().push("translucentSort");
             double xDiff = renderPosX - this.lastTranslucentSortX;
             double yDiff = renderPosY - this.lastTranslucentSortY;
@@ -389,7 +388,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
                 for (WorldRenderer.ChunkInfo chunkInfo : this.visibleChunks) {
                     if (count >= 16) break;
-                    if (chunkInfo.chunk.scheduleSort(renderLayer, this.chunkBuilder)) {
+                    if (chunkInfo.chunk.scheduleSort(layer, this.chunkBuilder)) {
                         ++count;
                     }
                 }
@@ -398,50 +397,62 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             this.client.getProfiler().pop();
         }
 
-        this.client.getProfiler().push(renderLayer::toString);
-        FastObjectArrayList<ChunkBuilder.BuiltChunk> list = filteredRenderInfos.get()[((IPatchedRenderLayer) renderLayer).getIndex()];
+        this.client.getProfiler().push(layer::toString);
+        FastObjectArrayList<ChunkBuilder.BuiltChunk> list = filteredRenderInfos.get()[((IPatchedRenderLayer) layer).getIndex()];
 
         AdaptersKt.toJoml(matrixStack.peek().getModel(), original);
         RenderSystem.pushMatrix();
 
-        if (renderLayer != RenderLayer.getTranslucent()) {
+        glEnableClientState(GL_VERTEX_ARRAY);
+        glEnableClientState(GL_COLOR_ARRAY);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glClientActiveTexture(GL_TEXTURE2);
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+        glClientActiveTexture(GL_TEXTURE0);
+
+        if (layer != RenderLayer.getTranslucent()) {
             for (int i = 0; i < list.size(); i++) {
-                ChunkBuilder.BuiltChunk builtChunk = list.get(i);
-                VertexBuffer vertexBuffer = builtChunk.getBuffer(renderLayer);
-
-                RenderSystem.loadIdentity();
-                BlockPos blockPos = builtChunk.getOrigin();
-                original.translate((float) (blockPos.getX() - renderPosX), (float) (blockPos.getY() - renderPosY), (float) (blockPos.getZ() - renderPosZ), translated);
-                MatrixUtils.INSTANCE.putMatrix(translated);
-                GlStateManager.multMatrix(MatrixUtils.INSTANCE.getMatrixBuffer());
-
-                vertexBuffer.bind();
-                this.vertexFormat.startDrawing(0L);
-                RenderSystem.drawArrays(GL_QUADS, 0, ((AccessorVertexBuffer) vertexBuffer).getVertexCount());
+                renderLayer(layer, renderPosX, renderPosY, renderPosZ, list.get(i));
             }
         } else {
             for (int i = list.size() - 1; i >= 0; i--) {
-                ChunkBuilder.BuiltChunk builtChunk = list.get(i);
-                VertexBuffer vertexBuffer = builtChunk.getBuffer(renderLayer);
-
-                RenderSystem.loadIdentity();
-                BlockPos blockPos = builtChunk.getOrigin();
-                original.translate((float) (blockPos.getX() - renderPosX), (float) (blockPos.getY() - renderPosY), (float) (blockPos.getZ() - renderPosZ), translated);
-                MatrixUtils.INSTANCE.putMatrix(translated);
-                GlStateManager.multMatrix(MatrixUtils.INSTANCE.getMatrixBuffer());
-
-                vertexBuffer.bind();
-                this.vertexFormat.startDrawing(0L);
-                RenderSystem.drawArrays(GL_QUADS, 0, ((AccessorVertexBuffer) vertexBuffer).getVertexCount());
+                renderLayer(layer, renderPosX, renderPosY, renderPosZ, list.get(i));
             }
         }
 
-        RenderSystem.popMatrix();
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_COLOR_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glClientActiveTexture(GL_TEXTURE2);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glClientActiveTexture(GL_TEXTURE0);
 
+        RenderSystem.popMatrix();
         VertexBuffer.unbind();
+
         RenderSystem.clearCurrentColor();
-        this.vertexFormat.endDrawing();
         this.client.getProfiler().pop();
-        renderLayer.endDrawing();
+        layer.endDrawing();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void renderLayer(RenderLayer layer, double renderPosX, double renderPosY, double renderPosZ, ChunkBuilder.BuiltChunk builtChunk) {
+        VertexBuffer vertexBuffer = builtChunk.getBuffer(layer);
+
+        RenderSystem.loadIdentity();
+        BlockPos blockPos = builtChunk.getOrigin();
+        original.translate((float) (blockPos.getX() - renderPosX), (float) (blockPos.getY() - renderPosY), (float) (blockPos.getZ() - renderPosZ), translated);
+        MatrixUtils.INSTANCE.putMatrix(translated);
+        GlStateManager.multMatrix(MatrixUtils.INSTANCE.getMatrixBuffer());
+
+        vertexBuffer.bind();
+        glVertexPointer(3, GL_FLOAT, 32, 0);
+        glColorPointer(4, GL_UNSIGNED_BYTE, 32, 12);
+        glTexCoordPointer(2, GL_FLOAT, 32, 16);
+        glClientActiveTexture(GL_TEXTURE2);
+        glTexCoordPointer(2, GL_SHORT, 32, 24);
+        glClientActiveTexture(GL_TEXTURE0);
+
+        RenderSystem.drawArrays(GL_QUADS, 0, ((AccessorVertexBuffer) vertexBuffer).getVertexCount());
     }
 }
