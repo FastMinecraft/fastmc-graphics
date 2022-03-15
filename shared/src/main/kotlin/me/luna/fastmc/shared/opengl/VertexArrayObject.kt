@@ -3,7 +3,7 @@ package me.luna.fastmc.shared.opengl
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
-class VertexArrayObject: IGLObject {
+class VertexArrayObject : IGLObject {
     override val id: Int = glCreateVertexArrays()
 
     private val iboList = FastObjectArrayList<IndexBufferObject>()

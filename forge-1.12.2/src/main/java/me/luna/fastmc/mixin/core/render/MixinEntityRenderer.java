@@ -3,7 +3,6 @@ package me.luna.fastmc.mixin.core.render;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.shared.FpsDisplay;
 import me.luna.fastmc.shared.util.MathUtilsKt;
-import me.luna.fastmc.shared.util.MatrixUtils;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
@@ -44,21 +43,17 @@ public abstract class MixinEntityRenderer {
 
     @Shadow
     private double cameraPitch;
+    @Shadow
+    private int rendererUpdateCount;
+    @Shadow
+    private boolean debugView;
+    @Shadow
+    private int debugViewDirection;
+    @Shadow
+    private float thirdPersonDistancePrev;
 
     @Shadow
     protected abstract float getFOVModifier(float partialTicks, boolean useFOVSetting);
-
-    @Shadow
-    private int rendererUpdateCount;
-
-    @Shadow
-    private boolean debugView;
-
-    @Shadow
-    private int debugViewDirection;
-
-    @Shadow
-    private float thirdPersonDistancePrev;
 
     @Inject(method = "setupCameraTransform", at = @At("RETURN"))
     private void setupCameraTransform$Inject$RETURN(float partialTicks, int pass, CallbackInfo ci) {

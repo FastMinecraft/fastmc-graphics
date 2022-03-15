@@ -1,5 +1,4 @@
 #version 330
-precision mediump float;
 
 uniform sampler2D texture;
 

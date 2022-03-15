@@ -23,7 +23,7 @@ allprojects {
         fun ModuleDependency.exclude(moduleName: String): ModuleDependency {
             return exclude(module = moduleName)
         }
-        
+
         val kotlinVersion: String by rootProject
         val kotlinxCoroutineVersion: String by rootProject
         val jomlVersion: String by rootProject

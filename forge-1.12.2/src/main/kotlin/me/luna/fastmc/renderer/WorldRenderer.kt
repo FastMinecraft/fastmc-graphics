@@ -3,7 +3,10 @@ package me.luna.fastmc.renderer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.glBindTexture
+import me.luna.fastmc.shared.opengl.glBindVertexArray
+import me.luna.fastmc.shared.opengl.glProgramUniform1f
+import me.luna.fastmc.shared.opengl.glUseProgramForce
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.util.MathUtils

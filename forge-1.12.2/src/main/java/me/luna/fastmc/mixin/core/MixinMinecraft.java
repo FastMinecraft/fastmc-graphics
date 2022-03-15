@@ -22,7 +22,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class MixinMinecraft {
-    @Shadow @Final public Profiler profiler;
+    @Shadow
+    @Final
+    public Profiler profiler;
 
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/OpenGlHelper;initializeTextures()V", shift = At.Shift.AFTER))
     public void init$Inject$INVOKE$initializeTextures(CallbackInfo ci) {

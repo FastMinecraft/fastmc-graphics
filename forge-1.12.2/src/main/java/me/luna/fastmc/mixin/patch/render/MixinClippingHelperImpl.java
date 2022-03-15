@@ -9,7 +9,8 @@ import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(ClippingHelperImpl.class)
 public abstract class MixinClippingHelperImpl extends ClippingHelper {
-    @Shadow protected abstract void normalize(float[] p_180547_1_);
+    @Shadow
+    protected abstract void normalize(float[] p_180547_1_);
 
     /**
      * @author Luna

@@ -1,6 +1,7 @@
 package me.luna.fastmc.mixin
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import me.luna.fastmc.mixin.accessor.AccessorRenderGlobal
 import me.luna.fastmc.shared.util.DoubleBufferedCollection
 import me.luna.fastmc.shared.util.ParallelUtils

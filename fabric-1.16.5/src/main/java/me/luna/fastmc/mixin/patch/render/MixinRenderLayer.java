@@ -12,12 +12,15 @@ import java.util.List;
 public class MixinRenderLayer implements IPatchedRenderLayer {
     private static final List<RenderLayer> blockLayers = ImmutableList.of(RenderLayer.getSolid(), RenderLayer.getCutoutMipped(), RenderLayer.getCutout(), RenderLayer.getTranslucent(), RenderLayer.getTripwire());
 
-    private int index = -1;
-
-    @Override
-    public int getIndex() {
-        return index;
+    static {
+        ((MixinRenderLayer) (Object) RenderLayer.getSolid()).index = 0;
+        ((MixinRenderLayer) (Object) RenderLayer.getCutoutMipped()).index = 1;
+        ((MixinRenderLayer) (Object) RenderLayer.getCutout()).index = 2;
+        ((MixinRenderLayer) (Object) RenderLayer.getTranslucent()).index = 3;
+        ((MixinRenderLayer) (Object) RenderLayer.getTripwire()).index = 4;
     }
+
+    private int index = -1;
 
     /**
      * @author Luna
@@ -28,11 +31,8 @@ public class MixinRenderLayer implements IPatchedRenderLayer {
         return blockLayers;
     }
 
-    static {
-        ((MixinRenderLayer) (Object) RenderLayer.getSolid()).index = 0;
-        ((MixinRenderLayer) (Object) RenderLayer.getCutoutMipped()).index = 1;
-        ((MixinRenderLayer) (Object) RenderLayer.getCutout()).index = 2;
-        ((MixinRenderLayer) (Object) RenderLayer.getTranslucent()).index = 3;
-        ((MixinRenderLayer) (Object) RenderLayer.getTripwire()).index = 4;
+    @Override
+    public int getIndex() {
+        return index;
     }
 }

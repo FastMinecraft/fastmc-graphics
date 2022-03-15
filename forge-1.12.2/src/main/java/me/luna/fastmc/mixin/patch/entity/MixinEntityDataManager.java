@@ -26,10 +26,16 @@ import java.util.concurrent.locks.ReadWriteLock;
 @Mixin(EntityDataManager.class)
 public class MixinEntityDataManager {
     private final FastIntMap<EntityDataManager.DataEntry<?>> entriesOverwrite = new FastIntMap<>();
-    @Shadow @Final private ReadWriteLock lock;
-    @Shadow @Final private Entity entity;
-    @Shadow private boolean empty;
-    @Shadow private boolean dirty;
+    @Shadow
+    @Final
+    private ReadWriteLock lock;
+    @Shadow
+    @Final
+    private Entity entity;
+    @Shadow
+    private boolean empty;
+    @Shadow
+    private boolean dirty;
 
     private static <T> void writeEntryS(PacketBuffer buf, EntityDataManager.DataEntry<T> entry) {
         DataParameter<T> dataParameter = entry.getKey();

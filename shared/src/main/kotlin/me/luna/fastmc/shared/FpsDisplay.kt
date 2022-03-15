@@ -4,8 +4,6 @@ import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.font.FontRenderer
 import me.luna.fastmc.shared.util.ColorARGB
 import org.joml.Matrix4f
-import kotlin.math.max
-import kotlin.math.min
 
 object FpsDisplay {
     private var lastRender = System.nanoTime()
@@ -69,7 +67,16 @@ object FpsDisplay {
             projection.ortho(0.0f, width, height, 0.0f, 1000.0f, 3000.0f)
             modelView.translate(0.0f, 0.0f, -2000.0f)
 
-            fontRenderer.drawString(projection, modelView, renderString, 2.0f, 2.0f, ColorARGB(255, 255, 255, 255), 1.0f, true)
+            fontRenderer.drawString(
+                projection,
+                modelView,
+                renderString,
+                2.0f,
+                2.0f,
+                ColorARGB(255, 255, 255, 255),
+                1.0f,
+                true
+            )
         }
     }
 }

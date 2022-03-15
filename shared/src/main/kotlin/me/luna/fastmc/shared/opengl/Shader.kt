@@ -3,7 +3,8 @@ package me.luna.fastmc.shared.opengl
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.resource.Resource
 
-open class Shader(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) : Resource, IGLObject {
+open class Shader(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) : Resource,
+    IGLObject {
     final override val id: Int
 
     init {

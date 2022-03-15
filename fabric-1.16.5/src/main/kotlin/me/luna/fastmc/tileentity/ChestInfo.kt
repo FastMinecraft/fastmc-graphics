@@ -1,7 +1,7 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.util.TileEntityChest
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
+import me.luna.fastmc.util.TileEntityChest
 import net.minecraft.block.ChestBlock
 import net.minecraft.block.entity.TrappedChestBlockEntity
 import net.minecraft.state.property.EnumProperty

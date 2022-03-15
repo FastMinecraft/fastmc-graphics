@@ -17,16 +17,14 @@ import java.util.Set;
 
 @Mixin(ChunkBuilder.ChunkData.class)
 public abstract class MixinChunkBuilderChunkData implements IPatchedChunkData {
+    private final ExtendedBitSet nonEmptyLayersOverride = new ExtendedBitSet();
     @Mutable
     @Shadow
     @Final
     private List<BlockEntity> blockEntities;
-
     @Shadow
     @Final
     private Set<RenderLayer> nonEmptyLayers;
-
-    private final ExtendedBitSet nonEmptyLayersOverride = new ExtendedBitSet();
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(CallbackInfo ci) {

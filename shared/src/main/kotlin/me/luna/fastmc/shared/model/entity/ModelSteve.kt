@@ -3,11 +3,11 @@ package me.luna.fastmc.shared.model.entity
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.model.ModelBuilder
 
-class ModelSteve : Model("entity/Steve",64, 64) {
+class ModelSteve : Model("entity/Steve", 64, 64) {
     override fun ModelBuilder.buildModel() {
         // Head
         childModel {
-            addBox(0.0f, 0.0f,-4.0f, 24.0f, -4.0f, 8.0f, 8.0f, 8.0f)
+            addBox(0.0f, 0.0f, -4.0f, 24.0f, -4.0f, 8.0f, 8.0f, 8.0f)
         }
 
         // Body

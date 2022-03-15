@@ -19,11 +19,14 @@ public abstract class MixinBuiltChunkStorage implements IPatchedBuiltChunkStorag
     @Shadow
     public ChunkBuilder.BuiltChunk[] chunks;
 
-    @Shadow protected int sizeY;
+    @Shadow
+    protected int sizeY;
 
-    @Shadow protected int sizeX;
+    @Shadow
+    protected int sizeX;
 
-    @Shadow protected int sizeZ;
+    @Shadow
+    protected int sizeZ;
 
     @Inject(method = "createChunks", at = @At("RETURN"))
     private void createChunks$Inject$RETURN(ChunkBuilder chunkBuilder, CallbackInfo ci) {

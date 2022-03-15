@@ -1,7 +1,7 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.util.TileEntity
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IHDirectionalTileEntityInfo
+import me.luna.fastmc.util.TileEntity
 import me.luna.fastmc.util.getPropertyOrDefault
 import net.minecraft.state.property.EnumProperty
 import net.minecraft.util.math.Direction

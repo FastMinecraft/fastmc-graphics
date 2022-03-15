@@ -1,11 +1,7 @@
 package me.luna.fastmc.resource
 
+import me.luna.fastmc.shared.texture.*
 import me.luna.fastmc.util.ResourceLocation
-import me.luna.fastmc.shared.texture.BedTexture
-import me.luna.fastmc.shared.texture.ChestTexture
-import me.luna.fastmc.shared.texture.DefaultTexture
-import me.luna.fastmc.shared.texture.ITexture
-import me.luna.fastmc.shared.texture.TextureUtils
 import net.minecraft.client.MinecraftClient
 import net.minecraft.util.DyeColor
 import java.awt.image.BufferedImage

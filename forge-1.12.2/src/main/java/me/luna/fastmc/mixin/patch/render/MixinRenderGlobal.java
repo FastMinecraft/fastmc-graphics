@@ -50,51 +50,36 @@ import java.util.*;
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
-    @Shadow
-    private WorldClient world;
-
-    @Shadow
-    private List<RenderGlobal.ContainerLocalRenderInformation> renderInfos;
-
-    @Shadow
-    @Final
-    private RenderManager renderManager;
-
-    @Shadow
-    @Final
-    private Minecraft mc;
-
-    @Shadow
-    private int countEntitiesRendered;
-
-    @Shadow
-    private ChunkRenderContainer renderContainer;
-
-    @Shadow
-    private double prevRenderSortX;
-
-    @Shadow
-    private double prevRenderSortY;
-
-    @Shadow
-    private double prevRenderSortZ;
-
-    @Shadow
-    private ChunkRenderDispatcher renderDispatcher;
-
-    @Shadow
-    private Set<RenderChunk> chunksToUpdate;
-
-    @Shadow
-    private boolean displayListEntitiesDirty;
-
-    @Shadow
-    protected abstract boolean isOutlineActive(Entity entityIn, Entity viewer, ICamera camera);
-
     private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
     private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
     private final DoubleBuffered<FastObjectArrayList<RenderChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinRenderGlobal::clearArray);
+    @Shadow
+    private WorldClient world;
+    @Shadow
+    private List<RenderGlobal.ContainerLocalRenderInformation> renderInfos;
+    @Shadow
+    @Final
+    private RenderManager renderManager;
+    @Shadow
+    @Final
+    private Minecraft mc;
+    @Shadow
+    private int countEntitiesRendered;
+    @Shadow
+    private ChunkRenderContainer renderContainer;
+    @Shadow
+    private double prevRenderSortX;
+    @Shadow
+    private double prevRenderSortY;
+    @Shadow
+    private double prevRenderSortZ;
+    @Shadow
+    private ChunkRenderDispatcher renderDispatcher;
+    @Shadow
+    private Set<RenderChunk> chunksToUpdate;
+    @Shadow
+    private boolean displayListEntitiesDirty;
 
     private static FastObjectArrayList<RenderChunk>[] getArray() {
         int size = BlockRenderLayer.values().length;
@@ -119,6 +104,9 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             array[i].clearAndTrim();
         }
     }
+
+    @Shadow
+    protected abstract boolean isOutlineActive(Entity entityIn, Entity viewer, ICamera camera);
 
     @Inject(method = "setWorldAndLoadRenderers", at = @At("HEAD"))
     private void setWorldAndLoadRenderers$Inject$HEAD(WorldClient worldClientIn, CallbackInfo ci) {

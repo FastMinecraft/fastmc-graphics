@@ -44,38 +44,35 @@ import java.util.List;
 
 @Mixin(World.class)
 public abstract class MixinWorld implements IPatchedWorld {
+    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(new IntOpenHashSet());
+    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(new IntOpenHashSet());
+    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(new ArrayList<>());
+    private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
     @Shadow
     @Final
     public WorldProvider provider;
-
-    @Shadow
-    private boolean processingLoadedTiles;
-
     @Shadow
     @Final
     public Profiler profiler;
-
+    @Shadow
+    @Final
+    public List<TileEntity> loadedTileEntityList;
+    @Shadow
+    @Final
+    public List<Entity> loadedEntityList;
+    @Shadow
+    @Final
+    public List<Entity> weatherEffects;
+    @Shadow
+    private boolean processingLoadedTiles;
     @Mutable
     @Shadow
     @Final
     private List<TileEntity> addedTileEntityList;
-
-    @Shadow
-    @Final
-    public List<TileEntity> loadedTileEntityList;
-
     @Mutable
     @Shadow
     @Final
     private List<TileEntity> tileEntitiesToBeRemoved;
-
-    @Shadow
-    @Final
-    public List<Entity> loadedEntityList;
-
-    @Shadow
-    @Final
-    public List<Entity> weatherEffects;
 
     @Shadow
     public abstract IBlockState getBlockState(BlockPos pos);
@@ -109,12 +106,6 @@ public abstract class MixinWorld implements IPatchedWorld {
 
     @Shadow
     public abstract TileEntity getTileEntity(BlockPos par1);
-
-    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(new IntOpenHashSet());
-    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(new IntOpenHashSet());
-    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(new ArrayList<>());
-
-    private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
 
     @Override
     public void batchRemoveEntities() {

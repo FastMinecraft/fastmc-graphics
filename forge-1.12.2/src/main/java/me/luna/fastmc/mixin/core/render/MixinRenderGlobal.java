@@ -1,36 +1,25 @@
 package me.luna.fastmc.mixin.core.render;
 
 import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.mixin.accessor.AccessorRenderGlobalContainerLocalRenderInformation;
 import me.luna.fastmc.renderer.EntityRenderer;
 import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.renderer.WorldRenderer;
 import me.luna.fastmc.resource.ResourceManager;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
 import me.luna.fastmc.shared.resource.IResourceManager;
-import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher;
 import net.minecraft.entity.Entity;
-import net.minecraft.tileentity.TileEntity;
-import org.spongepowered.asm.lib.Opcodes;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 @Mixin(value = RenderGlobal.class, priority = Integer.MAX_VALUE)
 public abstract class MixinRenderGlobal {

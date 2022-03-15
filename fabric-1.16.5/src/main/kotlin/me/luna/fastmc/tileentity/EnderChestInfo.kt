@@ -1,7 +1,7 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.util.TileEntityEnderChest
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IEnderChestInfo
+import me.luna.fastmc.util.TileEntityEnderChest
 import net.minecraft.block.EnderChestBlock
 import net.minecraft.state.property.EnumProperty
 import net.minecraft.util.math.Direction

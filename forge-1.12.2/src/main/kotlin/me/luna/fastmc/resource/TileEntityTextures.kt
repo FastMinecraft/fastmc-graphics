@@ -7,8 +7,6 @@ import me.luna.fastmc.shared.texture.TextureUtils
 import net.minecraft.client.Minecraft
 import net.minecraft.item.EnumDyeColor
 import net.minecraft.util.ResourceLocation
-import java.io.File
-import javax.imageio.ImageIO
 
 fun smallChestTexture(mc: Minecraft): ITexture {
     val images = arrayOf(

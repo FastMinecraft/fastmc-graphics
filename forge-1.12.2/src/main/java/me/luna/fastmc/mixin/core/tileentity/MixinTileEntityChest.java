@@ -20,31 +20,24 @@ import java.util.List;
 @Mixin(TileEntityChest.class)
 public abstract class MixinTileEntityChest extends TileEntity implements ChestInfo, IParallelUpdate {
     @Shadow
-    public abstract void checkForAdjacentChests();
-
+    public int numPlayersUsing;
+    @Shadow
+    public float prevLidAngle;
+    @Shadow
+    public float lidAngle;
+    @Shadow
+    public TileEntityChest adjacentChestZNeg;
+    @Shadow
+    public TileEntityChest adjacentChestXNeg;
+    @Shadow
+    public TileEntityChest adjacentChestZPos;
+    @Shadow
+    public TileEntityChest adjacentChestXPos;
     @Shadow
     private int ticksSinceSync;
 
     @Shadow
-    public int numPlayersUsing;
-
-    @Shadow
-    public float prevLidAngle;
-
-    @Shadow
-    public float lidAngle;
-
-    @Shadow
-    public TileEntityChest adjacentChestZNeg;
-
-    @Shadow
-    public TileEntityChest adjacentChestXNeg;
-
-    @Shadow
-    public TileEntityChest adjacentChestZPos;
-
-    @Shadow
-    public TileEntityChest adjacentChestXPos;
+    public abstract void checkForAdjacentChests();
 
     @Override
     public void updateParallel(@NotNull List<Runnable> async, @NotNull List<Runnable> callbacks) {

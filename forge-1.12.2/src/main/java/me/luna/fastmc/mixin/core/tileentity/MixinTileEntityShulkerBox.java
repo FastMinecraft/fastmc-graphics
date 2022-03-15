@@ -11,19 +11,16 @@ import java.util.List;
 
 @Mixin(TileEntityShulkerBox.class)
 public abstract class MixinTileEntityShulkerBox implements ShulkerBoxInfo, IParallelUpdate {
+    private final Runnable moveCollidedEntitiesCommand = this::moveCollidedEntities;
     @Shadow
     private float progressOld;
-
     @Shadow
     private float progress;
-
     @Shadow
     private TileEntityShulkerBox.AnimationStatus animationStatus;
 
     @Shadow
     protected abstract void moveCollidedEntities();
-
-    private final Runnable moveCollidedEntitiesCommand = this::moveCollidedEntities;
 
     @Override
     public void updateParallel(@NotNull List<Runnable> async, @NotNull List<Runnable> callbacks) {

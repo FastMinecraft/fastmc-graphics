@@ -284,6 +284,8 @@ inline fun glTextureSubImage2D(
     pixels: ByteBuffer
 ) = glWrapper.glTextureSubImage2D(texture, level, xoffset, yoffset, width, height, format, type, pixels)
 
-inline fun glTextureParameteri(texture: Int, pname: Int, param: Int) = glWrapper.glTextureParameteri(texture, pname, param)
+inline fun glTextureParameteri(texture: Int, pname: Int, param: Int) =
+    glWrapper.glTextureParameteri(texture, pname, param)
 
-inline fun glTextureParameterf(texture: Int, pname: Int, param: Float) = glWrapper.glTextureParameterf(texture, pname, param)
+inline fun glTextureParameterf(texture: Int, pname: Int, param: Float) =
+    glWrapper.glTextureParameterf(texture, pname, param)

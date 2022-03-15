@@ -1,7 +1,7 @@
-
 package me.luna.fastmc.shared.util.collection
 
-class ClassInheritanceMap<K : Class<*>, V>(private val baseClass: K, private val wrapped: MutableMap<K, V>) : MutableMap<K, V> by wrapped {
+class ClassInheritanceMap<K : Class<*>, V>(private val baseClass: K, private val wrapped: MutableMap<K, V>) :
+    MutableMap<K, V> by wrapped {
     @Suppress("UNCHECKED_CAST")
     override fun containsKey(key: K): Boolean {
         var value = wrapped[key]

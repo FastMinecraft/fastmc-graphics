@@ -36,7 +36,7 @@ abstract class Model(override val resourceName: String, private val textureSizeX
     }
 
     companion object {
-        fun <T : Model> T.init() :T {
+        fun <T : Model> T.init(): T {
             this.init0()
             return this
         }

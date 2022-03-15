@@ -2,7 +2,6 @@ package me.luna.fastmc.mixin.core.render;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.util.AdaptersKt;
@@ -50,29 +49,16 @@ public abstract class MixinCoreWorldRenderer {
     @Shadow
     @Final
     private MinecraftClient client;
-
     @Shadow
     private ClientWorld world;
-
     @Shadow
     @Final
     private EntityRenderDispatcher entityRenderDispatcher;
     @Shadow
     private @Nullable Frustum capturedFrustum;
-
-    @Shadow
-    protected abstract void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator);
-
-    @Shadow
-    protected abstract void updateChunks(long limitTime);
-
     @Shadow
     @Final
     private FpsSmoother chunkUpdateSmoother;
-
-    @Shadow
-    protected abstract void renderLayer(RenderLayer renderLayer, MatrixStack matrixStack, double d, double e, double f);
-
     @Shadow
     private int regularEntityCount;
     @Shadow
@@ -81,10 +67,6 @@ public abstract class MixinCoreWorldRenderer {
     private @Nullable Framebuffer entityFramebuffer;
     @Shadow
     private @Nullable Framebuffer weatherFramebuffer;
-
-    @Shadow
-    protected abstract boolean canDrawEntityOutlines();
-
     @Shadow
     private @Nullable Framebuffer entityOutlinesFramebuffer;
     @Shadow
@@ -92,25 +74,11 @@ public abstract class MixinCoreWorldRenderer {
     private BufferBuilderStorage bufferBuilders;
     @Shadow
     @Final
-    private ObjectList<WorldRenderer.ChunkInfo> visibleChunks;
-    @Shadow
-    @Final
     private Vector3d capturedFrustumPosition;
     @Shadow
     private boolean shouldCaptureFrustum;
-
-    @Shadow
-    protected abstract void captureFrustum(Matrix4f modelMatrix, Matrix4f matrix4f, double x, double y, double z, Frustum frustum);
-
-    @Shadow
-    public abstract void renderSky(MatrixStack matrices, float tickDelta);
-
     @Shadow
     private int frame;
-
-    @Shadow
-    protected abstract void checkEmpty(MatrixStack matrices);
-
     @Shadow
     @Final
     private Set<BlockEntity> noCullingBlockEntities;
@@ -119,10 +87,6 @@ public abstract class MixinCoreWorldRenderer {
     @Shadow
     @Final
     private Long2ObjectMap<SortedSet<BlockBreakingInfo>> blockBreakingProgressions;
-
-    @Shadow
-    protected abstract void drawBlockOutline(MatrixStack matrices, VertexConsumer vertexConsumer, Entity entity, double d, double e, double f, BlockPos blockPos, BlockState blockState);
-
     @Shadow
     private @Nullable Framebuffer translucentFramebuffer;
     @Shadow
@@ -131,6 +95,30 @@ public abstract class MixinCoreWorldRenderer {
     private @Nullable ShaderEffect transparencyShader;
     @Shadow
     private @Nullable Framebuffer cloudsFramebuffer;
+
+    @Shadow
+    protected abstract void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator);
+
+    @Shadow
+    protected abstract void updateChunks(long limitTime);
+
+    @Shadow
+    protected abstract void renderLayer(RenderLayer renderLayer, MatrixStack matrixStack, double d, double e, double f);
+
+    @Shadow
+    protected abstract boolean canDrawEntityOutlines();
+
+    @Shadow
+    protected abstract void captureFrustum(Matrix4f modelMatrix, Matrix4f matrix4f, double x, double y, double z, Frustum frustum);
+
+    @Shadow
+    public abstract void renderSky(MatrixStack matrices, float tickDelta);
+
+    @Shadow
+    protected abstract void checkEmpty(MatrixStack matrices);
+
+    @Shadow
+    protected abstract void drawBlockOutline(MatrixStack matrices, VertexConsumer vertexConsumer, Entity entity, double d, double e, double f, BlockPos blockPos, BlockState blockState);
 
     @Shadow
     public abstract void renderClouds(MatrixStack matrices, float tickDelta, double cameraX, double cameraY, double cameraZ);
@@ -200,9 +188,9 @@ public abstract class MixinCoreWorldRenderer {
 
         profiler.swap("fog");
         BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, Math.max(g - 16.0F, 32.0F), bl2);
-        profiler.swap("terrain_setup");
+        profiler.swap("terrainSetup");
         this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
-        profiler.swap("updatechunks");
+        profiler.swap("updateChunks");
         int j = this.client.options.maxFps;
         long n;
         if ((double) j == Option.FRAMERATE_LIMIT.getMax()) {
@@ -252,13 +240,7 @@ public abstract class MixinCoreWorldRenderer {
         boolean entityRendered = renderEntity(
             matrices,
             tickDelta,
-            limitTime,
-            renderBlockOutline,
             camera,
-            gameRenderer,
-            lightmapTextureManager,
-            matrix4f,
-            profiler,
             renderPosX,
             renderPosY,
             renderPosZ,
@@ -272,7 +254,7 @@ public abstract class MixinCoreWorldRenderer {
         profiler.push("vanilla");
         renderTileEntityVanilla(matrices, tickDelta, renderPosX, renderPosY, renderPosZ, immediate);
         profiler.swap("fastMinecraft");
-        renderTileEntityFastMc(matrices, tickDelta, matrix4f, profiler);
+        renderTileEntityFastMc(matrices, tickDelta, matrix4f);
         profiler.pop();
 
         // Entity outline
@@ -298,7 +280,7 @@ public abstract class MixinCoreWorldRenderer {
                     matrices.push();
                     matrices.translate((double) blockPos3.getX() - renderPosX, (double) blockPos3.getY() - renderPosY, (double) blockPos3.getZ() - renderPosZ);
                     MatrixStack.Entry entry3 = matrices.peek();
-                    VertexConsumer vertexConsumer2 = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer((RenderLayer) ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(z)), entry3.getModel(), entry3.getNormal());
+                    VertexConsumer vertexConsumer2 = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer(ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(z)), entry3.getModel(), entry3.getNormal());
                     this.client.getBlockRenderManager().renderDamage(this.world.getBlockState(blockPos3), blockPos3, this.world, matrices, vertexConsumer2);
                     matrices.pop();
                 }
@@ -401,16 +383,17 @@ public abstract class MixinCoreWorldRenderer {
         BackgroundRenderer.method_23792();
     }
 
-    private boolean renderEntity(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f, Profiler profiler, double renderPosX, double renderPosY, double renderPosZ, Frustum frustum, VertexConsumerProvider.Immediate immediate) {
+    @SuppressWarnings("deprecation")
+    private boolean renderEntity(MatrixStack matrices, float tickDelta, Camera camera, double renderPosX, double renderPosY, double renderPosZ, Frustum frustum, VertexConsumerProvider.Immediate immediate) {
         boolean entityRendered = false;
 
         for (Entity entity : this.world.getEntities()) {
-            if (!this.entityRenderDispatcher.shouldRender(entity, frustum, renderPosX, renderPosY, renderPosZ)
-                && !entity.hasPassengerDeep(this.client.player)) continue;
+            if (entity instanceof ClientPlayerEntity && camera.getFocusedEntity() != entity) continue;
             if (entity == camera.getFocusedEntity() && !camera.isThirdPerson()
                 && (!(camera.getFocusedEntity() instanceof LivingEntity) || !((LivingEntity) camera.getFocusedEntity()).isSleeping()))
                 continue;
-            if (entity instanceof ClientPlayerEntity && camera.getFocusedEntity() != entity) continue;
+            if (!this.entityRenderDispatcher.shouldRender(entity, frustum, renderPosX, renderPosY, renderPosZ)
+                && !entity.hasPassengerDeep(this.client.player)) continue;
 
             ++this.regularEntityCount;
             if (entity.age == 0) {
@@ -445,7 +428,7 @@ public abstract class MixinCoreWorldRenderer {
         return entityRendered;
     }
 
-    private void renderTileEntityFastMc(MatrixStack matrices, float tickDelta, Matrix4f matrix4f, Profiler profiler) {
+    private void renderTileEntityFastMc(MatrixStack matrices, float tickDelta, Matrix4f matrix4f) {
         MatrixStack.Entry entry = matrices.peek();
         FastMcMod.INSTANCE.getWorldRenderer().setupCamera(AdaptersKt.toJoml(matrix4f), AdaptersKt.toJoml(entry.getModel()));
         FastMcMod.INSTANCE.getWorldRenderer().preRender(tickDelta);

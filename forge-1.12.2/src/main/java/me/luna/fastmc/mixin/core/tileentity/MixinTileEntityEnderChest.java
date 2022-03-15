@@ -16,16 +16,13 @@ import java.util.List;
 @Mixin(TileEntityEnderChest.class)
 public abstract class MixinTileEntityEnderChest extends TileEntity implements EnderChestInfo, IParallelUpdate {
     @Shadow
-    private int ticksSinceSync;
-
-    @Shadow
     public int numPlayersUsing;
-
     @Shadow
     public float lidAngle;
-
     @Shadow
     public float prevLidAngle;
+    @Shadow
+    private int ticksSinceSync;
 
     @Override
     public void updateParallel(@NotNull List<Runnable> async, @NotNull List<Runnable> callbacks) {

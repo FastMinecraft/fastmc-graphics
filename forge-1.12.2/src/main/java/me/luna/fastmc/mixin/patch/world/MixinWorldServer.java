@@ -25,9 +25,8 @@ import java.util.List;
 
 @Mixin(WorldServer.class)
 public abstract class MixinWorldServer extends World {
-    @Shadow
-    protected abstract boolean fireBlockEvent(BlockEventData event);
-
+    private final DoubleBufferedCollection<IntSet> blockEventDataSet = new DoubleBufferedCollection<>(new IntOpenHashSet());
+    private final DoubleBufferedCollection<List<BlockEventData>> blockEventDataList = new DoubleBufferedCollection<>(new ArrayList<>());
     @Shadow
     @Final
     private MinecraftServer server;
@@ -36,8 +35,8 @@ public abstract class MixinWorldServer extends World {
         super(saveHandlerIn, info, providerIn, profilerIn, client);
     }
 
-    private final DoubleBufferedCollection<IntSet> blockEventDataSet = new DoubleBufferedCollection<>(new IntOpenHashSet());
-    private final DoubleBufferedCollection<List<BlockEventData>> blockEventDataList = new DoubleBufferedCollection<>(new ArrayList<>());
+    @Shadow
+    protected abstract boolean fireBlockEvent(BlockEventData event);
 
     /**
      * @author Luna

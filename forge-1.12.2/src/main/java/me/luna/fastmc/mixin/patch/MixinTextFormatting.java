@@ -18,15 +18,15 @@ public class MixinTextFormatting {
         if (text == null) {
             return null;
         }
-        
+
         StringBuilder stringBuilder = new StringBuilder();
 
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
-            
+
             if (c == '§') {
                 char nextChar = text.charAt(i + 1);
-                
+
                 switch (nextChar) {
                     case '0':
                     case '1':

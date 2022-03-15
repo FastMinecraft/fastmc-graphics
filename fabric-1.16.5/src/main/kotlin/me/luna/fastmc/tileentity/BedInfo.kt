@@ -1,7 +1,7 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.util.TileEntityBed
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IBedInfo
+import me.luna.fastmc.util.TileEntityBed
 import net.minecraft.block.BedBlock
 import net.minecraft.block.enums.BedPart
 import net.minecraft.state.property.EnumProperty

@@ -41,7 +41,8 @@ interface IPatchedWorldRenderer {
 
             if (nextBuiltChunk != null
                 && (!chunkCulling || !chunkInfo.canCull(nextDirection.opposite))
-                && (!chunkCulling || direction == null || builtChunk.getData().isVisibleThrough(direction.opposite, nextDirection))
+                && (!chunkCulling || direction == null || builtChunk.getData()
+                    .isVisibleThrough(direction.opposite, nextDirection))
                 && nextBuiltChunk.shouldBuild()
                 && nextBuiltChunk.setRebuildFrame(frame)
                 && frustum.isVisible(nextBuiltChunk.boundingBox)

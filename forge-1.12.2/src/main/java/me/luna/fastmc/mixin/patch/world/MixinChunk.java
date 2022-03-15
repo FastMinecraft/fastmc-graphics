@@ -1,7 +1,6 @@
 package me.luna.fastmc.mixin.patch.world;
 
 import me.luna.fastmc.mixin.IPatchedChunk;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
@@ -15,11 +14,17 @@ import static net.minecraft.world.chunk.Chunk.NULL_BLOCK_STORAGE;
 
 @Mixin(Chunk.class)
 public abstract class MixinChunk implements IPatchedChunk {
-    @Shadow @Final private ExtendedBlockStorage[] storageArrays;
+    @Shadow
+    @Final
+    private ExtendedBlockStorage[] storageArrays;
 
-    @Shadow @Final private int[] heightMap;
+    @Shadow
+    @Final
+    private int[] heightMap;
 
-    @Shadow @Final private World world;
+    @Shadow
+    @Final
+    private World world;
 
     @Override
     public int getLightFor(@NotNull EnumSkyBlock type, int x, int y, int z) {

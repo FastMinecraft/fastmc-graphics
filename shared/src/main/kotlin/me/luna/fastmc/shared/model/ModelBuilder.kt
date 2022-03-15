@@ -34,7 +34,8 @@ open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: In
 }
 
 @Suppress("NOTHING_TO_INLINE")
-class ChildModelBuilder(parent: ModelBuilder) : ModelBuilder(parent.idCounter++, parent.textureSizeX, parent.textureSizeY) {
+class ChildModelBuilder(parent: ModelBuilder) :
+    ModelBuilder(parent.idCounter++, parent.textureSizeX, parent.textureSizeY) {
     override var idCounter: Int by parent::idCounter
 
     private val boxList = ArrayList<Box>()
@@ -78,7 +79,16 @@ class ChildModelBuilder(parent: ModelBuilder) : ModelBuilder(parent.idCounter++,
             sizeY: Float,
             sizeZ: Float
         ) {
-            this@ChildModelBuilder.addBox(textureOffsetX, textureOffsetY, offsetX, offsetY, offsetZ, sizeX, sizeY, sizeZ)
+            this@ChildModelBuilder.addBox(
+                textureOffsetX,
+                textureOffsetY,
+                offsetX,
+                offsetY,
+                offsetZ,
+                sizeX,
+                sizeY,
+                sizeZ
+            )
         }
     }
 

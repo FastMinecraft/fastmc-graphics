@@ -1,6 +1,5 @@
 package me.luna.fastmc.shared.util
 
-import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.opengl.glProgramUniformMatrix4fv
 import org.joml.Matrix4f
 import java.nio.FloatBuffer

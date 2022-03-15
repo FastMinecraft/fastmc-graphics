@@ -1,6 +1,5 @@
 package me.luna.fastmc.mixin
 
-import net.minecraft.util.math.BlockPos
 import net.minecraft.world.EnumSkyBlock
 
 interface IPatchedChunk {

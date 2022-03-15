@@ -2,11 +2,11 @@ package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.*
-import me.luna.fastmc.util.Minecraft
-import me.luna.fastmc.util.endSection
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.util.ITypeID
+import me.luna.fastmc.util.Minecraft
+import me.luna.fastmc.util.endSection
 import me.luna.fastmc.util.startSection
 import net.minecraft.entity.Entity
 import org.lwjgl.opengl.GL11.*

@@ -1,6 +1,5 @@
 package me.luna.fastmc.mixin.core.render;
 
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedCompiledChunk;
 import me.luna.fastmc.renderer.TileEntityRenderer;

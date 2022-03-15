@@ -7,7 +7,7 @@ class ModelBed : Model("tileEntity/Bed", 64, 64) {
     override fun ModelBuilder.buildModel() {
         // Head
         childModel {
-            addBox(0.0f, 0.0f,-8.0f, 3.0f, -8.0f, 16.0f, 6.0f, 16.0f)
+            addBox(0.0f, 0.0f, -8.0f, 3.0f, -8.0f, 16.0f, 6.0f, 16.0f)
             // Leg 0
             addBox(0.0f, 44.0f, -8.0f, 0.0f, -8.0f, 3.0f, 3.0f, 3.0f)
             // Leg 1

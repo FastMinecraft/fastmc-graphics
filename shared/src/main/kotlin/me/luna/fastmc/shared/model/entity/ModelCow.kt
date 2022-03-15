@@ -28,22 +28,22 @@ class ModelCow : Model("entity/Cow", 64, 64) {
 
         // Leg1
         childModel {
-            addBox(28.0f, 0.0f,-6.0F, 0.0F, -9.0F, 4.0f, 12.0f, 4.0f)
+            addBox(28.0f, 0.0f, -6.0F, 0.0F, -9.0F, 4.0f, 12.0f, 4.0f)
         }
 
         // Leg2
         childModel {
-            addBox(28.0f, 0.0f,2.0F, 0.0F, -9.0F, 4.0f, 12.0f, 4.0f)
+            addBox(28.0f, 0.0f, 2.0F, 0.0F, -9.0F, 4.0f, 12.0f, 4.0f)
         }
 
         // Leg3
         childModel {
-            addBox(28.0f, 0.0f,-6.0F, 0.0F, 4.0F, 4.0f, 12.0f, 4.0f)
+            addBox(28.0f, 0.0f, -6.0F, 0.0F, 4.0F, 4.0f, 12.0f, 4.0f)
         }
 
         // Leg4
         childModel {
-            addBox(28.0f, 0.0f,2.0F, 0.0F, 4.0F, 4.0f, 12.0f, 4.0f)
+            addBox(28.0f, 0.0f, 2.0F, 0.0F, 4.0F, 4.0f, 12.0f, 4.0f)
         }
     }
 }

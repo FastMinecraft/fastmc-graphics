@@ -1,6 +1,5 @@
 package me.luna.fastmc.mixin.patch.render;
 
-import it.unimi.dsi.fastutil.ints.IntArrayList;
 import me.luna.fastmc.mixin.IPatchedVisGraph;
 import net.minecraft.client.renderer.chunk.VisGraph;
 import net.minecraft.util.EnumFacing;
@@ -15,12 +14,17 @@ import java.util.Set;
 
 @Mixin(VisGraph.class)
 public abstract class MixinVisGraph implements IPatchedVisGraph {
-    @Shadow @Final private BitSet bitSet;
+    @Shadow
+    @Final
+    private BitSet bitSet;
+    @Shadow
+    private int empty;
 
-    @Shadow protected abstract void addEdges(int pos, Set<EnumFacing> p_178610_2_);
-    @Shadow protected abstract int getNeighborIndexAtFace(int pos, EnumFacing facing);
+    @Shadow
+    protected abstract void addEdges(int pos, Set<EnumFacing> p_178610_2_);
 
-    @Shadow private int empty;
+    @Shadow
+    protected abstract int getNeighborIndexAtFace(int pos, EnumFacing facing);
 
     /**
      * @author Luna

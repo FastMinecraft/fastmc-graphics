@@ -10,7 +10,8 @@ import org.spongepowered.asm.mixin.Shadow;
 
 @Mixin(PlayerControllerMP.class)
 public abstract class MixinPlayerControllerMP {
-    @Shadow private int currentPlayerItem;
+    @Shadow
+    private int currentPlayerItem;
 
     /**
      * @author Luna

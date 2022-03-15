@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.resource
 
-class ResourceProvider<T : Resource> (private val resourceClass: Class<T>, vararg resources: T) {
+class ResourceProvider<T : Resource>(private val resourceClass: Class<T>, vararg resources: T) {
     private val resourceMap = HashMap<String, T>()
 
     operator fun get(name: String): T {

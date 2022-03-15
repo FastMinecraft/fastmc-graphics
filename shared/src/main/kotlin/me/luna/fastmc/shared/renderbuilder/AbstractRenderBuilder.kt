@@ -131,7 +131,12 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         return SingleTextureRenderer(renderInfo(shader, vao, listOf(vbo), model), texture)
     }
 
-    protected fun renderInfo(shader: Shader, vao: VertexArrayObject, vboList: List<VertexBufferObject>, model: Model): RenderInfo {
+    protected fun renderInfo(
+        shader: Shader,
+        vao: VertexArrayObject,
+        vboList: List<VertexBufferObject>,
+        model: Model
+    ): RenderInfo {
         return RenderInfo(resourceManager, shader, vao, vboList, model.modelSize, size, builtPosX, builtPosY, builtPosZ)
     }
 

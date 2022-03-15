@@ -18,6 +18,7 @@ import java.nio.IntBuffer;
 
 @Mixin(value = ActiveRenderInfo.class, remap = false)
 public class MixinActiveRenderInfo {
+    private final static Minecraft mc = Minecraft.getMinecraft();
     @Shadow
     private static float rotationX;
     @Shadow
@@ -42,7 +43,6 @@ public class MixinActiveRenderInfo {
     @Shadow
     @Final
     private static FloatBuffer PROJECTION;
-    private final static Minecraft mc = Minecraft.getMinecraft();
 
     /**
      * @author Luna
