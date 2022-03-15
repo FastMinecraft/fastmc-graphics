@@ -2,7 +2,7 @@ package me.luna.fastmc.shared
 
 class Config {
     val glErrorDebug: Boolean
-        get() = true
+        get() = false
 
     val fps: Boolean
         get() = true

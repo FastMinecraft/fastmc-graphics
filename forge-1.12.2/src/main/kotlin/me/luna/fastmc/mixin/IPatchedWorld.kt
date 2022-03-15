@@ -9,8 +9,12 @@ import net.minecraft.block.state.IBlockState
 import net.minecraft.crash.CrashReport
 import net.minecraft.entity.Entity
 import net.minecraft.tileentity.TileEntity
+import net.minecraft.util.EnumFacing
 import net.minecraft.util.ITickable
 import net.minecraft.util.ReportedException
+import net.minecraft.util.math.BlockPos
+import net.minecraft.util.math.BlockPos.PooledMutableBlockPos
+import net.minecraft.util.math.MathHelper
 import net.minecraft.world.EnumSkyBlock
 import net.minecraft.world.World
 import net.minecraftforge.common.ForgeModContainer
@@ -204,6 +208,7 @@ interface IPatchedWorld {
         }
     }
 
+    fun checkLightFor(lightType: EnumSkyBlock, x: Int, y: Int, z: Int): Boolean
     fun getLightFromNeighborsFor(type: EnumSkyBlock, x: Int, y: Int, z: Int): Int
     fun getLightFor(type: EnumSkyBlock, x: Int, y: Int, z: Int): Int
     fun isValid(x: Int, y: Int, z: Int): Boolean
@@ -211,4 +216,5 @@ interface IPatchedWorld {
     fun isBlockLoaded(x: Int, z: Int): Boolean
     fun isBlockLoaded(x: Int, z: Int, allowEmpty: Boolean): Boolean
     fun getBlockState(x: Int, y: Int, z: Int): IBlockState
+    fun isAreaLoaded(x: Int, y: Int, z: Int, radius: Int, allowEmpty: Boolean): Boolean
 }
