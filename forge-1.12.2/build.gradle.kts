@@ -64,7 +64,7 @@ configure<MixinExtension> {
 configure<UserDevExtension> {
     mappings(mappingsChannel, mappingsVersion)
 
-    accessTransformer(file("src/main/resources/fastmc_at.cfg"))
+    accessTransformer(file("src/main/resources/META-INF/fastmc_at.cfg"))
 
     runs {
         create("client") {
@@ -91,7 +91,8 @@ tasks {
                 "MixinConfigs" to "mixins.fastmc-core.json, mixins.fastmc-accessor.json, mixins.fastmc-patch.json",
                 "TweakClass" to "org.spongepowered.asm.launch.MixinTweaker",
                 "FMLCorePluginContainsFMLMod" to true,
-                "FMLCorePlugin" to "me.luna.fastmc.FastMcCoremod"
+                "FMLCorePlugin" to "me.luna.fastmc.FastMcCoremod",
+                "FMLAT" to "fastmc_at.cfg"
             )
         }
 
