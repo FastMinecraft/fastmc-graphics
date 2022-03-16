@@ -14,6 +14,17 @@ class ExtendedBitSet : MutableSet<Int> {
             return sum
         }
 
+    fun put(element: Int, state: Boolean): Boolean {
+        val bit = 1L shl (element and 0x3F)
+        val index = element shr 6
+
+        val prev = getBit(index)
+        val result = if (state) prev or bit else prev xor bit
+        putBit(index, result)
+
+        return result != prev
+    }
+
     override fun add(element: Int): Boolean {
         val bit = 1L shl (element and 0x3F)
         val index = element shr 6
@@ -22,6 +33,19 @@ class ExtendedBitSet : MutableSet<Int> {
         val result = prev or bit
         putBit(index, result)
 
+        return result != prev
+    }
+
+    fun addFast(element: Int) {
+        val index = element shr 6
+        bitArray[index] = bitArray[index] or (1L shl (element and 0x3F))
+    }
+
+    fun addFastCheck(element: Int): Boolean {
+        val index = element shr 6
+        val prev = bitArray[index]
+        val result = prev or (1L shl (element and 0x3F))
+        bitArray[index] = result
         return result != prev
     }
 
@@ -51,7 +75,7 @@ class ExtendedBitSet : MutableSet<Int> {
 
         val prev = getBit(index)
         val result = prev xor bit
-        bitArray[index] = result
+        putBit(index, result)
 
         return result != prev
     }
@@ -89,6 +113,10 @@ class ExtendedBitSet : MutableSet<Int> {
         return modified
     }
 
+    fun containsFast(element: Int): Boolean {
+        return bitArray[element shr 6] and (1L shl (element and 0x3F)) != 0L
+    }
+
     override fun contains(element: Int): Boolean {
         val index = element shr 6
         if (index >= bitArray.size) return false
@@ -113,6 +141,16 @@ class ExtendedBitSet : MutableSet<Int> {
         return true
     }
 
+    fun ensureCapacity(capacity: Int) {
+        ensureArrayLength((capacity + 96) shr 6)
+    }
+
+    fun ensureArrayLength(length: Int) {
+        if (bitArray.size < length) {
+            bitArray = bitArray.copyOf(length)
+        }
+    }
+
     private fun getBit(index: Int): Long {
         return if (index >= bitArray.size) {
             0L
@@ -122,11 +160,7 @@ class ExtendedBitSet : MutableSet<Int> {
     }
 
     private fun putBit(index: Int, bit: Long) {
-        if (index >= bitArray.size) {
-            @Suppress("ReplaceJavaStaticMethodWithKotlinAnalog")
-            bitArray = Arrays.copyOf(bitArray, index + 2)
-        }
-
+        ensureArrayLength(index + 1)
         bitArray[index] = bit
     }
 

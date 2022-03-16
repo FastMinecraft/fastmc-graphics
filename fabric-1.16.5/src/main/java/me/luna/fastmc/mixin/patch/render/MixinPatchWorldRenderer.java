@@ -253,14 +253,21 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         }
 
         this.client.getProfiler().swap("rebuildNear");
-        this.rebuildNear();
+        this.rebuildNear(cameraBlockPos);
         this.client.getProfiler().pop();
     }
 
-    private void rebuildNear() {
+    private void rebuildNear(BlockPos cameraBlockPos) {
         ExtendedBitSet oldSet = chunksToUpdateBitSet.get();
         ExtendedBitSet newSet = chunksToUpdateBitSet.swapAndGet();
         FastObjectArrayList<ChunkBuilder.BuiltChunk> list = new FastObjectArrayList<>();
+
+        for (ChunkBuilder.BuiltChunk builtChunk : this.chunksToRebuild) {
+            int index = ((IPatchedBuiltChunk) builtChunk).getIndex();
+            if (newSet.add(index)) {
+                list.add(builtChunk);
+            }
+        }
 
         for (WorldRenderer.ChunkInfo renderInfo : this.visibleChunks) {
             ChunkBuilder.BuiltChunk builtChunk = renderInfo.chunk;
@@ -273,15 +280,16 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             }
         }
 
-        for (ChunkBuilder.BuiltChunk builtChunk : this.chunksToRebuild) {
-            int index = ((IPatchedBuiltChunk) builtChunk).getIndex();
-            if (newSet.add(index)) {
-                list.add(builtChunk);
-            }
-        }
-
         oldSet.clear();
         list.trim();
+
+        Arrays.sort(list.elements(), Comparator.comparingInt(it -> {
+            BlockPos chunkPos = it.getOrigin();
+            int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
+            int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
+            int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
+            return diffX * diffX + diffY * diffY + diffZ * diffZ;
+        }));
 
         this.chunksToRebuild = new ObjectArraySet<>(list.elements());
     }
@@ -295,40 +303,31 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         this.needsTerrainUpdate |= this.chunkBuilder.upload();
 
         long start = System.nanoTime();
-        int count = 0;
 
         if (!this.chunksToRebuild.isEmpty()) {
-            int countAsync = ParallelUtils.CPU_THREADS;
+            int count = 0;
+            int minCount = ParallelUtils.CPU_THREADS;
             boolean finish = false;
 
             Iterator<ChunkBuilder.BuiltChunk> iterator = this.chunksToRebuild.iterator();
             ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
 
-            while (iterator.hasNext() && (countAsync > 0 || !finish)) {
+            while (iterator.hasNext() && (count < minCount || !finish)) {
                 ChunkBuilder.BuiltChunk builtChunk = iterator.next();
-                boolean updated = false;
 
-                if (builtChunk.needsImportantRebuild()) {
-                    if (!finish) {
-                        updated = true;
-                        this.chunkBuilder.rebuild(builtChunk);
-                        long current = System.nanoTime();
-                        long durationPerChunk = (current - start) / (long) ++count;
-                        long remaining = limitTime - current;
-                        finish = remaining < durationPerChunk;
-                    }
-                } else if (--countAsync > 0) {
-                    updated = true;
-                    builtChunk.scheduleRebuild(this.chunkBuilder);
-                }
-
-                if (!updated) {
-                    continue;
-                }
+                builtChunk.scheduleRebuild(this.chunkBuilder);
+                count++;
 
                 builtChunk.cancelRebuild();
                 iterator.remove();
                 bitSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
+
+                if (!finish) {
+                    long current = System.nanoTime();
+                    long durationPerChunk = (current - start) / (long) count;
+                    long remaining = limitTime - current;
+                    finish = remaining < durationPerChunk;
+                }
             }
         }
     }
