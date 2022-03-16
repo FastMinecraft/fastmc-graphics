@@ -34,6 +34,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -91,6 +94,15 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private int lastCameraYaw0 = Integer.MAX_VALUE;
     private int lastCameraPitch0 = Integer.MAX_VALUE;
 
+    private final ThreadPoolExecutor updateChunkThreadPool = new ThreadPoolExecutor(
+        0,
+        1,
+        15L,
+        TimeUnit.SECONDS,
+        new ArrayBlockingQueue<>(4),
+        it -> new Thread(it, "Chunk Update")
+    );
+
     private static FastObjectArrayList<ChunkBuilder.BuiltChunk>[] getArray() {
         int size = RenderLayer.getBlockLayers().size();
         ArrayList<FastObjectArrayList<ChunkBuilder.BuiltChunk>> list = new ArrayList<>();
@@ -138,6 +150,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             chunksToUpdateBitSet.get().clearFast();
             chunksToUpdateBitSet.swapAndGet().clearFast();
         }
+
+        updateChunkThreadPool.getQueue().clear();
     }
 
     /**
@@ -301,35 +315,27 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Overwrite
     private void updateChunks(long limitTime) {
         this.needsTerrainUpdate |= this.chunkBuilder.upload();
+        if (this.chunksToRebuild.isEmpty() || updateChunkThreadPool.getTaskCount() - updateChunkThreadPool.getCompletedTaskCount() >= 2) return;
 
-        long start = System.nanoTime();
+        FastObjectArrayList<ChunkBuilder.BuiltChunk> list = new FastObjectArrayList<>();
+        Iterator<ChunkBuilder.BuiltChunk> iterator = this.chunksToRebuild.iterator();
+        ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
 
-        if (!this.chunksToRebuild.isEmpty()) {
-            int count = 0;
-            int minCount = ParallelUtils.CPU_THREADS;
-            boolean finish = false;
-
-            Iterator<ChunkBuilder.BuiltChunk> iterator = this.chunksToRebuild.iterator();
-            ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
-
-            while (iterator.hasNext() && (count < minCount || !finish)) {
-                ChunkBuilder.BuiltChunk builtChunk = iterator.next();
-
-                builtChunk.scheduleRebuild(this.chunkBuilder);
-                count++;
-
-                builtChunk.cancelRebuild();
-                iterator.remove();
-                bitSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
-
-                if (!finish) {
-                    long current = System.nanoTime();
-                    long durationPerChunk = (current - start) / (long) count;
-                    long remaining = limitTime - current;
-                    finish = remaining < durationPerChunk;
-                }
-            }
+        while (list.size() < ParallelUtils.CPU_THREADS && iterator.hasNext()) {
+            ChunkBuilder.BuiltChunk builtChunk = iterator.next();
+            list.add(builtChunk);
+            builtChunk.cancelRebuild();
+            iterator.remove();
+            bitSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
         }
+
+        updateChunkThreadPool.submit(() -> {
+            for (int i = 0; i < list.size(); i++) {
+                ChunkBuilder.BuiltChunk builtChunk = list.get(i);
+                builtChunk.scheduleRebuild(this.chunkBuilder);
+                builtChunk.cancelRebuild();
+            }
+        });
     }
 
     private void clearRenderLists() {

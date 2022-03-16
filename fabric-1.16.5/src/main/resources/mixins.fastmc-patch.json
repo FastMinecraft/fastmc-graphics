@@ -8,9 +8,9 @@
     "render.MixinChunkBuilderBuiltChunk",
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
-    "render.MixinRenderLayer",
+    "render.MixinModelPart",
     "render.MixinPatchWorldRenderer",
-    "render.MixinModelPart"
+    "render.MixinRenderLayer"
   ],
   "injectors": {
     "defaultRequire": 1
