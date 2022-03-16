@@ -8,4 +8,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface AccessorVertexBuffer {
     @Accessor
     int getVertexCount();
+
+    @Accessor
+    int getVertexBufferId();
 }

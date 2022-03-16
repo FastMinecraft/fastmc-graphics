@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
+import static org.lwjgl.opengl.GL15.glBindBuffer;
 
 @Mixin(WorldRenderer.class)
 public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
@@ -433,7 +435,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         glClientActiveTexture(GL_TEXTURE0);
 
         RenderSystem.popMatrix();
-        VertexBuffer.unbind();
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         RenderSystem.clearCurrentColor();
         this.client.getProfiler().pop();
@@ -443,6 +445,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @SuppressWarnings("deprecation")
     private void renderLayer(RenderLayer layer, double renderPosX, double renderPosY, double renderPosZ, ChunkBuilder.BuiltChunk builtChunk) {
         VertexBuffer vertexBuffer = builtChunk.getBuffer(layer);
+        AccessorVertexBuffer accessor = ((AccessorVertexBuffer) vertexBuffer);
 
         RenderSystem.loadIdentity();
         BlockPos blockPos = builtChunk.getOrigin();
@@ -450,7 +453,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         MatrixUtils.INSTANCE.putMatrix(translated);
         GlStateManager.multMatrix(MatrixUtils.INSTANCE.getMatrixBuffer());
 
-        vertexBuffer.bind();
+        glBindBuffer(GL_ARRAY_BUFFER, accessor.getVertexBufferId());
         glVertexPointer(3, GL_FLOAT, 32, 0);
         glColorPointer(4, GL_UNSIGNED_BYTE, 32, 12);
         glTexCoordPointer(2, GL_FLOAT, 32, 16);
@@ -458,6 +461,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         glTexCoordPointer(2, GL_SHORT, 32, 24);
         glClientActiveTexture(GL_TEXTURE0);
 
-        RenderSystem.drawArrays(GL_QUADS, 0, ((AccessorVertexBuffer) vertexBuffer).getVertexCount());
+        RenderSystem.drawArrays(GL_QUADS, 0, accessor.getVertexCount());
     }
 }

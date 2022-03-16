@@ -9,6 +9,9 @@
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
     "render.MixinModelPart",
+    "render.MixinPatchMatrix4f",
+    "render.MixinPatchMatrixStack",
+    "render.MixinPatchMatrix3f",
     "render.MixinPatchWorldRenderer",
     "render.MixinRenderLayer"
   ],

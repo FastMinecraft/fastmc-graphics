@@ -1,6 +1,5 @@
 package me.luna.fastmc.util
 
-import me.luna.fastmc.mixin.accessor.AccessorMatrix4f
 import net.minecraft.block.ChestBlock
 import net.minecraft.block.entity.*
 import net.minecraft.client.MinecraftClient
@@ -12,9 +11,6 @@ import net.minecraft.util.profiler.Profiler
 import net.minecraft.world.World
 
 fun Matrix4f.toJoml(dest: org.joml.Matrix4f): org.joml.Matrix4f {
-    @Suppress("CAST_NEVER_SUCCEEDS")
-    this as AccessorMatrix4f
-
     dest.m00(this.a00)
     dest.m01(this.a10)
     dest.m02(this.a20)
@@ -36,9 +32,6 @@ fun Matrix4f.toJoml(dest: org.joml.Matrix4f): org.joml.Matrix4f {
 }
 
 fun Matrix4f.toJoml(): org.joml.Matrix4f {
-    @Suppress("CAST_NEVER_SUCCEEDS")
-    this as AccessorMatrix4f
-
     return org.joml.Matrix4f(
         this.a00,
         this.a10,
