@@ -25,6 +25,11 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
         parentScope.launch(Dispatchers.Default) {
             tileEntityRenderer.onPostTick(mainThreadContext, this)
         }
+        mc.world?.let {
+            parentScope.launch(Dispatchers.Default) {
+                it.chunkManager.lightingProvider.doLightUpdates(Int.MAX_VALUE, true, true)
+            }
+        }
     }
 
     override fun preRender(partialTicks: Float) {

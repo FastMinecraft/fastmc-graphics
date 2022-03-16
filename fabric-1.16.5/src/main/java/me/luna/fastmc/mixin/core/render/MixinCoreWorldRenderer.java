@@ -151,8 +151,6 @@ public abstract class MixinCoreWorldRenderer {
         BlockEntityRenderDispatcher.INSTANCE.configure(this.world, this.client.getTextureManager(), this.client.textRenderer, camera, this.client.crosshairTarget);
         this.entityRenderDispatcher.configure(this.world, camera, this.client.targetedEntity);
         Profiler profiler = this.world.getProfiler();
-        profiler.swap("light_updates");
-        this.client.world.getChunkManager().getLightingProvider().doLightUpdates(Integer.MAX_VALUE, true, true);
         Vec3d vec3d = camera.getPos();
         double renderPosX = vec3d.getX();
         double renderPosY = vec3d.getY();
