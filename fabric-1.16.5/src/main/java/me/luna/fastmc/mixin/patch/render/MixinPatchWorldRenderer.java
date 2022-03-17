@@ -72,9 +72,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     private double lastTranslucentSortZ;
     @Shadow
-    @Final
-    private VertexFormat vertexFormat;
-    @Shadow
     private int viewDistance;
     @Shadow
     private double lastCameraChunkUpdateX;
@@ -101,7 +98,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         1,
         15L,
         TimeUnit.SECONDS,
-        new ArrayBlockingQueue<>(4),
+        new ArrayBlockingQueue<>(16),
         it -> new Thread(it, "Chunk Update")
     );
 
@@ -153,6 +150,12 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             chunksToUpdateBitSet.swapAndGet().clearFast();
         }
 
+        lastCameraX0 = Integer.MAX_VALUE;
+        lastCameraY0 = Integer.MAX_VALUE;
+        lastCameraZ0 = Integer.MAX_VALUE;
+        lastCameraYaw0 = Integer.MAX_VALUE;
+        lastCameraPitch0 = Integer.MAX_VALUE;
+
         updateChunkThreadPool.getQueue().clear();
     }
 
@@ -164,7 +167,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator) {
         WorldRenderer thisRef = (WorldRenderer) (Object) this;
         IPatchedBuiltChunkStorage patchedChunks = (IPatchedBuiltChunkStorage) this.chunks;
-
 
         if (this.client.options.viewDistance != this.viewDistance) {
             this.reload();
@@ -316,14 +318,14 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     private void updateChunks(long limitTime) {
-        this.needsTerrainUpdate |= this.chunkBuilder.upload();
-        if (this.chunksToRebuild.isEmpty() || updateChunkThreadPool.getTaskCount() - updateChunkThreadPool.getCompletedTaskCount() >= 2) return;
+        this.needsTerrainUpdate = this.chunkBuilder.upload() || this.needsTerrainUpdate;
+        if (this.chunksToRebuild.isEmpty() || updateChunkThreadPool.getTaskCount() - updateChunkThreadPool.getCompletedTaskCount() >= 4) return;
 
         FastObjectArrayList<ChunkBuilder.BuiltChunk> list = new FastObjectArrayList<>();
         Iterator<ChunkBuilder.BuiltChunk> iterator = this.chunksToRebuild.iterator();
         ExtendedBitSet bitSet = chunksToUpdateBitSet.get();
 
-        while (list.size() < ParallelUtils.CPU_THREADS && iterator.hasNext()) {
+        while (list.size() < ParallelUtils.CPU_THREADS * 2 && iterator.hasNext()) {
             ChunkBuilder.BuiltChunk builtChunk = iterator.next();
             list.add(builtChunk);
             builtChunk.cancelRebuild();

@@ -1,11 +1,15 @@
 package me.luna.fastmc.renderer
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import me.luna.fastmc.tileentity.ChestInfo
@@ -28,7 +32,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             mc.world?.let {
                 val tempAdding: ArrayList<TileEntity>
                 val tempRemoving: ArrayList<TileEntity>
@@ -58,7 +62,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 
                 coroutineScope {
                     for ((id, entry) in renderEntryMap) {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             removingGroups[id]?.let { removing -> entry.removeAll(removing) }
                             addingGroups[id]?.let { adding -> entry.addAll(adding) }
 
@@ -191,7 +195,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                             smallChestRenderer = null
                         }
                     } else {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             smallChest.forEach {
                                 it.checkForAdjacentChests()
                             }
@@ -215,7 +219,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                             largeChestRenderer = null
                         }
                     } else {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             largeChest.forEach {
                                 it.checkForAdjacentChests()
                             }

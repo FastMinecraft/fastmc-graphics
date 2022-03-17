@@ -10,6 +10,7 @@ import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.BufferUtils
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
@@ -81,7 +82,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
             ParallelUtils.splitListIndex(
                 total = entities.size,
                 blockForEach = { start, end ->
-                    launch {
+                    launch(FastMcCoreScope.context) {
                         val regionBuffer = buffer.duplicate().order(ByteOrder.nativeOrder())
                         regionBuffer.position(start * vertexSize)
 

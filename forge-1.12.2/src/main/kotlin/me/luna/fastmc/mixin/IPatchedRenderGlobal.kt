@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import me.luna.fastmc.mixin.accessor.AccessorRenderGlobal
 import me.luna.fastmc.shared.util.DoubleBufferedCollection
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import me.luna.fastmc.shared.util.fastFloor
@@ -34,7 +35,7 @@ interface IPatchedRenderGlobal {
         ParallelUtils.splitListIndex(
             renderInfos.size,
             blockForEach = { start, end ->
-                scope.launch {
+                scope.launch(FastMcCoreScope.context) {
                     for (i in start until end) {
                         val renderInfo = renderInfos[i]
                         val chunk = world.getChunk(renderInfo.renderChunk.position)

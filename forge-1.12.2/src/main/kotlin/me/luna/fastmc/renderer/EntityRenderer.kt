@@ -1,10 +1,14 @@
 package me.luna.fastmc.renderer
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.mixin.IPatchedRenderGlobal
 import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GlStateManager
@@ -20,9 +24,9 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
     }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             mc.world?.let {
-                parentScope.launch(Dispatchers.Default) {
+                parentScope.launch(FastMcCoreScope.context) {
                     (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, it)
                 }
             }
@@ -38,7 +42,7 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 
                 coroutineScope {
                     for (entry in renderEntryList) {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             entry.markDirty()
                             entry.update(mainThreadContext, this)
                         }

@@ -1,7 +1,6 @@
 package me.luna.fastmc.renderer
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.opengl.glBindTexture
 import me.luna.fastmc.shared.opengl.glBindVertexArray
@@ -9,6 +8,7 @@ import me.luna.fastmc.shared.opengl.glProgramUniform1f
 import me.luna.fastmc.shared.opengl.glUseProgramForce
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.MathUtils
 import me.luna.fastmc.shared.util.MatrixUtils
 import net.minecraft.client.Minecraft
@@ -17,10 +17,10 @@ import kotlin.coroutines.CoroutineContext
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             entityRenderer.onPostTick(mainThreadContext, this)
         }
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             tileEntityRenderer.onPostTick(mainThreadContext, this)
         }
     }

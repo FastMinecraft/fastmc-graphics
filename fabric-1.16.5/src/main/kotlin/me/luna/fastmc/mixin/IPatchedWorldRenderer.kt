@@ -1,8 +1,12 @@
 package me.luna.fastmc.mixin
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import net.minecraft.block.entity.BlockEntity
@@ -52,7 +56,7 @@ interface IPatchedWorldRenderer {
                 queue.add(nextChunkInfo)
 
                 if (counter.getAndUpdate(UPDATE_FUNCTION) > 0) {
-                    scope.launch(Dispatchers.Default) {
+                    scope.launch(FastMcCoreScope.context) {
                         recursiveSetupTerrainIteration(
                             scope,
                             frustum,
@@ -96,7 +100,7 @@ interface IPatchedWorldRenderer {
         val queue = ConcurrentLinkedQueue(chunkInfoList)
         val dummy = this.ChunkInfo(null, null, 0)
 
-        scope.launch(Dispatchers.Default) {
+        scope.launch(FastMcCoreScope.context) {
             var it: WorldRenderer.ChunkInfo?
             while (true) {
                 do {

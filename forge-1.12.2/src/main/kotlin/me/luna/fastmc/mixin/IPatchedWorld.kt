@@ -3,18 +3,15 @@ package me.luna.fastmc.mixin
 import it.unimi.dsi.fastutil.ints.IntSet
 import kotlinx.coroutines.*
 import me.luna.fastmc.shared.renderbuilder.IParallelUpdate
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import net.minecraft.block.state.IBlockState
 import net.minecraft.crash.CrashReport
 import net.minecraft.entity.Entity
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.EnumFacing
 import net.minecraft.util.ITickable
 import net.minecraft.util.ReportedException
-import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.BlockPos.PooledMutableBlockPos
-import net.minecraft.util.math.MathHelper
 import net.minecraft.world.EnumSkyBlock
 import net.minecraft.world.World
 import net.minecraftforge.common.ForgeModContainer
@@ -72,9 +69,9 @@ interface IPatchedWorld {
             }
 
             if (anyInvalidAll[0]) {
-                launch(Dispatchers.Default) { addedTileEntityList.removeIf { it.isInvalid } }
-                launch(Dispatchers.Default) { world.tickableTileEntities.removeIf { it.isInvalid } }
-                launch(Dispatchers.Default) { world.loadedTileEntityList.removeIf { it.isInvalid } }
+                launch(FastMcCoreScope.context) { addedTileEntityList.removeIf { it.isInvalid } }
+                launch(FastMcCoreScope.context) { world.tickableTileEntities.removeIf { it.isInvalid } }
+                launch(FastMcCoreScope.context) { world.loadedTileEntityList.removeIf { it.isInvalid } }
             }
         }
 
@@ -87,14 +84,14 @@ interface IPatchedWorld {
         anyInvalid: BooleanArray,
         list: MutableList<TileEntity>
     ) {
-        scope.launch(Dispatchers.Default) outer@{
+        scope.launch(FastMcCoreScope.context) outer@{
             val anyInvalidGroup = booleanArrayOf(false)
 
             coroutineScope {
                 ParallelUtils.splitListIndex(
                     total = list.size,
                     blockForEach = { start, end ->
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             val mainThreadCommand = ArrayList<Runnable>()
                             val parallelCommand = ArrayList<Runnable>()
 
@@ -113,11 +110,11 @@ interface IPatchedWorld {
                                     it.run()
                                 }
 
-                                withContext(Dispatchers.Default) {
+                                withContext(FastMcCoreScope.context) {
                                     ParallelUtils.splitListIndex(
                                         parallelCommand.size,
                                         blockForEach = { start, end ->
-                                            launch(Dispatchers.Default) {
+                                            launch(FastMcCoreScope.context) {
                                                 for (i in start until end) {
                                                     parallelCommand[i].run()
                                                 }

@@ -1,12 +1,16 @@
 package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import me.luna.fastmc.tileentity.ChestInfo
@@ -28,7 +32,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             mc.world?.let {
                 val tempAdding: ArrayList<TileEntity>
                 val tempRemoving: ArrayList<TileEntity>
@@ -58,7 +62,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 
                 coroutineScope {
                     for ((id, entry) in renderEntryMap) {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             removingGroups[id]?.let { removing -> entry.removeAll(removing) }
                             addingGroups[id]?.let { adding -> entry.addAll(adding) }
 
@@ -175,7 +179,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                             smallChestRenderer = null
                         }
                     } else {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             val builder = SmallChestRenderBuilder()
                             builder.init(this@TileEntityRenderer, smallChest.size)
                             @Suppress("UNCHECKED_CAST")
@@ -195,7 +199,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
                             largeChestRenderer = null
                         }
                     } else {
-                        launch(Dispatchers.Default) {
+                        launch(FastMcCoreScope.context) {
                             val builder = LargeChestRenderBuilder()
                             builder.init(this@TileEntityRenderer, largeChest.size)
                             @Suppress("UNCHECKED_CAST")

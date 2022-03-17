@@ -4,6 +4,7 @@ import kotlinx.coroutines.*
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.IInfo
 import me.luna.fastmc.shared.util.ClassIDRegistry
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import org.joml.Matrix4f
@@ -59,7 +60,7 @@ abstract class AbstractRenderer<ET : Any>(
         coroutineScope {
             for (entry in renderEntryList) {
                 if (force) entry.markDirty()
-                launch(Dispatchers.Default) {
+                launch(FastMcCoreScope.context) {
                     entry.update(mainThreadContext, this)
                 }
             }

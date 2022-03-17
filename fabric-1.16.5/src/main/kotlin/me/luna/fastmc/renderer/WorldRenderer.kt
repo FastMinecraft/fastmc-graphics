@@ -2,7 +2,6 @@ package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.opengl.glBindTexture
 import me.luna.fastmc.shared.opengl.glBindVertexArray
@@ -10,23 +9,26 @@ import me.luna.fastmc.shared.opengl.glProgramUniform1f
 import me.luna.fastmc.shared.opengl.glUseProgramForce
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
+import me.luna.fastmc.shared.util.FastMcExtendScope
+import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.MatrixUtils
 import me.luna.fastmc.util.Minecraft
 import org.lwjgl.opengl.GL11.*
+import java.util.concurrent.Future
 import kotlin.coroutines.CoroutineContext
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             entityRenderer.onPostTick(mainThreadContext, this)
         }
-        parentScope.launch(Dispatchers.Default) {
+        parentScope.launch(FastMcCoreScope.context) {
             tileEntityRenderer.onPostTick(mainThreadContext, this)
         }
         mc.world?.let {
-            parentScope.launch(Dispatchers.Default) {
+            parentScope.launch(FastMcExtendScope.context) {
                 it.chunkManager.lightingProvider.doLightUpdates(Int.MAX_VALUE, true, true)
             }
         }
