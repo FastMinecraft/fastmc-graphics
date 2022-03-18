@@ -13,6 +13,10 @@ class DoubleBufferedCollection<T : MutableCollection<*>>(value: T, private val i
         return delegate
     }
 
+    fun getSwap(): T {
+        return swap
+    }
+
     fun getAndSwap(): T {
         val temp = delegate
         initAction.accept(swap)

@@ -9,28 +9,58 @@ import me.luna.fastmc.shared.opengl.glProgramUniform1f
 import me.luna.fastmc.shared.opengl.glUseProgramForce
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
-import me.luna.fastmc.shared.util.FastMcExtendScope
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.MatrixUtils
 import me.luna.fastmc.util.Minecraft
+import me.luna.fastmc.util.OffThreadLightingProvider
+import net.minecraft.util.math.ChunkSectionPos
 import org.lwjgl.opengl.GL11.*
-import java.util.concurrent.Future
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
+    private val lightUpdateQueue = ConcurrentLinkedQueue<ChunkSectionPos>()
+    private val updating = AtomicBoolean(true)
+
+    fun scheduleLightUpdate(pos: ChunkSectionPos) {
+        lightUpdateQueue.add(pos)
+    }
+
+    fun runLightUpdates() {
+        val world = mc.world ?: return
+
+        var pos = lightUpdateQueue.poll()
+        while (pos != null) {
+            mc.worldRenderer.scheduleBlockRender(pos.sectionX, pos.sectionY, pos.sectionZ)
+            pos = lightUpdateQueue.poll()
+        }
+
+        if (updating.getAndSet(false)) {
+            val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
+            provider.scheduleUpdate {
+                try {
+                    provider.doLightUpdates(Int.MAX_VALUE, true, false)
+                } finally {
+                    updating.set(true)
+                }
+            }
+        }
+    }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
+        val world = mc.world
+        if (world == null) {
+            lightUpdateQueue.clear()
+            updating.set(true)
+        }
+
         parentScope.launch(FastMcCoreScope.context) {
             entityRenderer.onPostTick(mainThreadContext, this)
         }
         parentScope.launch(FastMcCoreScope.context) {
             tileEntityRenderer.onPostTick(mainThreadContext, this)
-        }
-        mc.world?.let {
-            parentScope.launch(FastMcExtendScope.context) {
-                it.chunkManager.lightingProvider.doLightUpdates(Int.MAX_VALUE, true, true)
-            }
         }
     }
 

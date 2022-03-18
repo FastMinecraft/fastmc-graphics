@@ -9,11 +9,12 @@
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
     "render.MixinModelPart",
+    "render.MixinPatchMatrix3f",
     "render.MixinPatchMatrix4f",
     "render.MixinPatchMatrixStack",
-    "render.MixinPatchMatrix3f",
     "render.MixinPatchWorldRenderer",
-    "render.MixinRenderLayer"
+    "render.MixinRenderLayer",
+    "world.MixinPatchClientChunkManager"
   ],
   "injectors": {
     "defaultRequire": 1

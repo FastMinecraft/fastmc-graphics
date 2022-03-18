@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package me.luna.fastmc.util
 
 import net.minecraft.block.ChestBlock
@@ -9,6 +11,7 @@ import net.minecraft.util.Identifier
 import net.minecraft.util.math.Matrix4f
 import net.minecraft.util.profiler.Profiler
 import net.minecraft.world.World
+import java.util.concurrent.Future
 
 fun Matrix4f.toJoml(dest: org.joml.Matrix4f): org.joml.Matrix4f {
     dest.m00(this.a00)
@@ -52,23 +55,26 @@ fun Matrix4f.toJoml(): org.joml.Matrix4f {
     )
 }
 
-fun Profiler.startSection(name: String) {
+inline fun Profiler.startSection(name: String) {
     this.push(name)
 }
 
-fun Profiler.endSection() {
+inline fun Profiler.endSection() {
     this.pop()
 }
 
-fun Profiler.endStartSection(name: String) {
+inline fun Profiler.endStartSection(name: String) {
     this.swap(name)
 }
 
-val Minecraft.renderViewEntity: Entity?
+inline val Minecraft.renderViewEntity: Entity?
     get() = this.cameraEntity
 
-val World.loadedTileEntityList: List<TileEntity>
+inline val World.loadedTileEntityList: List<TileEntity>
     get() = this.blockEntities
+
+inline val Future<*>?.isDoneOrNull: Boolean
+    get() = this == null || this.isDone
 
 typealias Minecraft = MinecraftClient
 typealias BlockChest = ChestBlock

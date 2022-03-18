@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_8",
   "package": "me.luna.fastmc.mixin.accessor",
   "client": [
+    "AccessorChunkBuilder",
     "AccessorVertexBuffer",
     "AccessorWorldRenderer"
   ],

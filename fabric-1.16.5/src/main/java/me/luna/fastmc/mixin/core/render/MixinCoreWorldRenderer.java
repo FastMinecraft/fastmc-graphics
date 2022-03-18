@@ -12,7 +12,6 @@ import net.minecraft.client.gl.Framebuffer;
 import net.minecraft.client.gl.ShaderEffect;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.CloudRenderMode;
-import net.minecraft.client.option.Option;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
@@ -23,7 +22,6 @@ import net.minecraft.client.util.math.Vector3d;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Util;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -188,20 +186,6 @@ public abstract class MixinCoreWorldRenderer {
         BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, Math.max(g - 16.0F, 32.0F), bl2);
         profiler.swap("terrainSetup");
         this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
-        profiler.swap("updateChunks");
-        int j = this.client.options.maxFps;
-        long n;
-        if ((double) j == Option.FRAMERATE_LIMIT.getMax()) {
-            n = 0L;
-        } else {
-            n = 1000000000 / j;
-        }
-
-        long o = Util.getMeasuringTimeNano() - limitTime;
-        long p = this.chunkUpdateSmoother.getTargetUsedTime(o);
-        long q = p * 3L / 2L;
-        long r = MathHelper.clamp(q, n, 33333333L);
-        this.updateChunks(limitTime + r);
         profiler.swap("terrain");
         this.renderLayer(RenderLayer.getSolid(), matrices, renderPosX, renderPosY, renderPosZ);
         this.renderLayer(RenderLayer.getCutoutMipped(), matrices, renderPosX, renderPosY, renderPosZ);
