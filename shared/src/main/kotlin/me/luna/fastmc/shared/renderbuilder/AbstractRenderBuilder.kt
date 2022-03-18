@@ -144,12 +144,19 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     open class Renderer(
         renderInfo: RenderInfo
     ) : IRenderInfo by renderInfo {
-        fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double) {
+        private val matrixSwap = Matrix4f()
+
+        fun render(renderer: IRenderer) {
             shader.bind()
             preRender()
 
-            shader.updateOffset(builtPosX - renderPosX, builtPosY - renderPosY, builtPosZ - renderPosZ)
-            shader.updateModelViewMatrix(modelView)
+            renderer.modelViewMatrix.translate(
+                (builtPosX - renderer.renderPosX).toFloat(),
+                (builtPosY - renderer.renderPosY).toFloat(),
+                (builtPosZ - renderer.renderPosZ).toFloat(),
+                matrixSwap
+            )
+            shader.updateModelViewMatrix(matrixSwap)
 
             glBindVertexArray(vao.id)
             glDrawArraysInstanced(GL_TRIANGLES, 0, modelSize, size)

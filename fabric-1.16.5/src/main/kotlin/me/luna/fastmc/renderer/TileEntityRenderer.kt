@@ -10,6 +10,7 @@ import me.luna.fastmc.shared.renderbuilder.tileentity.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.renderer.IRenderer
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
@@ -17,7 +18,6 @@ import me.luna.fastmc.tileentity.ChestInfo
 import me.luna.fastmc.util.*
 import net.minecraft.block.enums.ChestType
 import net.minecraft.util.math.Direction
-import org.joml.Matrix4f
 import kotlin.coroutines.CoroutineContext
 
 class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
@@ -223,9 +223,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
             largeDirty = true
         }
 
-        override fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double) {
-            smallChestRenderer?.render(modelView, renderPosX, renderPosY, renderPosZ)
-            largeChestRenderer?.render(modelView, renderPosX, renderPosY, renderPosZ)
+        override fun render(renderer: IRenderer) {
+            smallChestRenderer?.render(renderer)
+            largeChestRenderer?.render(renderer)
         }
 
         override fun markDirty() {

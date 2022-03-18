@@ -2,7 +2,6 @@
 
 uniform mat4 projection;
 uniform mat4 modelView;
-uniform vec3 offset;
 
 uniform float alpha;
 uniform float partialTicks;
@@ -35,7 +34,7 @@ void main() {
     mat3 rotationMatrix = mat3(1.0);
     rotationMatrix = rotateY90(rotationMatrix, rotationY);
 
-    gl_Position = projection * modelView * vec4(modelPosition * 1.0001 * rotationMatrix + (renderPosition + offset), 1.0);
+    gl_Position = projection * modelView * vec4(modelPosition * 1.0001 * rotationMatrix + renderPosition, 1.0);
     uv = vertUV * 0.25 + vec2(float(colorIndex % 4), float(colorIndex / 4)) * 0.25;
     normal = vertNormal * rotationMatrix;
     lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;

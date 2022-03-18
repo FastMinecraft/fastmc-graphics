@@ -93,7 +93,7 @@ void main() {
             position += legOffset;
     }
 
-    gl_Position = projection * modelView * vec4(position * rotationMatrix + (renderPosition + offset), 1.0);
+    gl_Position = projection * modelView * vec4(position * rotationMatrix + renderPosition, 1.0);
 
     uv = modelUV;
     normal = modelNormal * rotationMatrix;

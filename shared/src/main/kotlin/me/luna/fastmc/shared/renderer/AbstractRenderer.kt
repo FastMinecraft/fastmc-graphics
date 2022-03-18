@@ -7,7 +7,6 @@ import me.luna.fastmc.shared.util.ClassIDRegistry
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import me.luna.fastmc.shared.util.collection.FastIntMap
-import org.joml.Matrix4f
 import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractRenderer<ET : Any>(
@@ -69,7 +68,7 @@ abstract class AbstractRenderer<ET : Any>(
 
     open fun render() {
         renderEntryList.forEach {
-            it.render(modelViewMatrix, renderPosX, renderPosY, renderPosZ)
+            it.render(this)
         }
     }
 
@@ -86,7 +85,7 @@ abstract class AbstractRenderer<ET : Any>(
 
         abstract suspend fun update(mainThreadContext: CoroutineContext, parentScope: CoroutineScope)
 
-        abstract fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double)
+        abstract fun render(renderer: IRenderer)
 
         abstract fun destroyRenderer()
 
@@ -151,8 +150,8 @@ abstract class AbstractRenderer<ET : Any>(
             }
         }
 
-        override fun render(modelView: Matrix4f, renderPosX: Double, renderPosY: Double, renderPosZ: Double) {
-            renderer?.render(modelView, renderPosX, renderPosY, renderPosZ)
+        override fun render(renderer: IRenderer) {
+            this.renderer?.render(renderer)
         }
 
         override fun destroyRenderer() {
