@@ -1,5 +1,11 @@
 package me.luna.fastmc.util
 
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import me.luna.fastmc.FastMcMod
+import me.luna.fastmc.shared.util.FastMcCoreScope
+import me.luna.fastmc.shared.util.FastMcExtendScope
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.ChunkPos
 import net.minecraft.util.math.ChunkSectionPos
@@ -7,60 +13,38 @@ import net.minecraft.world.LightType
 import net.minecraft.world.chunk.ChunkNibbleArray
 import net.minecraft.world.chunk.ChunkProvider
 import net.minecraft.world.chunk.light.LightingProvider
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
 
 class OffThreadLightingProvider(
     chunkProvider: ChunkProvider,
     hasBlockLight: Boolean, hasSkyLight: Boolean
 ) : LightingProvider(chunkProvider, hasBlockLight, hasSkyLight) {
     override fun setSectionStatus(pos: ChunkSectionPos, notReady: Boolean) {
-        if (checkThread()) {
+        channel.trySend {
             super.setSectionStatus(pos, notReady)
-        } else {
-            queue.offer {
-                super.setSectionStatus(pos, notReady)
-            }
         }
     }
 
     override fun setSectionStatus(pos: BlockPos, notReady: Boolean) {
-        if (checkThread()) {
+        channel.trySend {
             super.setSectionStatus(pos, notReady)
-        } else {
-            queue.offer {
-                super.setSectionStatus(pos, notReady)
-            }
         }
     }
 
     override fun checkBlock(pos: BlockPos?) {
-        if (checkThread()) {
+        channel.trySend {
             super.checkBlock(pos)
-        } else {
-            queue.offer {
-                super.checkBlock(pos)
-            }
         }
     }
 
     override fun addLightSource(pos: BlockPos, level: Int) {
-        if (checkThread()) {
+        channel.trySend {
             super.addLightSource(pos, level)
-        } else {
-            queue.offer {
-                super.addLightSource(pos, level)
-            }
         }
     }
 
     override fun setColumnEnabled(pos: ChunkPos, lightEnabled: Boolean) {
-        if (checkThread()) {
+        channel.trySend {
             super.setColumnEnabled(pos, lightEnabled)
-        } else {
-            queue.offer {
-                super.setColumnEnabled(pos, lightEnabled)
-            }
         }
     }
 
@@ -70,51 +54,44 @@ class OffThreadLightingProvider(
         nibbles: ChunkNibbleArray?,
         bl: Boolean
     ) {
-        if (checkThread()) {
+        channel.trySend {
             super.enqueueSectionData(lightType, pos, nibbles, bl)
-        } else {
-            queue.offer {
-                super.enqueueSectionData(lightType, pos, nibbles, bl)
-            }
         }
     }
 
     override fun setRetainData(pos: ChunkPos, retainData: Boolean) {
-        if (checkThread()) {
+        channel.trySend {
             super.setRetainData(pos, retainData)
-        } else {
-            queue.offer {
-                super.setRetainData(pos, retainData)
+        }
+    }
+
+    suspend fun doLightUpdates(doSkylight: Boolean, skipEdgeLightPropagation: Boolean) {
+        coroutineScope {
+            launch(FastMcExtendScope.context) {
+                blockLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, skipEdgeLightPropagation)
+            }
+            launch(FastMcExtendScope.context) {
+                skyLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, skipEdgeLightPropagation)
             }
         }
     }
 
-    fun scheduleUpdate(runnable: Runnable) {
-        if (checkThread()) {
-            runnable.run()
-        } else {
-            queue.offer(runnable)
-        }
-    }
-
-    @Suppress("NOTHING_TO_INLINE")
-    private inline fun checkThread(): Boolean {
-        return Thread.currentThread() === thread
+    fun scheduleUpdate(block: suspend () -> Unit) {
+        channel.trySend(block)
     }
 
     private companion object {
-        val queue = LinkedBlockingQueue<Runnable>()
-        val thread = Thread({
+        val channel = Channel<suspend () -> Unit>(capacity = Channel.UNLIMITED)
+        val thread = FastMcCoreScope.launch {
             while (true) {
                 try {
-                    queue.poll(1L, TimeUnit.SECONDS)?.run()
-                } catch (e: InterruptedException) {
-                    queue.clear()
+                    for (block in channel) {
+                        block.invoke()
+                    }
+                } catch (e: Exception) {
+                    FastMcMod.logger.error("Lighting update error", e)
                 }
             }
-        }, "Lighting Update").apply {
-            isDaemon = true
-            start()
         }
     }
 }

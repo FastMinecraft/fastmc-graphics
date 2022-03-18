@@ -31,17 +31,17 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
     fun runLightUpdates() {
         val world = mc.world ?: return
 
-        var pos = lightUpdateQueue.poll()
-        while (pos != null) {
-            mc.worldRenderer.scheduleBlockRender(pos.sectionX, pos.sectionY, pos.sectionZ)
-            pos = lightUpdateQueue.poll()
-        }
-
         if (updating.getAndSet(false)) {
+            var pos = lightUpdateQueue.poll()
+            while (pos != null) {
+                mc.worldRenderer.scheduleBlockRender(pos.sectionX, pos.sectionY, pos.sectionZ)
+                pos = lightUpdateQueue.poll()
+            }
+
             val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
             provider.scheduleUpdate {
                 try {
-                    provider.doLightUpdates(Int.MAX_VALUE, true, false)
+                    provider.doLightUpdates(doSkylight = true, skipEdgeLightPropagation = false)
                 } finally {
                     updating.set(true)
                 }
