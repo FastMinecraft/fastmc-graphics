@@ -10,9 +10,13 @@
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
     "render.MixinModelPart",
+    "render.MixinPatchBillboardParticle",
+    "render.MixinPatchEmitterParticle",
     "render.MixinPatchMatrix3f",
     "render.MixinPatchMatrix4f",
     "render.MixinPatchMatrixStack",
+    "render.MixinPatchParticle",
+    "render.MixinPatchParticleManager",
     "render.MixinPatchWorldRenderer",
     "render.MixinRenderLayer",
     "world.MixinPatchClientChunkManager"
