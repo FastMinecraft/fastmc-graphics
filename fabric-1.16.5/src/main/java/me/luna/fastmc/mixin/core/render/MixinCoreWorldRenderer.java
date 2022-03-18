@@ -363,6 +363,12 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.disableBlend();
         RenderSystem.popMatrix();
         BackgroundRenderer.method_23792();
+
+        try {
+            ((IPatchedWorldRenderer) this).setTicked(false);
+        } catch (Exception e) {
+            // Ignored
+        }
     }
 
     @SuppressWarnings("deprecation")

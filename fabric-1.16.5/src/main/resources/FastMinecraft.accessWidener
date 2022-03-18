@@ -22,6 +22,9 @@ accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo direction L
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo cullingState B
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo propagationLevel I
 
+accessible field net/minecraft/world/chunk/light/LightingProvider blockLightProvider Lnet/minecraft/world/chunk/light/ChunkLightProvider;
+accessible field net/minecraft/world/chunk/light/LightingProvider skyLightProvider Lnet/minecraft/world/chunk/light/ChunkLightProvider;
+
 accessible field net/minecraft/client/model/ModelPart$Cuboid sides [Lnet/minecraft/client/model/ModelPart$Quad;
 
 accessible field net/minecraft/util/math/Matrix3f a00 F

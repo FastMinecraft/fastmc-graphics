@@ -22,6 +22,7 @@ import java.util.function.IntUnaryOperator
 import kotlin.math.max
 
 interface IPatchedWorldRenderer {
+    var ticked: Boolean
     val renderTileEntityList: List<BlockEntity>
 
     fun recursiveSetupTerrainIteration(

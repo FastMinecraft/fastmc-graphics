@@ -113,6 +113,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private int lastCameraZ0 = Integer.MAX_VALUE;
     private int lastCameraYaw0 = Integer.MAX_VALUE;
     private int lastCameraPitch0 = Integer.MAX_VALUE;
+    private boolean ticked = false;
 
     private static FastObjectArrayList<ChunkBuilder.BuiltChunk>[] getArray() {
         int size = RenderLayer.getBlockLayers().size();
@@ -197,88 +198,90 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             this.chunks.updateCameraPosition(this.client.player.getX(), this.client.player.getZ());
         }
 
-        this.client.getProfiler().swap("updateChunks");
-        this.chunkBuilder.setCameraPosition(camera.getPos());
-        this.needsTerrainUpdate = this.chunkBuilder.upload() || this.needsTerrainUpdate;
+        if (!this.getTicked()) {
+            this.client.getProfiler().swap("updateChunks");
+            this.chunkBuilder.setCameraPosition(camera.getPos());
+            this.needsTerrainUpdate = this.chunkBuilder.upload() || this.needsTerrainUpdate;
 
-        this.client.getProfiler().swap("culling");
-        BlockPos cameraBlockPos = camera.getBlockPos();
+            this.client.getProfiler().swap("culling");
+            BlockPos cameraBlockPos = camera.getBlockPos();
 
-        int cameraPosX0 = cameraBlockPos.getX() >> 1;
-        int cameraPosY0 = cameraBlockPos.getY() >> 1;
-        int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
-        int cameraYaw0 = MathHelper.floor(camera.getYaw());
-        int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
+            int cameraPosX0 = cameraBlockPos.getX() >> 1;
+            int cameraPosY0 = cameraBlockPos.getY() >> 1;
+            int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
+            int cameraYaw0 = MathHelper.floor(camera.getYaw());
+            int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
 
-        if (!hasForcedFrustum
-            && (this.needsTerrainUpdate
-            || cameraPosX0 != this.lastCameraX0
-            || cameraPosY0 != this.lastCameraY0
-            || cameraPosZ0 != this.lastCameraZ0
-            || cameraYaw0 != this.lastCameraYaw0
-            || cameraPitch0 != this.lastCameraPitch0)) {
-            this.lastCameraX0 = cameraPosX0;
-            this.lastCameraY0 = cameraPosY0;
-            this.lastCameraZ0 = cameraPosZ0;
-            this.lastCameraYaw0 = cameraYaw0;
-            this.lastCameraPitch0 = cameraPitch0;
+            if (!hasForcedFrustum
+                && (this.needsTerrainUpdate
+                || cameraPosX0 != this.lastCameraX0
+                || cameraPosY0 != this.lastCameraY0
+                || cameraPosZ0 != this.lastCameraZ0
+                || cameraYaw0 != this.lastCameraYaw0
+                || cameraPitch0 != this.lastCameraPitch0)) {
+                this.lastCameraX0 = cameraPosX0;
+                this.lastCameraY0 = cameraPosY0;
+                this.lastCameraZ0 = cameraPosZ0;
+                this.lastCameraYaw0 = cameraYaw0;
+                this.lastCameraPitch0 = cameraPitch0;
 
-            this.needsTerrainUpdate = false;
+                this.needsTerrainUpdate = false;
 
-            this.visibleChunks.clear();
-            clearRenderLists();
+                this.visibleChunks.clear();
+                clearRenderLists();
 
-            Entity.setRenderDistanceMultiplier(MathHelper.clamp(this.client.options.viewDistance / 8.0D, 1.0D, 2.5D) * this.client.options.entityDistanceScaling);
-            boolean chunkCulling = this.client.chunkCullingEnabled;
+                Entity.setRenderDistanceMultiplier(MathHelper.clamp(this.client.options.viewDistance / 8.0D, 1.0D, 2.5D) * this.client.options.entityDistanceScaling);
+                boolean chunkCulling = this.client.chunkCullingEnabled;
 
-            ChunkBuilder.BuiltChunk builtChunk = patchedChunks.getRenderedChunk(cameraBlockPos);
-            ObjectArrayList<WorldRenderer.ChunkInfo> list = new ObjectArrayList<>();
+                ChunkBuilder.BuiltChunk builtChunk = patchedChunks.getRenderedChunk(cameraBlockPos);
+                ObjectArrayList<WorldRenderer.ChunkInfo> list = new ObjectArrayList<>();
 
-            if (builtChunk != null) {
-                if (spectator && this.world.getBlockState(cameraBlockPos).isOpaqueFullCube(this.world, cameraBlockPos)) {
-                    chunkCulling = false;
-                }
+                if (builtChunk != null) {
+                    if (spectator && this.world.getBlockState(cameraBlockPos).isOpaqueFullCube(this.world, cameraBlockPos)) {
+                        chunkCulling = false;
+                    }
 
-                builtChunk.setRebuildFrame(frame);
-                list.add(thisRef.new ChunkInfo(builtChunk, null, 0));
-            } else {
-                int chunkY = cameraBlockPos.getY() > 0 ? 248 : 8;
-                int cameraChunkX = cameraBlockPos.getX() >> 4;
-                int cameraChunkZ = cameraBlockPos.getZ() >> 4;
-                Comparator<WorldRenderer.ChunkInfo> comparator = Comparator.comparingInt(it -> {
-                    BlockPos chunkPos = it.chunk.getOrigin();
-                    int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
-                    int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
-                    int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
-                    return diffX * diffX + diffY * diffY + diffZ * diffZ;
-                });
+                    builtChunk.setRebuildFrame(frame);
+                    list.add(thisRef.new ChunkInfo(builtChunk, null, 0));
+                } else {
+                    int chunkY = cameraBlockPos.getY() > 0 ? 248 : 8;
+                    int cameraChunkX = cameraBlockPos.getX() >> 4;
+                    int cameraChunkZ = cameraBlockPos.getZ() >> 4;
+                    Comparator<WorldRenderer.ChunkInfo> comparator = Comparator.comparingInt(it -> {
+                        BlockPos chunkPos = it.chunk.getOrigin();
+                        int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
+                        int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
+                        int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
+                        return diffX * diffX + diffY * diffY + diffZ * diffZ;
+                    });
 
-                for (int iChunkX = -this.viewDistance; iChunkX <= this.viewDistance; iChunkX++) {
-                    for (int iChunkZ = -this.viewDistance; iChunkZ <= this.viewDistance; iChunkZ++) {
-                        ChunkBuilder.BuiltChunk builtChunk2 = patchedChunks.getRenderedChunk(cameraChunkX + iChunkX, chunkY, cameraChunkZ + iChunkZ);
-                        if (builtChunk2 != null && frustum.isVisible(builtChunk2.boundingBox)) {
-                            builtChunk2.setRebuildFrame(frame);
-                            list.add(thisRef.new ChunkInfo(builtChunk2, null, 0));
+                    for (int iChunkX = -this.viewDistance; iChunkX <= this.viewDistance; iChunkX++) {
+                        for (int iChunkZ = -this.viewDistance; iChunkZ <= this.viewDistance; iChunkZ++) {
+                            ChunkBuilder.BuiltChunk builtChunk2 = patchedChunks.getRenderedChunk(cameraChunkX + iChunkX, chunkY, cameraChunkZ + iChunkZ);
+                            if (builtChunk2 != null && frustum.isVisible(builtChunk2.boundingBox)) {
+                                builtChunk2.setRebuildFrame(frame);
+                                list.add(thisRef.new ChunkInfo(builtChunk2, null, 0));
+                            }
                         }
                     }
+
+                    Arrays.sort(list.elements(), 0, list.size(), comparator);
                 }
 
-                Arrays.sort(list.elements(), 0, list.size(), comparator);
+                this.client.getProfiler().push("iteration");
+                BlockPos cameraChunkBlockPos = new BlockPos(
+                    cameraBlockPos.getX() >> 4 << 4,
+                    cameraBlockPos.getY() >> 4 << 4,
+                    cameraBlockPos.getZ() >> 4 << 4
+                );
+                this.setupTerrainIteration((FastObjectArrayList<WorldRenderer.ChunkInfo>) visibleChunks, renderTileEntityList.get(), filteredRenderInfos.get(), frustum, frame, cameraChunkBlockPos, chunkCulling, list);
+                list.clear();
+                this.client.getProfiler().pop();
             }
 
-            this.client.getProfiler().push("iteration");
-            BlockPos cameraChunkBlockPos = new BlockPos(
-                cameraBlockPos.getX() >> 4 << 4,
-                cameraBlockPos.getY() >> 4 << 4,
-                cameraBlockPos.getZ() >> 4 << 4
-            );
-            this.setupTerrainIteration((FastObjectArrayList<WorldRenderer.ChunkInfo>) visibleChunks, renderTileEntityList.get(), filteredRenderInfos.get(), frustum, frame, cameraChunkBlockPos, chunkCulling, list);
-            list.clear();
-            this.client.getProfiler().pop();
+            this.client.getProfiler().swap("rebuildNear");
+            this.rebuildNear(cameraBlockPos);
         }
-
-        this.client.getProfiler().swap("rebuildNear");
-        this.rebuildNear(cameraBlockPos);
         this.client.getProfiler().pop();
     }
 
@@ -312,27 +315,25 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         oldSet.clear();
 
         if (!list.isEmpty()) {
-            Arrays.sort(list.elements(), 0, list.size(), Comparator.comparingInt(it -> {
-                BlockPos chunkPos = it.getOrigin();
-                int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
-                int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
-                int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
-                return -(diffX * diffX + diffY * diffY + diffZ * diffZ);
-            }));
-
             this.client.getProfiler().swap("updateChunks");
             if (((AccessorChunkBuilder) this.chunkBuilder).getQueuedTaskCount() < ParallelUtils.CPU_THREADS * 2) {
+                Arrays.sort(list.elements(), 0, list.size(), Comparator.comparingInt(it -> {
+                    BlockPos chunkPos = it.getOrigin();
+                    int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
+                    int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
+                    int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
+                    return -(diffX * diffX + diffY * diffY + diffZ * diffZ);
+                }));
+
                 ChunkBuilder.BuiltChunk[] array = new ChunkBuilder.BuiltChunk[Math.min(list.size(), ParallelUtils.CPU_THREADS)];
                 for (int i = 0; i < array.length; i++) {
                     int last = list.size() - 1;
                     ChunkBuilder.BuiltChunk builtChunk = list.get(last);
+                    builtChunk.cancelRebuild();
+
                     list.remove(last);
                     newSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
                     array[i] = builtChunk;
-                }
-
-                for (int i = 0; i < array.length; i++) {
-                    array[i].cancelRebuild();
                 }
 
                 FastMcExtendScope.INSTANCE.getPool().execute(() -> {
@@ -491,5 +492,15 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Override
     public List<BlockEntity> getRenderTileEntityList() {
         return renderTileEntityList.get();
+    }
+
+    @Override
+    public void setTicked(boolean ticked) {
+        this.ticked = ticked;
+    }
+
+    @Override
+    public boolean getTicked() {
+        return ticked;
     }
 }

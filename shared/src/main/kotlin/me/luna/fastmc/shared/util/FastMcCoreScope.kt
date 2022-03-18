@@ -10,9 +10,9 @@ private val group = ThreadGroup("FastMinecraft").apply {
 }
 
 private val extendPool0 = object : ThreadPoolExecutor(
-    ParallelUtils.CPU_THREADS,
+    0,
     ParallelUtils.CPU_THREADS * 4,
-    1L,
+    3L,
     TimeUnit.SECONDS,
     ArrayBlockingQueue(ParallelUtils.CPU_THREADS),
     object : ThreadFactory {
