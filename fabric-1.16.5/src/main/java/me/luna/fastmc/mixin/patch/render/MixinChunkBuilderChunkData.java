@@ -31,7 +31,6 @@ public abstract class MixinChunkBuilderChunkData implements IPatchedChunkData {
         this.blockEntities = new FastObjectArrayList<>();
     }
 
-
     /**
      * @author Luna
      * @reason Fast look up

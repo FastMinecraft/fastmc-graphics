@@ -98,9 +98,6 @@ public abstract class MixinCoreWorldRenderer {
     protected abstract void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator);
 
     @Shadow
-    protected abstract void updateChunks(long limitTime);
-
-    @Shadow
     protected abstract void renderLayer(RenderLayer renderLayer, MatrixStack matrixStack, double d, double e, double f);
 
     @Shadow
@@ -145,7 +142,7 @@ public abstract class MixinCoreWorldRenderer {
      */
     @SuppressWarnings({ "ConstantConditions", "deprecation" })
     @Overwrite
-    public void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f matrix4f) {
+    public void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f projection) {
         BlockEntityRenderDispatcher.INSTANCE.configure(this.world, this.client.getTextureManager(), this.client.textRenderer, camera, this.client.crosshairTarget);
         this.entityRenderDispatcher.configure(this.world, camera, this.client.targetedEntity);
         Profiler profiler = this.world.getProfiler();
@@ -153,7 +150,9 @@ public abstract class MixinCoreWorldRenderer {
         double renderPosX = vec3d.getX();
         double renderPosY = vec3d.getY();
         double renderPosZ = vec3d.getZ();
-        Matrix4f matrix4f2 = matrices.peek().getModel();
+        Matrix4f modelView = matrices.peek().getModel();
+        FastMcMod.INSTANCE.getWorldRenderer().setupCamera(AdaptersKt.toJoml(projection), AdaptersKt.toJoml(modelView));
+
         profiler.swap("culling");
         boolean bl = this.capturedFrustum != null;
         Frustum frustum;
@@ -161,13 +160,13 @@ public abstract class MixinCoreWorldRenderer {
             frustum = this.capturedFrustum;
             frustum.setPosition(this.capturedFrustumPosition.x, this.capturedFrustumPosition.y, this.capturedFrustumPosition.z);
         } else {
-            frustum = new Frustum(matrix4f2, matrix4f);
+            frustum = new Frustum(modelView, projection);
             frustum.setPosition(renderPosX, renderPosY, renderPosZ);
         }
 
         this.client.getProfiler().swap("captureFrustum");
         if (this.shouldCaptureFrustum) {
-            this.captureFrustum(matrix4f2, matrix4f, vec3d.x, vec3d.y, vec3d.z, bl ? new Frustum(matrix4f2, matrix4f) : frustum);
+            this.captureFrustum(modelView, projection, vec3d.x, vec3d.y, vec3d.z, bl ? new Frustum(modelView, projection) : frustum);
             this.shouldCaptureFrustum = false;
         }
 
@@ -236,7 +235,7 @@ public abstract class MixinCoreWorldRenderer {
         profiler.push("vanilla");
         renderTileEntityVanilla(matrices, tickDelta, renderPosX, renderPosY, renderPosZ, immediate);
         profiler.swap("fastMinecraft");
-        renderTileEntityFastMc(matrices, tickDelta, matrix4f);
+        renderTileEntityFastMc(matrices, tickDelta, projection);
         profiler.pop();
 
         // Entity outline
@@ -418,7 +417,6 @@ public abstract class MixinCoreWorldRenderer {
 
     private void renderTileEntityFastMc(MatrixStack matrices, float tickDelta, Matrix4f matrix4f) {
         MatrixStack.Entry entry = matrices.peek();
-        FastMcMod.INSTANCE.getWorldRenderer().setupCamera(AdaptersKt.toJoml(matrix4f), AdaptersKt.toJoml(entry.getModel()));
         FastMcMod.INSTANCE.getWorldRenderer().preRender(tickDelta);
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().render();
         FastMcMod.INSTANCE.getWorldRenderer().postRender();

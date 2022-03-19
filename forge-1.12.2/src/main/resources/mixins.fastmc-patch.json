@@ -5,7 +5,6 @@
   "package": "me.luna.fastmc.mixin.patch",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
-    "render.MixinBlockRenderLayer",
     "MixinEnumFacing",
     "MixinMinecraft",
     "MixinTextFormatting",
@@ -14,6 +13,7 @@
     "optifine.MixinConfig",
     "player.MixinPlayerControllerMP",
     "render.MixinActiveRenderInfo",
+    "render.MixinBlockRenderLayer",
     "render.MixinClippingHelperImpl",
     "render.MixinCompiledChunk",
     "render.MixinRenderGlobal",

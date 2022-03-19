@@ -5,6 +5,7 @@ import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.ChunkBuilder;
+import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -64,5 +65,11 @@ public abstract class MixinChunkBuilderBuiltChunk implements IPatchedBuiltChunk 
     @Override
     public void setIndex(int index) {
         this.index = index;
+    }
+
+    @NotNull
+    @Override
+    public VertexBuffer @NotNull [] getBufferArray() {
+        return bufferArray;
     }
 }

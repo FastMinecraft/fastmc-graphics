@@ -1,6 +1,5 @@
 package me.luna.fastmc.mixin.patch.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
@@ -91,6 +90,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
     @Shadow
     public abstract void setWorld(@Nullable ClientWorld world);
+
+    @Shadow protected abstract int getCompletedChunkCount();
 
     private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
@@ -466,16 +467,14 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         layer.endDrawing();
     }
 
-    @SuppressWarnings("deprecation")
     private void renderLayer(RenderLayer layer, double renderPosX, double renderPosY, double renderPosZ, ChunkBuilder.BuiltChunk builtChunk) {
         VertexBuffer vertexBuffer = builtChunk.getBuffer(layer);
         AccessorVertexBuffer accessor = ((AccessorVertexBuffer) vertexBuffer);
 
-        RenderSystem.loadIdentity();
         BlockPos blockPos = builtChunk.getOrigin();
         original.translate((float) (blockPos.getX() - renderPosX), (float) (blockPos.getY() - renderPosY), (float) (blockPos.getZ() - renderPosZ), translated);
         MatrixUtils.INSTANCE.putMatrix(translated);
-        GlStateManager.multMatrix(MatrixUtils.INSTANCE.getMatrixBuffer());
+        glLoadMatrixf(MatrixUtils.INSTANCE.getMatrixBuffer());
 
         glBindBuffer(GL_ARRAY_BUFFER, accessor.getVertexBufferId());
         glVertexPointer(3, GL_FLOAT, 32, 0);
@@ -486,6 +485,31 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         glClientActiveTexture(GL_TEXTURE0);
 
         RenderSystem.drawArrays(GL_QUADS, 0, accessor.getVertexCount());
+    }
+
+    /**
+     * @author Luna
+     * @reason Debug
+     */
+    @Overwrite
+    public String getChunksDebugString() {
+        ChunkBuilder.BuiltChunk[] builtChunks = this.chunks.chunks;
+        long vboSize = 0;
+        for (int i = 0; i < builtChunks.length; i++) {
+            VertexBuffer[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getBufferArray();
+            for (int i2 = 0; i2 < bufferArray.length; i2++) {
+                vboSize += ((AccessorVertexBuffer) bufferArray[i2]).getVertexCount() * 32L;
+            }
+        }
+        return String.format(
+            "C: %d/%d(%.1f MB) %sD: %d, %s",
+            this.getCompletedChunkCount(),
+            builtChunks.length,
+            (double) vboSize / 1048576.0,
+            this.client.chunkCullingEnabled ? "(s) " : "",
+            this.viewDistance,
+            this.chunkBuilder == null ? "null" : this.chunkBuilder.getDebugString()
+        );
     }
 
     @NotNull
