@@ -10,6 +10,7 @@
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
     "render.MixinModelPart",
+    "render.MixinPatchBackgroundRenderer",
     "render.MixinPatchBillboardParticle",
     "render.MixinPatchEmitterParticle",
     "render.MixinPatchMatrix3f",
@@ -17,6 +18,7 @@
     "render.MixinPatchMatrixStack",
     "render.MixinPatchParticle",
     "render.MixinPatchParticleManager",
+    "render.MixinPatchVoronoiBiomeAccessType",
     "render.MixinPatchWorldRenderer",
     "render.MixinRenderLayer",
     "world.MixinPatchClientChunkManager"
