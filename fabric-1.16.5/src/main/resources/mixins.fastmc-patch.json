@@ -6,6 +6,7 @@
   "client": [
     "MixinPatchMinecraftClient",
     "render.MixinBuiltChunkStorage",
+    "render.MixinChunkBuilder",
     "render.MixinChunkBuilderBuiltChunk",
     "render.MixinChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",

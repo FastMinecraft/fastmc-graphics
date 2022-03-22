@@ -33,10 +33,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.*;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
@@ -101,15 +98,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
     private final Matrix4f original = new Matrix4f();
     private final Matrix4f translated = new Matrix4f();
-
-    private final ThreadPoolExecutor updateChunkThreadPool = new ThreadPoolExecutor(
-        0,
-        1,
-        15L,
-        TimeUnit.SECONDS,
-        new ArrayBlockingQueue<>(16),
-        it -> new Thread(it, "Chunk Update")
-    );
+    private final TickTimer loadingTimer = new TickTimer();
+    private final AtomicBoolean scheduling = new AtomicBoolean(false);
 
     private int lastCameraX0 = Integer.MAX_VALUE;
     private int lastCameraY0 = Integer.MAX_VALUE;
@@ -117,7 +107,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private int lastCameraYaw0 = Integer.MAX_VALUE;
     private int lastCameraPitch0 = Integer.MAX_VALUE;
     private boolean ticked = false;
-    private Future<?> lastUpdateTask = null;
 
     private static FastObjectArrayList<ChunkBuilder.BuiltChunk>[] getArray() {
         int size = RenderLayer.getBlockLayers().size();
@@ -166,8 +155,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         lastCameraZ0 = Integer.MAX_VALUE;
         lastCameraYaw0 = Integer.MAX_VALUE;
         lastCameraPitch0 = Integer.MAX_VALUE;
-
-        updateChunkThreadPool.getQueue().clear();
+        scheduling.set(false);
     }
 
     /**
@@ -205,30 +193,45 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         if (!this.getTicked()) {
             this.client.getProfiler().swap("updateChunks");
             this.chunkBuilder.setCameraPosition(camera.getPos());
-            this.needsTerrainUpdate = this.chunkBuilder.upload() || this.needsTerrainUpdate;
+            if (this.chunkBuilder.upload()) {
+                this.needsTerrainUpdate = true;
+            }
 
             this.client.getProfiler().swap("culling");
             BlockPos cameraBlockPos = camera.getBlockPos();
 
-            int cameraPosX0 = cameraBlockPos.getX() >> 1;
-            int cameraPosY0 = cameraBlockPos.getY() >> 1;
-            int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
-            int cameraYaw0 = MathHelper.floor(camera.getYaw());
-            int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
+            boolean update = false;
+            if (!hasForcedFrustum) {
+                int cameraPosX0 = cameraBlockPos.getX() >> 1;
+                int cameraPosY0 = cameraBlockPos.getY() >> 1;
+                int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
+                int cameraYaw0 = MathHelper.floor(camera.getYaw());
+                int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
 
-            if (!hasForcedFrustum
-                && (this.needsTerrainUpdate
-                || cameraPosX0 != this.lastCameraX0
-                || cameraPosY0 != this.lastCameraY0
-                || cameraPosZ0 != this.lastCameraZ0
-                || cameraYaw0 != this.lastCameraYaw0
-                || cameraPitch0 != this.lastCameraPitch0)) {
-                this.lastCameraX0 = cameraPosX0;
-                this.lastCameraY0 = cameraPosY0;
-                this.lastCameraZ0 = cameraPosZ0;
-                this.lastCameraYaw0 = cameraYaw0;
-                this.lastCameraPitch0 = cameraPitch0;
-                this.needsTerrainUpdate = false;
+                if (cameraPosX0 != lastCameraX0
+                    || cameraPosY0 != lastCameraY0
+                    || cameraPosZ0 != lastCameraZ0
+                    || cameraYaw0 != lastCameraYaw0
+                    || cameraPitch0 != lastCameraPitch0) {
+                    lastCameraX0 = cameraPosX0;
+                    lastCameraY0 = cameraPosY0;
+                    lastCameraZ0 = cameraPosZ0;
+                    lastCameraYaw0 = cameraYaw0;
+                    lastCameraPitch0 = cameraPitch0;
+                    loadingTimer.reset();
+                    update = true;
+                } else if (this.needsTerrainUpdate && loadingTimer.tick(250L)) {
+                    lastCameraX0 = cameraPosX0;
+                    lastCameraY0 = cameraPosY0;
+                    lastCameraZ0 = cameraPosZ0;
+                    lastCameraYaw0 = cameraYaw0;
+                    lastCameraPitch0 = cameraPitch0;
+                    update = true;
+                }
+            }
+
+            if (update) {
+                needsTerrainUpdate = false;
 
                 this.visibleChunks.clear();
                 clearRenderLists();
@@ -251,10 +254,10 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     int cameraChunkX = cameraBlockPos.getX() >> 4;
                     int cameraChunkZ = cameraBlockPos.getZ() >> 4;
                     Comparator<WorldRenderer.ChunkInfo> comparator = Comparator.comparingInt(it -> {
-                        BlockPos chunkPos = it.chunk.getOrigin();
-                        int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
-                        int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
-                        int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
+                        BlockPos chunkOrigin = it.chunk.getOrigin();
+                        int diffX = cameraBlockPos.getX() - (chunkOrigin.getX() + 8);
+                        int diffY = cameraBlockPos.getY() - (chunkOrigin.getY() + 8);
+                        int diffZ = cameraBlockPos.getZ() - (chunkOrigin.getZ() + 8);
                         return diffX * diffX + diffY * diffY + diffZ * diffZ;
                     });
 
@@ -282,10 +285,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                 this.client.getProfiler().pop();
             }
 
-            Future<?> lastUpdateTask = this.lastUpdateTask;
-            if (lastUpdateTask == null || lastUpdateTask.isDone()) {
-                this.client.getProfiler().swap("lightingUpdates");
-                ((me.luna.fastmc.renderer.WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).runLightUpdates();
+            if (!scheduling.get() && ((AccessorChunkBuilder) this.chunkBuilder).getQueuedTaskCount() < ParallelUtils.CPU_THREADS * 4) {
                 this.client.getProfiler().swap("rebuildNear");
                 this.rebuildNear(cameraBlockPos);
             }
@@ -300,6 +300,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         newSet.ensureCapacity(chunks.length);
 
         FastObjectArrayList<ChunkBuilder.BuiltChunk> list = new FastObjectArrayList<>();
+        ((me.luna.fastmc.renderer.WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).runLightUpdates();
 
         for (WorldRenderer.ChunkInfo renderInfo : this.visibleChunks) {
             ChunkBuilder.BuiltChunk builtChunk = renderInfo.chunk;
@@ -315,29 +316,20 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         oldSet.clear();
 
         if (!list.isEmpty()) {
-            this.client.getProfiler().swap("updateChunks");
-            updateChunks(cameraBlockPos, newSet, list);
-        }
-    }
-
-    private void updateChunks(BlockPos cameraBlockPos, ExtendedBitSet newSet, FastObjectArrayList<ChunkBuilder.BuiltChunk> list) {
-        if (((AccessorChunkBuilder) this.chunkBuilder).getQueuedTaskCount() < ParallelUtils.CPU_THREADS * 2) {
-            lastUpdateTask = FastMcCoreScope.INSTANCE.getPool().submit(() -> {
+            scheduling.set(true);
+            FastMcCoreScope.INSTANCE.getPool().submit(() -> {
                 Arrays.sort(list.elements(), 0, list.size(), Comparator.comparingInt(it -> {
                     BlockPos chunkPos = it.getOrigin();
                     int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
                     int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
                     int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
-                    return -(diffX * diffX + diffY * diffY + diffZ * diffZ);
+                    return diffX * diffX + diffY * diffY + diffZ * diffZ;
                 }));
 
-                ChunkBuilder.BuiltChunk[] array = new ChunkBuilder.BuiltChunk[Math.min(list.size(), ParallelUtils.CPU_THREADS)];
+                ChunkBuilder.BuiltChunk[] array = new ChunkBuilder.BuiltChunk[Math.min(list.size(), ParallelUtils.CPU_THREADS * 2)];
                 for (int i = 0; i < array.length; i++) {
-                    int last = list.size() - 1;
-                    ChunkBuilder.BuiltChunk builtChunk = list.get(last);
+                    ChunkBuilder.BuiltChunk builtChunk = list.get(i);
                     builtChunk.cancelRebuild();
-
-                    list.remove(last);
                     newSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
                     array[i] = builtChunk;
                 }
@@ -348,6 +340,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     builtChunk.cancelRebuild();
                     this.chunkBuilder.send(task);
                 }
+
+                scheduling.set(false);
             });
         }
     }

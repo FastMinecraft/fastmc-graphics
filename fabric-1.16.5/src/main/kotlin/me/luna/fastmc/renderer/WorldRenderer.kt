@@ -39,23 +39,25 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
             LightType.BLOCK -> pendingBlockLightUpdate
         }
         list.add(longPos)
-        list.add(System.currentTimeMillis() + 3000L)
+        list.add(System.currentTimeMillis() + 15000L)
     }
 
     fun runLightUpdates() {
         if (lightUpdate.isNotEmpty()) {
             val worldRenderer = mc.worldRenderer
             val builtChunkStorage = (worldRenderer as AccessorWorldRenderer).chunks as IPatchedBuiltChunkStorage
-            val iterator = lightUpdate.keys.iterator()
+            val iterator = lightUpdate.long2LongEntrySet().iterator()
+            val current = System.currentTimeMillis()
             while (iterator.hasNext()) {
-                val longPos = iterator.nextLong()
+                val entry = iterator.next()
+                val longPos = entry.longKey
                 val x = BlockPos.unpackLongX(longPos)
                 val y = BlockPos.unpackLongY(longPos)
                 val z = BlockPos.unpackLongZ(longPos)
                 val builtChunk = builtChunkStorage.getRenderedChunk(x, y, z)
                 if (builtChunk == null || builtChunk.origin.x shr 4 != x || builtChunk.origin.y shr 4 != y || builtChunk.origin.z shr 4 != z) {
                     iterator.remove()
-                } else if (!builtChunk.getData().isEmpty) {
+                } else if (entry.longValue < current || !builtChunk.getData().isEmpty) {
                     for (ix in -1..1) {
                         for (iy in -1..1) {
                             for (iz in -1..1) {
@@ -94,11 +96,6 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
                     lightUpdate.put(pendingBlockLightUpdate.getLong(i), pendingBlockLightUpdate.getLong(i + 1))
                 }
                 pendingBlockLightUpdate.clear()
-
-                val current = System.currentTimeMillis()
-                lightUpdate.values.removeIf(LongPredicate {
-                    it < current
-                })
 
                 val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
                 provider.scheduleUpdate {

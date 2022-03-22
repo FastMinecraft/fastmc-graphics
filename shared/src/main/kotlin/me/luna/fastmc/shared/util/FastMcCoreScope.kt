@@ -13,7 +13,7 @@ private val extendPool0 = object : ThreadPoolExecutor(
     0,
     ParallelUtils.CPU_THREADS * 4,
     3L,
-    TimeUnit.SECONDS,
+    java.util.concurrent.TimeUnit.SECONDS,
     ArrayBlockingQueue(ParallelUtils.CPU_THREADS),
     object : ThreadFactory {
         private val counter = AtomicInteger(1)
@@ -32,9 +32,9 @@ private val extendPool0 = object : ThreadPoolExecutor(
             val emptyRunnable = {}
 
             while (!this.isShutdown) {
-                lastTask = unboundQueue.poll(1L, TimeUnit.MILLISECONDS)
+                lastTask = unboundQueue.poll(1L, java.util.concurrent.TimeUnit.MILLISECONDS)
                 while (lastTask != null) {
-                    if (queue.offer(lastTask, 1L, TimeUnit.MILLISECONDS)) {
+                    if (queue.offer(lastTask, 1L, java.util.concurrent.TimeUnit.MILLISECONDS)) {
                         lastTask = null
                     }
                 }
