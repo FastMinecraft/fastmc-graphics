@@ -1,8 +1,12 @@
 package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
+import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongArrayList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import me.luna.fastmc.mixin.IPatchedBuiltChunkStorage
+import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
 import me.luna.fastmc.shared.opengl.glBindTexture
 import me.luna.fastmc.shared.opengl.glBindVertexArray
 import me.luna.fastmc.shared.opengl.glProgramUniform1f
@@ -13,37 +17,53 @@ import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.MatrixUtils
 import me.luna.fastmc.util.Minecraft
 import me.luna.fastmc.util.OffThreadLightingProvider
+import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.ChunkSectionPos
+import net.minecraft.world.LightType
 import org.lwjgl.opengl.GL11.*
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.function.LongPredicate
 import kotlin.coroutines.CoroutineContext
 
 class WorldRenderer(private val mc: Minecraft, override val resourceManager: IResourceManager) :
     AbstractWorldRenderer() {
-    private val lightUpdateQueue = ConcurrentLinkedQueue<ChunkSectionPos>()
+    private val lightUpdate = Long2LongLinkedOpenHashMap()
+    private val pendingSkyLightUpdate = LongArrayList()
+    private val pendingBlockLightUpdate = LongArrayList()
     private val updating = AtomicBoolean(true)
 
-    fun scheduleLightUpdate(pos: ChunkSectionPos) {
-        lightUpdateQueue.add(pos)
+    fun scheduleLightUpdate(type: LightType, pos: ChunkSectionPos) {
+        val longPos = pos.asLong()
+        val list = when (type) {
+            LightType.SKY -> pendingSkyLightUpdate
+            LightType.BLOCK -> pendingBlockLightUpdate
+        }
+        list.add(longPos)
+        list.add(System.currentTimeMillis() + 3000L)
     }
 
     fun runLightUpdates() {
-        val world = mc.world ?: return
-
-        if (updating.getAndSet(false)) {
-            var pos = lightUpdateQueue.poll()
-            while (pos != null) {
-                mc.worldRenderer.scheduleBlockRender(pos.sectionX, pos.sectionY, pos.sectionZ)
-                pos = lightUpdateQueue.poll()
-            }
-
-            val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
-            provider.scheduleUpdate {
-                try {
-                    provider.doLightUpdates(doSkylight = true, skipEdgeLightPropagation = false)
-                } finally {
-                    updating.set(true)
+        if (lightUpdate.isNotEmpty()) {
+            val worldRenderer = mc.worldRenderer
+            val builtChunkStorage = (worldRenderer as AccessorWorldRenderer).chunks as IPatchedBuiltChunkStorage
+            val iterator = lightUpdate.keys.iterator()
+            while (iterator.hasNext()) {
+                val longPos = iterator.nextLong()
+                val x = BlockPos.unpackLongX(longPos)
+                val y = BlockPos.unpackLongY(longPos)
+                val z = BlockPos.unpackLongZ(longPos)
+                val builtChunk = builtChunkStorage.getRenderedChunk(x, y, z)
+                if (builtChunk == null || builtChunk.origin.x shr 4 != x || builtChunk.origin.y shr 4 != y || builtChunk.origin.z shr 4 != z) {
+                    iterator.remove()
+                } else if (!builtChunk.getData().isEmpty) {
+                    for (ix in -1..1) {
+                        for (iy in -1..1) {
+                            for (iz in -1..1) {
+                                worldRenderer.scheduleBlockRender(x + ix, y + iy, z + iz)
+                            }
+                        }
+                    }
+                    iterator.remove()
                 }
             }
         }
@@ -52,7 +72,7 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
         val world = mc.world
         if (world == null) {
-            lightUpdateQueue.clear()
+            lightUpdate.clear()
             updating.set(true)
         }
 
@@ -61,6 +81,31 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
         }
         parentScope.launch(FastMcCoreScope.context) {
             tileEntityRenderer.onPostTick(mainThreadContext, this)
+        }
+
+        if (world != null) {
+            if (updating.getAndSet(false)) {
+                for (i in pendingSkyLightUpdate.indices step 2) {
+                    lightUpdate.put(pendingSkyLightUpdate.getLong(i), pendingSkyLightUpdate.getLong(i + 1))
+                }
+                pendingSkyLightUpdate.clear()
+
+                for (i in pendingBlockLightUpdate.indices step 2) {
+                    lightUpdate.put(pendingBlockLightUpdate.getLong(i), pendingBlockLightUpdate.getLong(i + 1))
+                }
+                pendingBlockLightUpdate.clear()
+
+                val current = System.currentTimeMillis()
+                lightUpdate.values.removeIf(LongPredicate {
+                    it < current
+                })
+
+                val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
+                provider.scheduleUpdate {
+                    provider.doLightUpdates()
+                    updating.set(true)
+                }
+            }
         }
     }
 

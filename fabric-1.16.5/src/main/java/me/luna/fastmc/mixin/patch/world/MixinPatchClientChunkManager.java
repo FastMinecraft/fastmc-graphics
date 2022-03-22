@@ -32,6 +32,6 @@ public class MixinPatchClientChunkManager {
      */
     @Overwrite
     public void onLightUpdate(LightType type, ChunkSectionPos pos) {
-        ((WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).scheduleLightUpdate(pos);
+        ((WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).scheduleLightUpdate(type, pos);
     }
 }

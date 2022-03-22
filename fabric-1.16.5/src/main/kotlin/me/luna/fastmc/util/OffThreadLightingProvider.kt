@@ -1,9 +1,10 @@
 package me.luna.fastmc.util
 
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import me.luna.fastmc.FastMcMod
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.FastMcExtendScope
 import net.minecraft.util.math.BlockPos
@@ -19,31 +20,31 @@ class OffThreadLightingProvider(
     hasBlockLight: Boolean, hasSkyLight: Boolean
 ) : LightingProvider(chunkProvider, hasBlockLight, hasSkyLight) {
     override fun setSectionStatus(pos: ChunkSectionPos, notReady: Boolean) {
-        channel.trySend {
+        scheduleUpdate {
             super.setSectionStatus(pos, notReady)
         }
     }
 
     override fun setSectionStatus(pos: BlockPos, notReady: Boolean) {
-        channel.trySend {
+        scheduleUpdate {
             super.setSectionStatus(pos, notReady)
         }
     }
 
     override fun checkBlock(pos: BlockPos?) {
-        channel.trySend {
+        scheduleUpdate {
             super.checkBlock(pos)
         }
     }
 
     override fun addLightSource(pos: BlockPos, level: Int) {
-        channel.trySend {
+        scheduleUpdate {
             super.addLightSource(pos, level)
         }
     }
 
     override fun setColumnEnabled(pos: ChunkPos, lightEnabled: Boolean) {
-        channel.trySend {
+        scheduleUpdate {
             super.setColumnEnabled(pos, lightEnabled)
         }
     }
@@ -54,44 +55,37 @@ class OffThreadLightingProvider(
         nibbles: ChunkNibbleArray?,
         bl: Boolean
     ) {
-        channel.trySend {
+        scheduleUpdate {
             super.enqueueSectionData(lightType, pos, nibbles, bl)
         }
     }
 
     override fun setRetainData(pos: ChunkPos, retainData: Boolean) {
-        channel.trySend {
+        scheduleUpdate {
             super.setRetainData(pos, retainData)
         }
     }
 
-    suspend fun doLightUpdates(doSkylight: Boolean, skipEdgeLightPropagation: Boolean) {
+    suspend fun doLightUpdates() {
         coroutineScope {
             launch(FastMcExtendScope.context) {
-                blockLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, skipEdgeLightPropagation)
+                blockLightProvider?.doLightUpdates(Int.MAX_VALUE, true, false)
             }
             launch(FastMcExtendScope.context) {
-                skyLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, skipEdgeLightPropagation)
+                skyLightProvider?.doLightUpdates(Int.MAX_VALUE, true, false)
             }
         }
     }
 
-    fun scheduleUpdate(block: suspend () -> Unit) {
-        channel.trySend(block)
+    fun scheduleUpdate(block: suspend OffThreadLightingProvider.() -> Unit): Job {
+        return FastMcCoreScope.launch {
+            mutex.withLock {
+                block.invoke(this@OffThreadLightingProvider)
+            }
+        }
     }
 
     private companion object {
-        val channel = Channel<suspend () -> Unit>(capacity = Channel.UNLIMITED)
-        val thread = FastMcCoreScope.launch {
-            while (true) {
-                try {
-                    for (block in channel) {
-                        block.invoke()
-                    }
-                } catch (e: Exception) {
-                    FastMcMod.logger.error("Lighting update error", e)
-                }
-            }
-        }
+        val mutex = Mutex()
     }
 }

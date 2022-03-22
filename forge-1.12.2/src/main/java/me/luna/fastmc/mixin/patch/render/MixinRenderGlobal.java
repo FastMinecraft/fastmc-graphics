@@ -50,8 +50,8 @@ import java.util.*;
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
-    private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
-    private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clearFast);
+    private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
+    private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
     private final DoubleBuffered<FastObjectArrayList<RenderChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinRenderGlobal::clearArray);
     @Shadow
@@ -95,7 +95,7 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
 
     private static void clearArray(FastObjectArrayList<RenderChunk>[] array) {
         for (int i = 0; i < BlockRenderLayer.values().length; i++) {
-            array[i].clearFast();
+            array[i].clear();
         }
     }
 
@@ -251,6 +251,7 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
         }
     }
 
+    @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
     private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
         for (TileEntity tileEntity : renderTileEntityList.get()) {
