@@ -9,10 +9,8 @@ import me.luna.fastmc.mixin.accessor.AccessorBuiltChunk;
 import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
 import me.luna.fastmc.mixin.accessor.AccessorChunkData;
 import me.luna.fastmc.renderer.TileEntityRenderer;
-import me.luna.fastmc.shared.opengl.VertexBufferObject;
 import me.luna.fastmc.shared.util.BufferUtils;
 import me.luna.fastmc.terrain.ChunkVertexData;
-import me.luna.fastmc.terrain.RenderRegion;
 import me.luna.fastmc.terrain.VertexDataTransformer;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.render.BufferBuilder;
@@ -31,9 +29,6 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glNamedBufferData;
-import static org.lwjgl.opengl.GL15.GL_STATIC_COPY;
 
 @Mixin(ChunkBuilder.BuiltChunk.RebuildTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPatchedTask {
@@ -79,8 +74,10 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                 } else {
                     List<RenderLayer> layers = RenderLayer.getBlockLayers();
                     Set<RenderLayer> initializedLayers = ((AccessorChunkData) chunkData).getInitializedLayers();
-                    ByteBuffer[] bufferArray = new ByteBuffer[layers.size()];
+
                     long builtOrigin = builtChunk.getOrigin().asLong();
+                    ByteBuffer[] bufferArray = new ByteBuffer[layers.size()];
+                    int[] vertexCountArray = new int[layers.size()];
 
                     for (int i = 0; i < layers.size(); i++) {
                         RenderLayer layer = layers.get(i);
@@ -98,6 +95,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
 
                             VertexDataTransformer.INSTANCE.transform(offsetX, offsetY, offsetZ, vertexCount, bufferData.getSecond(), newBuffer);
                             bufferArray[i] = newBuffer;
+                            vertexCountArray[i] = vertexCount;
                         }
                     }
 
@@ -106,13 +104,15 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                             ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
 
                             for (int i = 0; i < bufferArray.length; i++) {
-                                ChunkVertexData data = chunkVertexDataArray[i];
                                 ByteBuffer newBuffer = bufferArray[i];
                                 if (newBuffer != null) {
-                                    VertexBufferObject vbo = data != null ? data.getVbo() : new VertexBufferObject(RenderRegion.VERTEX_ATTRIBUTE);
-                                    int size = newBuffer.remaining();
-                                    glNamedBufferData(vbo.getId(), newBuffer, GL_STATIC_COPY);
-                                    chunkVertexDataArray[i] = new ChunkVertexData(builtOrigin, size / VertexDataTransformer.INSTANCE.getVertexSize(), size, vbo);
+                                    updateVertexData(
+                                        chunkVertexDataArray,
+                                        i,
+                                        builtOrigin,
+                                        newBuffer,
+                                        vertexCountArray[i]
+                                    );
                                 }
                             }
 

@@ -6,10 +6,7 @@ import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedTask;
 import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
 import me.luna.fastmc.mixin.accessor.AccessorChunkData;
-import me.luna.fastmc.shared.opengl.VertexBufferObject;
 import me.luna.fastmc.shared.util.BufferUtils;
-import me.luna.fastmc.terrain.ChunkVertexData;
-import me.luna.fastmc.terrain.RenderRegion;
 import me.luna.fastmc.terrain.VertexDataTransformer;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.RenderLayer;
@@ -24,9 +21,6 @@ import org.spongepowered.asm.mixin.Overwrite;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glNamedBufferData;
-import static org.lwjgl.opengl.GL15.GL_STATIC_COPY;
 
 @Mixin(ChunkBuilder.BuiltChunk.SortTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatchedTask {
@@ -74,8 +68,8 @@ public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatch
                         Pair<BufferBuilder.DrawArrayParameters, ByteBuffer> bufferData = buffers.get(layer).popData();
                         int vertexCount = bufferData.getFirst().getCount();
                         if (vertexCount == 0) return CompletableFuture.completedFuture(ChunkBuilder.Result.SUCCESSFUL);
-                        int size = VertexDataTransformer.INSTANCE.transformedSize(vertexCount);
-                        ByteBuffer newBuffer = BufferUtils.allocateByte(size);
+                        int vertexSize = VertexDataTransformer.INSTANCE.transformedSize(vertexCount);
+                        ByteBuffer newBuffer = BufferUtils.allocateByte(vertexSize);
                         long builtOrigin = builtChunk.getOrigin().asLong();
 
                         BlockPos regionOrigin = patchedBuiltChunk.getRegion().getOrigin();
@@ -87,17 +81,13 @@ public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatch
                         VertexDataTransformer.INSTANCE.transform(offsetX, offsetY, offsetZ, vertexCount, bufferData.getSecond(), newBuffer);
 
                         if (!cancelled0.get()) {
-                            ((AccessorChunkBuilder) chunkBuilder).getUploadQueue().add(() -> {
-                                int layerIndex = ((IPatchedRenderLayer) layer).getIndex();
-                                ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
-
-                                ChunkVertexData data = chunkVertexDataArray[layerIndex];
-                                VertexBufferObject vbo = data != null ? data.getVbo() : new VertexBufferObject(RenderRegion.VERTEX_ATTRIBUTE);
-                                glNamedBufferData(vbo.getId(), newBuffer, GL_STATIC_COPY);
-
-                                patchedBuiltChunk.getRegion().setDirty(true);
-                                chunkVertexDataArray[layerIndex] = new ChunkVertexData(builtOrigin, size / VertexDataTransformer.INSTANCE.getVertexSize(), size, vbo);
-                            });
+                            ((AccessorChunkBuilder) chunkBuilder).getUploadQueue().add(() -> updateVertexData(
+                                patchedBuiltChunk.getChunkVertexDataArray(),
+                                ((IPatchedRenderLayer) layer).getIndex(),
+                                builtOrigin,
+                                newBuffer,
+                                vertexCount
+                            ));
                             return CompletableFuture.completedFuture(ChunkBuilder.Result.SUCCESSFUL);
                         } else {
                             return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);

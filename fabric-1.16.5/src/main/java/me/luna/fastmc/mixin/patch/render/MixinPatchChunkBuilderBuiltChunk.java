@@ -69,7 +69,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltC
     public void delete() {
         for (int i = 0; i < chunkVertexDataArray.length; i++) {
             ChunkVertexData data = chunkVertexDataArray[i];
-            if (data != null) data.getVbo().destroy();
+            if (data != null) data.vboInfo.vbo.destroy();
         }
         this.clear();
     }

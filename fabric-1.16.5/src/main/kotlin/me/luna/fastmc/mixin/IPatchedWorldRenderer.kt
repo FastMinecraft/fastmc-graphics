@@ -3,9 +3,8 @@ package me.luna.fastmc.mixin
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import kotlinx.coroutines.*
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
-import me.luna.fastmc.shared.opengl.GL_STATIC_DRAW
+import me.luna.fastmc.shared.opengl.VboInfo
 import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
-import me.luna.fastmc.shared.opengl.glNamedBufferData
 import me.luna.fastmc.shared.util.DoubleBufferedCollection
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
@@ -49,7 +48,9 @@ interface IPatchedWorldRenderer {
         for (nextDirection in DIRECTIONS) {
             if (chunkCulling) {
                 if (chunkInfo.canCull(nextDirection.opposite)) continue
-                if (direction != null && builtChunk.getData().isVisibleThrough(direction.opposite, nextDirection)) continue
+                if (direction != null && !builtChunk.getData()
+                        .isVisibleThrough(direction.opposite, nextDirection)
+                ) continue
             }
 
             val nextBuiltChunk = this.invokeGetAdjacentChunk(cameraChunkBlockPos, builtChunk, nextDirection)
@@ -146,7 +147,9 @@ interface IPatchedWorldRenderer {
                         renderTileEntityList.addAll(list as ObjectArrayList<BlockEntity>)
                     }
 
-                    region.visible = true
+                    if (!builtChunk.getData().isEmpty) {
+                        region.visible = true
+                    }
 
                     if (!builtChunk.needsRebuild()) {
                         val longOrigin = builtChunk.origin.asLong()
@@ -180,24 +183,25 @@ interface IPatchedWorldRenderer {
                             val list = array[layerIndex]
                             if (list.isNotEmpty()) {
                                 val vertexCount = list.sumOf {
-                                    it.vertexCount
+                                    it.vboInfo.vertexCount
                                 }
                                 val vertexSize = VertexDataTransformer.transformedSize(vertexCount)
-                                val renderInfo = region.getInitRenderInfo(layerIndex)
-                                renderInfo.update(list.size, vertexCount, vertexSize)
-                                glNamedBufferData(renderInfo.vbo.id, vertexSize.toLong(), GL_STATIC_DRAW)
+                                val newVboSize = (vertexSize + 1048575) shr 20 shl 20
 
-                                var offset = 0L
-                                for (i in list.size - 1 downTo 0) {
-                                    val data = list[i]
-                                    glCopyNamedBufferSubData(
-                                        data.vbo.id,
-                                        renderInfo.vbo.id,
-                                        0L,
-                                        offset,
-                                        data.size.toLong()
-                                    )
-                                    offset += data.size
+                                region.updateRegionLayer(layerIndex, newVboSize) {
+                                    var offset = 0L
+                                    for (i in list.size - 1 downTo 0) {
+                                        val data = list[i]
+                                        glCopyNamedBufferSubData(
+                                            data.vboInfo.vbo.id,
+                                            it.id,
+                                            0L,
+                                            offset,
+                                            data.vboInfo.vertexSize.toLong()
+                                        )
+                                        offset += data.vboInfo.vertexSize
+                                    }
+                                    VboInfo(it, vertexCount, vertexSize, newVboSize)
                                 }
                             }
                         }

@@ -116,9 +116,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     public abstract void setWorld(@Nullable ClientWorld world);
 
     @Shadow
-    protected abstract int getCompletedChunkCount();
-
-    @Shadow
     protected abstract void loadTransparencyShader();
 
     @Shadow
@@ -465,8 +462,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         for (int i = 0; i < regionArray.length; i++) {
             RenderRegion region = regionArray[i];
             if (!region.isVisible()) continue;
-            RenderRegion.RenderInfo renderInfo = region.getRenderInfo(layerIndex);
-            if (renderInfo == null) continue;
+            RenderRegion.RegionLayer regionLayer = region.getRegionLayer(layerIndex);
+            if (regionLayer == null) continue;
 
             BlockPos regionOrigin = region.getOrigin();
             original.translate(
@@ -478,7 +475,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             MatrixUtils.INSTANCE.putMatrix(translated);
             glLoadMatrixf(MatrixUtils.INSTANCE.getMatrixBuffer());
 
-            renderInfo.getVbo().bind();
+            regionLayer.vboInfo.vbo.bind();
             glVertexPointer(3, GL_FLOAT, 28, 0);
             glColorPointer(4, GL_UNSIGNED_BYTE, 28, 12);
             glTexCoordPointer(2, GL_FLOAT, 28, 16);
@@ -486,7 +483,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             glTexCoordPointer(2, GL_SHORT, 28, 24);
             glClientActiveTexture(GL_TEXTURE0);
 
-            RenderSystem.drawArrays(GL_QUADS, 0, renderInfo.getVertexCount());
+            RenderSystem.drawArrays(GL_QUADS, 0, regionLayer.vboInfo.vertexCount);
         }
 
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -512,59 +509,85 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     public String getChunksDebugString() {
         RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
         int visibleRegionCount = 0;
-        long visibleRegionSize = 0;
-        long regionSize = 0;
+        int regionCount = 0;
+        long visibleRegionVertexSize = 0;
+        long regionVertexSize = 0;
+        long regionVboSize = 0;
         for (int i = 0; i < regionArray.length; i++) {
             RenderRegion region = regionArray[i];
-            RenderRegion.RenderInfo[] renderInfoArray = region.getRenderInfoArray();
+            RenderRegion.RegionLayer[] regionLayerArray = region.getRegionLayerArray();
             boolean isEmpty = true;
-            for (int i2 = 0; i2 < renderInfoArray.length; i2++) {
-                RenderRegion.RenderInfo renderInfo = renderInfoArray[i2];
-                if (renderInfo != null) {
-                    if (region.isVisible()) visibleRegionSize += renderInfo.getVertexSize();
-                    regionSize += renderInfo.getVertexSize();
+
+            for (int i2 = 0; i2 < regionLayerArray.length; i2++) {
+                RenderRegion.RegionLayer regionLayer = regionLayerArray[i2];
+                if (regionLayer != null) {
                     isEmpty = false;
+                    if (region.isVisible()) visibleRegionVertexSize += regionLayer.vboInfo.vertexSize;
+                    regionVertexSize += regionLayer.vboInfo.vertexSize;
+                    regionVboSize += regionLayer.vboInfo.vboSize;
                 }
             }
-            if (!isEmpty && region.isVisible()) visibleRegionCount++;
+
+            if (!isEmpty) {
+                if (region.isVisible()) visibleRegionCount++;
+                regionCount++;
+            }
         }
 
         ChunkBuilder.BuiltChunk[] builtChunks = this.chunks.chunks;
-        long totalSize = 0;
+        long chunkVertexSize = 0;
+        long chunkVboSize = 0;
+        int chunkCount = 0;
         for (int i = 0; i < builtChunks.length; i++) {
             ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getChunkVertexDataArray();
+            boolean isEmpty = true;
+
             for (int i2 = 0; i2 < bufferArray.length; i2++) {
-                ChunkVertexData chunkVertexDataArray = bufferArray[i2];
-                if (chunkVertexDataArray != null) {
-                    totalSize += chunkVertexDataArray.getSize();
+                ChunkVertexData data = bufferArray[i2];
+                if (data != null) {
+                    isEmpty = false;
+                    chunkVertexSize += data.vboInfo.vertexSize;
+                    chunkVboSize += data.vboInfo.vboSize;
                 }
             }
+
+            if (!isEmpty) chunkCount++;
         }
 
-        long visibleSize = 0;
+        long visibleChunkSize = 0;
+        int visibleChunkCount = 0;
         ObjectList<WorldRenderer.ChunkInfo> visibleChunks = this.visibleChunks;
         for (int i = 0; i < visibleChunks.size(); i++) {
             ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) visibleChunks.get(i).chunk).getChunkVertexDataArray();
+            boolean isEmpty = true;
+
             for (int i2 = 0; i2 < bufferArray.length; i2++) {
                 ChunkVertexData chunkVertexDataArray = bufferArray[i2];
                 if (chunkVertexDataArray != null) {
-                    visibleSize += chunkVertexDataArray.getSize();
+                    isEmpty = false;
+                    visibleChunkSize += chunkVertexDataArray.vboInfo.vertexSize;
                 }
             }
+
+            if (!isEmpty) visibleChunkCount++;
         }
 
         return String.format(
-            "R: %d/%d(%.1f/%.1f MB) C: %d/%d(%.1f/%.1f MB) %sD: %d, %s",
-            visibleRegionCount,
-            regionArray.length,
-            (double) visibleRegionSize / 1048576.0,
-            (double) regionSize / 1048576.0,
-            this.getCompletedChunkCount(),
-            builtChunks.length,
-            (double) visibleSize / 1048576.0,
-            (double) totalSize / 1048576.0,
+            "%sD: %d, R: %d/%d/%d(%.1f/%.1f/%.1f MB), C: %d/%d/%d(%.1f/%.1f/%.1f MB), %s",
             this.client.chunkCullingEnabled ? "(s) " : "",
             this.viewDistance,
+            visibleRegionCount,
+            regionCount,
+            regionArray.length,
+            (double) visibleRegionVertexSize / 1048576.0,
+            (double) regionVertexSize / 1048576.0,
+            (double) regionVboSize / 1048576.0,
+            visibleChunkCount,
+            chunkCount,
+            builtChunks.length,
+            (double) visibleChunkSize / 1048576.0,
+            (double) chunkVertexSize / 1048576.0,
+            (double) chunkVboSize / 1048576.0,
             this.chunkBuilder == null ? "null" : this.chunkBuilder.getDebugString()
         );
     }

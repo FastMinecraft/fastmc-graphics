@@ -47,12 +47,17 @@ interface IGLWrapper {
     // GL31
     fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int)
 
-    // glWrapper
+    // GL20
     fun glProgramUniform1i(program: Int, location: Int, v0: Int)
     fun glProgramUniform1f(program: Int, location: Int, v0: Float)
     fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float)
     fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
     fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer)
+
+
+    // GL43
+    fun glInvalidateBufferData(buffer: Int)
+
 
     // GL45
     fun glCreateVertexArrays(): Int
@@ -246,6 +251,10 @@ inline fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float,
 
 inline fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
     glWrapper.glProgramUniformMatrix4fv(program, location, transpose, matrices)
+
+
+// GL43
+inline fun glInvalidateBufferData(buffer: Int) = glWrapper.glInvalidateBufferData(buffer)
 
 
 // GL44

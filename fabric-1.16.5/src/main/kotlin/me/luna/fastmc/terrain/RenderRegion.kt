@@ -1,36 +1,43 @@
 package me.luna.fastmc.terrain
 
-import me.luna.fastmc.shared.opengl.GLDataType
-import me.luna.fastmc.shared.opengl.VertexArrayObject
-import me.luna.fastmc.shared.opengl.VertexBufferObject
-import me.luna.fastmc.shared.opengl.buildAttribute
+import me.luna.fastmc.shared.opengl.*
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.util.math.BlockPos
 
 class RenderRegion(val index: Int) {
     private val origin0 = BlockPos.Mutable()
-    val renderInfoArray = arrayOfNulls<RenderInfo>(RenderLayer.getBlockLayers().size)
+    val regionLayerArray = arrayOfNulls<RegionLayer>(RenderLayer.getBlockLayers().size)
     val origin: BlockPos get() = origin0
     var dirty = true
-
 
     @get:JvmName("isVisible")
     var visible = false
 
-    fun getRenderInfo(index: Int): RenderInfo? {
-        return renderInfoArray[index]
+    fun getRegionLayer(index: Int): RegionLayer? {
+        return regionLayerArray[index]
     }
 
-    fun getInitRenderInfo(index: Int): RenderInfo {
-        var renderInfo = renderInfoArray[index]
-        if (renderInfo == null) {
-            val vao = VertexArrayObject()
-            val vbo = VertexBufferObject(VERTEX_ATTRIBUTE)
+    inline fun updateRegionLayer(index: Int, newVboSize: Int, block: (VertexBufferObject) -> VboInfo) {
+        val layer = regionLayerArray[index]
+        val vao: VertexArrayObject
+        val vbo: VertexBufferObject
+
+        if (layer == null) {
+            vao = VertexArrayObject()
+            vbo = newVbo(newVboSize)
             vao.attachVbo(vbo)
-            renderInfo = RenderInfo(0, 0, 0, vao, vbo)
-            renderInfoArray[index] = renderInfo
+        } else {
+            vbo = layer.vboInfo.updateVbo(newVboSize, Companion::newVbo)
+            if (vbo !== layer.vboInfo.vbo) {
+                layer.vao.destroyVao()
+                vao = VertexArrayObject()
+                vao.attachVbo(vbo)
+            } else {
+                vao = layer.vao
+            }
         }
-        return renderInfo
+
+        regionLayerArray[index] = RegionLayer(vao, block.invoke(vbo))
     }
 
     fun setOrigin(x: Int, z: Int) {
@@ -42,29 +49,16 @@ class RenderRegion(val index: Int) {
     }
 
     fun clear() {
-        for (i in renderInfoArray.indices) {
-            renderInfoArray[i]?.vao?.destroy()
-            renderInfoArray[i] = null
+        for (i in regionLayerArray.indices) {
+            regionLayerArray[i]?.vao?.destroy()
+            regionLayerArray[i] = null
         }
     }
 
-    class RenderInfo(
-        chunksCount: Int,
-        vertexCount: Int,
-        vertexSize: Int,
-        val vao: VertexArrayObject,
-        val vbo: VertexBufferObject
-    ) {
-        var chunksCount = chunksCount; private set
-        var vertexCount = vertexCount; private set
-        var vertexSize = vertexSize; private set
-
-        fun update(chunksCount: Int, vertexCount: Int, vertexSize: Int) {
-            this.chunksCount = chunksCount
-            this.vertexCount = vertexCount
-            this.vertexSize = vertexSize
-        }
-    }
+    data class RegionLayer(
+        @JvmField val vao: VertexArrayObject,
+        @JvmField val vboInfo: VboInfo
+    )
 
     companion object {
         @JvmField
@@ -73,6 +67,13 @@ class RenderRegion(val index: Int) {
             float(1, 4, GLDataType.GL_UNSIGNED_BYTE, true)
             float(2, 2, GLDataType.GL_UNSIGNED_SHORT, true)
             float(3, 2, GLDataType.GL_UNSIGNED_BYTE, true)
+        }
+
+        @JvmStatic
+        fun newVbo(newVboSize: Int): VertexBufferObject {
+            return VertexBufferObject(VERTEX_ATTRIBUTE).apply {
+                glNamedBufferStorage(id, newVboSize.toLong(), GL_DYNAMIC_STORAGE_BIT)
+            }
         }
     }
 }

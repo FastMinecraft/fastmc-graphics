@@ -71,6 +71,10 @@ class GLWrapper : IGLWrapper {
     override fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
         GL41.glProgramUniformMatrix4(program, location, transpose, matrices)
 
+
+    // GL43
+    override fun glInvalidateBufferData(buffer: Int) = GL43.glInvalidateBufferData(buffer)
+
     // GL45
     override fun glCreateVertexArrays(): Int = GL45.glCreateVertexArrays()
     override fun glVertexArrayVertexBuffer(vaobj: Int, bindingindex: Int, buffer: Int, offset: Long, stride: Int) =
