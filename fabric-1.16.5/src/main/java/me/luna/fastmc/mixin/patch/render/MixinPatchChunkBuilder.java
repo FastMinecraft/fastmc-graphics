@@ -1,6 +1,5 @@
 package me.luna.fastmc.mixin.patch.render;
 
-import me.luna.fastmc.shared.util.FastMcExtendScope;
 import me.luna.fastmc.shared.util.ParallelUtils;
 import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.chunk.BlockBufferBuilderStorage;
@@ -18,12 +17,7 @@ import java.util.Queue;
 import java.util.concurrent.Executor;
 
 @Mixin(ChunkBuilder.class)
-public class MixinChunkBuilder {
-    @Mutable
-    @Shadow
-    @Final
-    private Executor executor;
-
+public class MixinPatchChunkBuilder {
     @Mutable
     @Shadow
     @Final
@@ -35,7 +29,6 @@ public class MixinChunkBuilder {
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(World world, WorldRenderer worldRenderer, Executor executor, boolean is64Bits, BlockBufferBuilderStorage buffers, CallbackInfo ci) {
-        this.executor = FastMcExtendScope.INSTANCE.getPool();
         this.buffers = null;
         int newSize = ParallelUtils.CPU_THREADS * 2;
         int remaining = newSize - this.bufferCount;

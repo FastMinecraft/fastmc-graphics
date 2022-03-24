@@ -103,8 +103,11 @@ class RegionBuiltChunkStorage(
     }
 
     override fun clear() {
-        for (region in regionArray) {
-            region.clear()
+        chunks.forEach {
+            it.delete()
+        }
+        regionArray.forEach {
+            it.clear()
         }
     }
 }

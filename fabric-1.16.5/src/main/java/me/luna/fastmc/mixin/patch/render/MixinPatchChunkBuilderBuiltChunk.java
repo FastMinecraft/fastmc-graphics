@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(ChunkBuilder.BuiltChunk.class)
 public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltChunk {
@@ -25,6 +26,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltC
     @Shadow
     protected abstract void clear();
 
+    @Shadow @Final public AtomicReference<ChunkBuilder.ChunkData> data;
     private int index = 0;
     private RenderRegion region;
     private final ChunkVertexData[] chunkVertexDataArray = new ChunkVertexData[RenderLayer.getBlockLayers().size()];
@@ -65,6 +67,10 @@ public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltC
      */
     @Overwrite
     public void delete() {
+        for (int i = 0; i < chunkVertexDataArray.length; i++) {
+            ChunkVertexData data = chunkVertexDataArray[i];
+            if (data != null) data.getVbo().destroy();
+        }
         this.clear();
     }
 

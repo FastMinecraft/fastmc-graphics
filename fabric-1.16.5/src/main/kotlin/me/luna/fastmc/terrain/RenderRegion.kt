@@ -9,22 +9,24 @@ import net.minecraft.util.math.BlockPos
 
 class RenderRegion(val index: Int) {
     private val origin0 = BlockPos.Mutable()
-    private val vboArray = arrayOfNulls<RenderInfo>(RenderLayer.getBlockLayers().size)
+    val renderInfoArray = arrayOfNulls<RenderInfo>(RenderLayer.getBlockLayers().size)
     val origin: BlockPos get() = origin0
     var dirty = true
+    @get:JvmName("isVisible")
+    var visible = false
 
     fun getRenderInfo(index: Int): RenderInfo? {
-        return vboArray[index]
+        return renderInfoArray[index]
     }
 
     fun getInitRenderInfo(index: Int): RenderInfo {
-        var renderInfo = vboArray[index]
+        var renderInfo = renderInfoArray[index]
         if (renderInfo == null) {
             val vao = VertexArrayObject()
             val vbo = VertexBufferObject(VERTEX_ATTRIBUTE)
             vao.attachVbo(vbo)
-            renderInfo = RenderInfo(0, vao, vbo)
-            vboArray[index] = renderInfo
+            renderInfo = RenderInfo(0, 0, vao, vbo)
+            renderInfoArray[index] = renderInfo
         }
         return renderInfo
     }
@@ -38,13 +40,13 @@ class RenderRegion(val index: Int) {
     }
 
     fun clear() {
-        for (i in vboArray.indices) {
-            vboArray[i]?.vao?.destroy()
-            vboArray[i] = null
+        for (i in renderInfoArray.indices) {
+            renderInfoArray[i]?.vao?.destroy()
+            renderInfoArray[i] = null
         }
     }
 
-    class RenderInfo(var vertexCount: Int, val vao: VertexArrayObject, val vbo: VertexBufferObject)
+    class RenderInfo(var vertexCount: Int, var size: Int, val vao: VertexArrayObject, val vbo: VertexBufferObject)
 
     companion object {
         @JvmField

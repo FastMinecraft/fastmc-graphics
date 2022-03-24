@@ -121,6 +121,11 @@ interface IPatchedWorldRenderer {
                         FastObjectArrayList<ChunkVertexData>()
                     }
                 }
+
+                for (i in regionArray.indices) {
+                    regionArray[i].visible = false
+                }
+
                 var it: WorldRenderer.ChunkInfo?
                 while (true) {
                     do {
@@ -133,14 +138,16 @@ interface IPatchedWorldRenderer {
                     builtChunk as IPatchedBuiltChunk
                     val chunkData = builtChunk.getData()
                     val list = chunkData.blockEntities
+                    val region = builtChunk.region
 
                     if (list.isNotEmpty()) {
                         renderTileEntityList.addAll(list as ObjectArrayList<BlockEntity>)
                     }
 
+                    region.visible = true
+
                     if (!builtChunk.needsRebuild()) {
                         val longOrigin = builtChunk.origin.asLong()
-                        val region = builtChunk.region
                         for (i in layers.indices) {
                             val dataArray = builtChunk.chunkVertexDataArray
                             dataArray[i]?.let {
@@ -173,13 +180,11 @@ interface IPatchedWorldRenderer {
                                 val vertexCount = list.sumOf {
                                     it.vertexCount
                                 }
+                                val size = VertexDataTransformer.transformedSize(vertexCount)
                                 val renderInfo = region.getInitRenderInfo(layerIndex)
                                 renderInfo.vertexCount = vertexCount
-                                glNamedBufferData(
-                                    renderInfo.vbo.id,
-                                    VertexDataTransformer.transformedSize(vertexCount).toLong(),
-                                    GL_STATIC_DRAW
-                                )
+                                renderInfo.size = size
+                                glNamedBufferData(renderInfo.vbo.id, size.toLong(), GL_STATIC_DRAW)
                                 var offset = 0L
                                 for (i in list.size - 1 downTo 0) {
                                     val data = list[i]

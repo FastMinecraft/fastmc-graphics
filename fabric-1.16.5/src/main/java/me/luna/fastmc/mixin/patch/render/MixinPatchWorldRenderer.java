@@ -14,7 +14,6 @@ import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.terrain.ChunkVertexData;
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
 import me.luna.fastmc.terrain.RenderRegion;
-import me.luna.fastmc.terrain.VertexDataTransformer;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
@@ -23,7 +22,6 @@ import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.NotNull;
@@ -47,13 +45,6 @@ import static org.lwjgl.opengl.GL15.glBindBuffer;
 
 @Mixin(WorldRenderer.class)
 public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
-    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
-    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final Matrix4f original = new Matrix4f();
-    private final Matrix4f translated = new Matrix4f();
-    private final TickTimer loadingTimer = new TickTimer();
-    private final AtomicBoolean scheduling = new AtomicBoolean(false);
     @Shadow
     private ChunkBuilder chunkBuilder;
     @Shadow
@@ -99,6 +90,18 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     @Final
     private BufferBuilderStorage bufferBuilders;
+
+    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
+    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final FastObjectArrayList<ChunkBuilder.BuiltChunk> chunksToUpdateList = new FastObjectArrayList<>();
+
+    private final Matrix4f original = new Matrix4f();
+    private final Matrix4f translated = new Matrix4f();
+    private final TickTimer loadingTimer = new TickTimer();
+    private final AtomicBoolean scheduling = new AtomicBoolean(false);
+
+
     private int lastCameraX0 = Integer.MAX_VALUE;
     private int lastCameraY0 = Integer.MAX_VALUE;
     private int lastCameraZ0 = Integer.MAX_VALUE;
@@ -162,7 +165,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
             this.world.reloadColor();
             if (this.chunkBuilder == null) {
-                this.chunkBuilder = new ChunkBuilder(this.world, thisRef, Util.getMainWorkerExecutor(), this.client.is64Bit(), this.bufferBuilders.getBlockBufferBuilders());
+                this.chunkBuilder = new ChunkBuilder(this.world, thisRef, FastMcExtendScope.INSTANCE.getPool(), this.client.is64Bit(), this.bufferBuilders.getBlockBufferBuilders());
             } else {
                 this.chunkBuilder.setWorld(this.world);
             }
@@ -331,7 +334,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         ChunkBuilder.BuiltChunk[] chunks = this.chunks.chunks;
         newSet.ensureCapacity(chunks.length);
 
-        FastObjectArrayList<ChunkBuilder.BuiltChunk> list = new FastObjectArrayList<>();
         ((me.luna.fastmc.renderer.WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).runLightUpdates();
 
         for (WorldRenderer.ChunkInfo renderInfo : this.visibleChunks) {
@@ -340,17 +342,17 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
             if (builtChunk.needsRebuild()) {
                 if (newSet.add(index)) {
-                    list.add(builtChunk);
+                    chunksToUpdateList.add(builtChunk);
                 }
             }
         }
 
         oldSet.clear();
 
-        if (!list.isEmpty()) {
+        if (!chunksToUpdateList.isEmpty()) {
             scheduling.set(true);
             FastMcCoreScope.INSTANCE.getPool().submit(() -> {
-                Arrays.sort(list.elements(), 0, list.size(), Comparator.comparingInt(it -> {
+                Arrays.sort(chunksToUpdateList.elements(), 0, chunksToUpdateList.size(), Comparator.comparingInt(it -> {
                     BlockPos chunkPos = it.getOrigin();
                     int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
                     int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
@@ -358,9 +360,9 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     return diffX * diffX + diffY * diffY + diffZ * diffZ;
                 }));
 
-                ChunkBuilder.BuiltChunk[] array = new ChunkBuilder.BuiltChunk[Math.min(list.size(), ParallelUtils.CPU_THREADS * 2)];
+                ChunkBuilder.BuiltChunk[] array = new ChunkBuilder.BuiltChunk[Math.min(chunksToUpdateList.size(), ParallelUtils.CPU_THREADS * 2)];
                 for (int i = 0; i < array.length; i++) {
-                    ChunkBuilder.BuiltChunk builtChunk = list.get(i);
+                    ChunkBuilder.BuiltChunk builtChunk = chunksToUpdateList.get(i);
                     builtChunk.cancelRebuild();
                     newSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
                     array[i] = builtChunk;
@@ -373,6 +375,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     this.chunkBuilder.send(task);
                 }
 
+                chunksToUpdateList.clear();
                 scheduling.set(false);
             });
         }
@@ -460,27 +463,11 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         glClientActiveTexture(GL_TEXTURE0);
 
         for (int i = 0; i < regionArray.length; i++) {
-            renderLayer(layerIndex, renderPosX, renderPosY, renderPosZ, regionArray[i]);
-        }
+            RenderRegion region = regionArray[i];
+            if (!region.isVisible()) continue;
+            RenderRegion.RenderInfo renderInfo = region.getRenderInfo(layerIndex);
+            if (renderInfo == null) continue;
 
-        glDisableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_COLOR_ARRAY);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        glClientActiveTexture(GL_TEXTURE2);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        glClientActiveTexture(GL_TEXTURE0);
-
-        RenderSystem.popMatrix();
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        RenderSystem.clearCurrentColor();
-        this.client.getProfiler().pop();
-        layer.endDrawing();
-    }
-
-    private void renderLayer(int layerIndex, double renderPosX, double renderPosY, double renderPosZ, RenderRegion region) {
-        RenderRegion.RenderInfo renderInfo = region.getRenderInfo(layerIndex);
-        if (renderInfo != null) {
             BlockPos regionOrigin = region.getOrigin();
             original.translate(
                 (float) (regionOrigin.getX() - renderPosX),
@@ -501,6 +488,20 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
             RenderSystem.drawArrays(GL_QUADS, 0, renderInfo.getVertexCount());
         }
+
+        glDisableClientState(GL_VERTEX_ARRAY);
+        glDisableClientState(GL_COLOR_ARRAY);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glClientActiveTexture(GL_TEXTURE2);
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+        glClientActiveTexture(GL_TEXTURE0);
+
+        RenderSystem.popMatrix();
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+        RenderSystem.clearCurrentColor();
+        this.client.getProfiler().pop();
+        layer.endDrawing();
     }
 
     /**
@@ -509,21 +510,59 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     public String getChunksDebugString() {
+        RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
+        int visibleRegionCount = 0;
+        long visibleRegionSize = 0;
+        long regionSize = 0;
+        for (int i = 0; i < regionArray.length; i++) {
+            RenderRegion region = regionArray[i];
+            RenderRegion.RenderInfo[] renderInfoArray = region.getRenderInfoArray();
+            boolean isEmpty = true;
+            for (int i2 = 0; i2 < renderInfoArray.length; i2++) {
+                RenderRegion.RenderInfo renderInfo = renderInfoArray[i2];
+                if (renderInfo != null) {
+                    if (region.isVisible()) visibleRegionSize += renderInfo.getSize();
+                    regionSize += renderInfo.getSize();
+                    isEmpty = false;
+                }
+            }
+            if (!isEmpty && region.isVisible()) visibleRegionCount++;
+        }
+
         ChunkBuilder.BuiltChunk[] builtChunks = this.chunks.chunks;
-        long vboSize = 0;
+        long totalSize = 0;
         for (int i = 0; i < builtChunks.length; i++) {
             ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getChunkVertexDataArray();
             for (int i2 = 0; i2 < bufferArray.length; i2++) {
                 ChunkVertexData chunkVertexDataArray = bufferArray[i2];
-                if (chunkVertexDataArray != null)
-                    vboSize += VertexDataTransformer.INSTANCE.transformedSize(chunkVertexDataArray.getVertexCount());
+                if (chunkVertexDataArray != null) {
+                    totalSize += chunkVertexDataArray.getSize();
+                }
             }
         }
+
+        long visibleSize = 0;
+        ObjectList<WorldRenderer.ChunkInfo> visibleChunks = this.visibleChunks;
+        for (int i = 0; i < visibleChunks.size(); i++) {
+            ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) visibleChunks.get(i).chunk).getChunkVertexDataArray();
+            for (int i2 = 0; i2 < bufferArray.length; i2++) {
+                ChunkVertexData chunkVertexDataArray = bufferArray[i2];
+                if (chunkVertexDataArray != null) {
+                    visibleSize += chunkVertexDataArray.getSize();
+                }
+            }
+        }
+
         return String.format(
-            "C: %d/%d(%.1f MB) %sD: %d, %s",
+            "R: %d/%d(%.1f/%.1f MB) C: %d/%d(%.1f/%.1f MB) %sD: %d, %s",
+            visibleRegionCount,
+            regionArray.length,
+            (double) visibleRegionSize / 1048576.0,
+            (double) regionSize / 1048576.0,
             this.getCompletedChunkCount(),
             builtChunks.length,
-            (double) vboSize / 1048576.0,
+            (double) visibleSize / 1048576.0,
+            (double) totalSize / 1048576.0,
             this.client.chunkCullingEnabled ? "(s) " : "",
             this.viewDistance,
             this.chunkBuilder == null ? "null" : this.chunkBuilder.getDebugString()
