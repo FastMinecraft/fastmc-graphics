@@ -11,9 +11,10 @@ import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
 import me.luna.fastmc.shared.util.*;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
+import me.luna.fastmc.terrain.ChunkVertexData;
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
 import me.luna.fastmc.terrain.RenderRegion;
-import me.luna.fastmc.terrain.ChunkVertexData;
+import me.luna.fastmc.terrain.VertexDataTransformer;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
@@ -33,7 +34,10 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.lwjgl.opengl.GL11.*;
@@ -43,6 +47,13 @@ import static org.lwjgl.opengl.GL15.glBindBuffer;
 
 @Mixin(WorldRenderer.class)
 public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
+    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
+    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final Matrix4f original = new Matrix4f();
+    private final Matrix4f translated = new Matrix4f();
+    private final TickTimer loadingTimer = new TickTimer();
+    private final AtomicBoolean scheduling = new AtomicBoolean(false);
     @Shadow
     private ChunkBuilder chunkBuilder;
     @Shadow
@@ -80,6 +91,20 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private int cameraChunkZ;
     @Shadow
     private BuiltChunkStorage chunks;
+    @Shadow
+    @Final
+    private Set<BlockEntity> noCullingBlockEntities;
+    @Shadow
+    private boolean cloudsDirty;
+    @Shadow
+    @Final
+    private BufferBuilderStorage bufferBuilders;
+    private int lastCameraX0 = Integer.MAX_VALUE;
+    private int lastCameraY0 = Integer.MAX_VALUE;
+    private int lastCameraZ0 = Integer.MAX_VALUE;
+    private int lastCameraYaw0 = Integer.MAX_VALUE;
+    private int lastCameraPitch0 = Integer.MAX_VALUE;
+    private boolean ticked = false;
 
     @Shadow
     public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
@@ -95,42 +120,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
     @Shadow
     protected abstract void resetTransparencyShader();
-
-    @Shadow
-    @Final
-    private Set<BlockEntity> noCullingBlockEntities;
-    @Shadow
-    private boolean cloudsDirty;
-    @Shadow
-    @Final
-    private BufferBuilderStorage bufferBuilders;
-    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
-    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-
-    private final Matrix4f original = new Matrix4f();
-    private final Matrix4f translated = new Matrix4f();
-    private final TickTimer loadingTimer = new TickTimer();
-    private final AtomicBoolean scheduling = new AtomicBoolean(false);
-
-    private int lastCameraX0 = Integer.MAX_VALUE;
-    private int lastCameraY0 = Integer.MAX_VALUE;
-    private int lastCameraZ0 = Integer.MAX_VALUE;
-    private int lastCameraYaw0 = Integer.MAX_VALUE;
-    private int lastCameraPitch0 = Integer.MAX_VALUE;
-    private boolean ticked = false;
-
-    private static FastObjectArrayList<ChunkBuilder.BuiltChunk>[] getArray() {
-        int size = RenderLayer.getBlockLayers().size();
-        ArrayList<FastObjectArrayList<ChunkBuilder.BuiltChunk>> list = new ArrayList<>();
-
-        for (int i = 0; i < size; i++) {
-            list.add(new FastObjectArrayList<>());
-        }
-
-        //noinspection unchecked
-        return (FastObjectArrayList<ChunkBuilder.BuiltChunk>[]) list.toArray(new FastObjectArrayList[size]);
-    }
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
@@ -401,20 +390,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         } else {
             renderTileEntityList.ensureCapacity(entityCapacity);
         }
-
-//        filteredRenderInfos.getAndSwap();
-//        FastObjectArrayList<ChunkBuilder.BuiltChunk>[] array = filteredRenderInfos.get();
-//        int renderInfoSize = this.visibleChunks.size();
-//
-//        for (int i = 0; i < RenderLayer.getBlockLayers().size(); i++) {
-//            FastObjectArrayList<ChunkBuilder.BuiltChunk> list = array[i];
-//
-//            if (list.getCapacity() > renderInfoSize + renderInfoSize / 2) {
-//                renderTileEntityList.trim(renderInfoSize);
-//            } else {
-//                list.ensureCapacity(renderInfoSize);
-//            }
-//        }
     }
 
 
@@ -485,7 +460,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         glClientActiveTexture(GL_TEXTURE0);
 
         for (int i = 0; i < regionArray.length; i++) {
-            renderLayer(layer, renderPosX, renderPosY, renderPosZ, regionArray[i]);
+            renderLayer(layerIndex, renderPosX, renderPosY, renderPosZ, regionArray[i]);
         }
 
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -503,7 +478,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         layer.endDrawing();
     }
 
-    private void renderLayer(RenderLayer layerIndex, double renderPosX, double renderPosY, double renderPosZ, RenderRegion region) {
+    private void renderLayer(int layerIndex, double renderPosX, double renderPosY, double renderPosZ, RenderRegion region) {
         RenderRegion.RenderInfo renderInfo = region.getRenderInfo(layerIndex);
         if (renderInfo != null) {
             BlockPos regionOrigin = region.getOrigin();
@@ -540,7 +515,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getChunkVertexDataArray();
             for (int i2 = 0; i2 < bufferArray.length; i2++) {
                 ChunkVertexData chunkVertexDataArray = bufferArray[i2];
-                if (chunkVertexDataArray != null) vboSize += chunkVertexDataArray.getVertexCount() * 32L;
+                if (chunkVertexDataArray != null)
+                    vboSize += VertexDataTransformer.INSTANCE.transformedSize(chunkVertexDataArray.getVertexCount());
             }
         }
         return String.format(
@@ -561,13 +537,13 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     }
 
     @Override
-    public void setTicked(boolean ticked) {
-        this.ticked = ticked;
+    public boolean getTicked() {
+        return ticked;
     }
 
     @Override
-    public boolean getTicked() {
-        return ticked;
+    public void setTicked(boolean ticked) {
+        this.ticked = ticked;
     }
 
     @NotNull

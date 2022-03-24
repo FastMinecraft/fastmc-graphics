@@ -145,7 +145,7 @@ interface IPatchedWorldRenderer {
                             val dataArray = builtChunk.chunkVertexDataArray
                             dataArray[i]?.let {
                                 if (it.builtOrigin == longOrigin) {
-                                    regionLayers[region.index][i].add(it)
+                                    regionLayers.getOrNull(region.index)?.get(i)?.add(it)
                                 }
                             }
                         }
@@ -165,7 +165,7 @@ interface IPatchedWorldRenderer {
                     for (regionIndex in regionLayers.indices) {
                         val region = regionArray[regionIndex]
                         if (!region.dirty) continue
-                        val array = regionLayers[regionIndex] ?: continue
+                        val array = regionLayers[regionIndex]
 
                         for (layerIndex in array.indices) {
                             val list = array[layerIndex]
@@ -173,7 +173,7 @@ interface IPatchedWorldRenderer {
                                 val vertexCount = list.sumOf {
                                     it.vertexCount
                                 }
-                                val renderInfo = region.getRenderInfo(layerIndex)
+                                val renderInfo = region.getInitRenderInfo(layerIndex)
                                 renderInfo.vertexCount = vertexCount
                                 glNamedBufferData(
                                     renderInfo.vbo.id,

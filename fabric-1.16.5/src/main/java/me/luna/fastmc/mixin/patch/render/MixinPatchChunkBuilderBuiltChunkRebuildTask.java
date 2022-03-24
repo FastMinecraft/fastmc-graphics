@@ -1,12 +1,14 @@
 package me.luna.fastmc.mixin.patch.render;
 
 import com.mojang.datafixers.util.Pair;
+import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedChunkData;
 import me.luna.fastmc.mixin.IPatchedTask;
 import me.luna.fastmc.mixin.accessor.AccessorBuiltChunk;
 import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
 import me.luna.fastmc.mixin.accessor.AccessorChunkData;
+import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.shared.opengl.VertexBufferObject;
 import me.luna.fastmc.shared.util.BufferUtils;
 import me.luna.fastmc.terrain.ChunkVertexData;
@@ -26,8 +28,7 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
 import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -112,6 +113,42 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                                     int size = newBuffer.remaining();
                                     glNamedBufferData(vbo.getId(), newBuffer, GL_STATIC_COPY);
                                     chunkVertexDataArray[i] = new ChunkVertexData(builtOrigin, size / VertexDataTransformer.INSTANCE.getVertexSize(), size, vbo);
+                                }
+                            }
+
+                            List<BlockEntity> oldList = ((IPatchedChunkData) builtChunk.data.get()).getInstancingRenderTileEntities();
+                            List<BlockEntity> newList = ((IPatchedChunkData) chunkData).getInstancingRenderTileEntities();
+
+                            boolean oldEmpty = oldList.isEmpty();
+                            boolean newEmpty = newList.isEmpty();
+
+                            if (!oldEmpty || !newEmpty) {
+                                TileEntityRenderer renderer = ((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer());
+
+                                if (oldEmpty) {
+                                    renderer.updateEntities(newList, Collections.emptyList());
+                                } else if (newEmpty) {
+                                    renderer.updateEntities(Collections.emptyList(), oldList);
+                                } else {
+                                    Set<BlockEntity> oldSet = new HashSet<>(oldList);
+                                    Set<BlockEntity> newSet = new HashSet<>(newList);
+
+                                    List<BlockEntity> adding = new ArrayList<>();
+                                    List<BlockEntity> removing = new ArrayList<>();
+
+                                    for (BlockEntity e : newList) {
+                                        if (!oldSet.contains(e)) {
+                                            adding.add(e);
+                                        }
+                                    }
+
+                                    for (BlockEntity e : oldList) {
+                                        if (!newSet.contains(e)) {
+                                            removing.add(e);
+                                        }
+                                    }
+
+                                    renderer.updateEntities(adding, removing);
                                 }
                             }
 
