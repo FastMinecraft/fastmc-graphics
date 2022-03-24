@@ -1,8 +1,13 @@
 package me.luna.fastmc.mixin
 
-import net.minecraft.client.gl.VertexBuffer
+import me.luna.fastmc.terrain.RenderRegion
+import me.luna.fastmc.terrain.ChunkVertexData
+import net.minecraft.client.render.chunk.ChunkBuilder
 
 interface IPatchedBuiltChunk {
+    val chunkBuilder: ChunkBuilder
+
     var index: Int
-    val bufferArray: Array<VertexBuffer>
+    val chunkVertexDataArray: Array<ChunkVertexData?>
+    var region: RenderRegion
 }

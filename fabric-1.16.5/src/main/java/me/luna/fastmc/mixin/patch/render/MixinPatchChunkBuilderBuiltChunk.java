@@ -1,7 +1,8 @@
 package me.luna.fastmc.mixin.patch.render;
 
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
-import me.luna.fastmc.mixin.IPatchedRenderLayer;
+import me.luna.fastmc.terrain.RenderRegion;
+import me.luna.fastmc.terrain.ChunkVertexData;
 import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.ChunkBuilder;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 @Mixin(ChunkBuilder.BuiltChunk.class)
-public abstract class MixinChunkBuilderBuiltChunk implements IPatchedBuiltChunk {
+public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltChunk {
     @Mutable
     @Shadow
     @Final
@@ -25,36 +26,46 @@ public abstract class MixinChunkBuilderBuiltChunk implements IPatchedBuiltChunk 
     protected abstract void clear();
 
     private int index = 0;
-    private final VertexBuffer[] bufferArray = new VertexBuffer[RenderLayer.getBlockLayers().size()];
+    private RenderRegion region;
+    private final ChunkVertexData[] chunkVertexDataArray = new ChunkVertexData[RenderLayer.getBlockLayers().size()];
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(ChunkBuilder chunkBuilder, CallbackInfo ci) {
         List<RenderLayer> layers = RenderLayer.getBlockLayers();
         for (int i = 0; i < layers.size(); i++) {
-            bufferArray[i] = buffers.get(layers.get(i));
+            buffers.get(layers.get(i)).close();
         }
         this.buffers = null;
     }
 
-    /**
-     * @author Luna
-     * @reason Fast look up
-     */
-    @Overwrite
-    public VertexBuffer getBuffer(RenderLayer layer) {
-        return bufferArray[((IPatchedRenderLayer) layer).getIndex()];
+    @Inject(method = "clear", at = @At("RETURN"))
+    private void clear$Inject$RETURN(CallbackInfo ci) {
+        RenderRegion region = this.region;
+        if (region != null) region.setDirty(true);
+    }
+
+    @Inject(method = "scheduleRebuild(Z)V", at = @At("RETURN"))
+    private void scheduleRebuild$Inject$RETURN(CallbackInfo ci) {
+        RenderRegion region = this.region;
+        if (region != null) region.setDirty(true);
     }
 
     /**
      * @author Luna
-     * @reason Fast look up
+     * @reason Render override
+     */
+    @Overwrite
+    public VertexBuffer getBuffer(RenderLayer layer) {
+        return null;
+    }
+
+    /**
+     * @author Luna
+     * @reason Render override
      */
     @Overwrite
     public void delete() {
         this.clear();
-        for (int i = 0; i < bufferArray.length; i++) {
-            bufferArray[i].close();
-        }
     }
 
     @Override
@@ -67,9 +78,19 @@ public abstract class MixinChunkBuilderBuiltChunk implements IPatchedBuiltChunk 
         this.index = index;
     }
 
+    @Override
+    public ChunkVertexData @NotNull [] getChunkVertexDataArray() {
+        return chunkVertexDataArray;
+    }
+
     @NotNull
     @Override
-    public VertexBuffer @NotNull [] getBufferArray() {
-        return bufferArray;
+    public RenderRegion getRegion() {
+        return region;
+    }
+
+    @Override
+    public void setRegion(@NotNull RenderRegion region) {
+        this.region = region;
     }
 }

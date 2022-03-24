@@ -72,7 +72,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         builtPosX0 = renderer.renderPosX
         builtPosY0 = renderer.renderPosY
         builtPosZ0 = renderer.renderPosZ
-        buffer0 = BufferUtils.byte(size * vertexSize)
+        buffer0 = BufferUtils.allocateByte(size * vertexSize)
 
         vertexAttribute = buildAttribute(vertexSize, 1) { setupAttribute() }
     }

@@ -1,21 +1,25 @@
 package me.luna.fastmc.mixin
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
+import me.luna.fastmc.shared.opengl.GL_STATIC_DRAW
+import me.luna.fastmc.shared.util.DoubleBufferedCollection
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
+import me.luna.fastmc.shared.util.collection.ExtendedBitSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import me.luna.fastmc.terrain.ChunkVertexData
+import me.luna.fastmc.terrain.RegionBuiltChunkStorage
+import me.luna.fastmc.terrain.VertexDataTransformer
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.client.render.Frustum
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.WorldRenderer
-import net.minecraft.client.render.chunk.ChunkBuilder
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
+import org.lwjgl.opengl.GL45.glCopyNamedBufferSubData
+import org.lwjgl.opengl.GL45.glNamedBufferData
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntUnaryOperator
@@ -24,6 +28,7 @@ import kotlin.math.max
 interface IPatchedWorldRenderer {
     var ticked: Boolean
     val renderTileEntityList: List<BlockEntity>
+    val visibleChunksBitSet: DoubleBufferedCollection<ExtendedBitSet>
 
     fun recursiveSetupTerrainIteration(
         scope: CoroutineScope,
@@ -90,68 +95,135 @@ interface IPatchedWorldRenderer {
         scope: CoroutineScope,
         visibleChunks: FastObjectArrayList<WorldRenderer.ChunkInfo>,
         renderTileEntityList: FastObjectArrayList<BlockEntity>,
-        filterRenderInfos: Array<FastObjectArrayList<ChunkBuilder.BuiltChunk>>,
+        chunks: RegionBuiltChunkStorage,
         frustum: Frustum,
         frame: Int,
         cameraChunkBlockPos: BlockPos,
         chunkCulling: Boolean,
         chunkInfoList: ObjectArrayList<WorldRenderer.ChunkInfo>
     ) {
-        this as WorldRenderer
-        val queue = ConcurrentLinkedQueue(chunkInfoList)
-        val dummy = this.ChunkInfo(null, null, 0)
+        withContext(FastMcCoreScope.context) {
+            this@IPatchedWorldRenderer as WorldRenderer
+            val queue = ConcurrentLinkedQueue(chunkInfoList)
+            val dummy = this@IPatchedWorldRenderer.ChunkInfo(null, null, 0)
 
-        scope.launch(FastMcCoreScope.context) {
-            var it: WorldRenderer.ChunkInfo?
-            while (true) {
-                do {
-                    it = queue.poll()
-                } while (it == null)
+            launch(scope.coroutineContext) {
+                val oldSet = visibleChunksBitSet.getAndSwap()
+                val newSet = visibleChunksBitSet.get()
+                val chunkArray = chunks.chunks
+                newSet.ensureCapacity(chunkArray.size)
+                newSet.clear()
 
-                if (it === dummy) break
+                val layers = RenderLayer.getBlockLayers()
+                val regionArray = chunks.regionArray
+                val regionLayers = Array(regionArray.size) {
+                    Array(layers.size) {
+                        FastObjectArrayList<ChunkVertexData>()
+                    }
+                }
+                var it: WorldRenderer.ChunkInfo?
+                while (true) {
+                    do {
+                        it = queue.poll()
+                    } while (it == null)
 
-                val builtChunk = it.chunk
-                val chunkData = builtChunk.getData()
-                val list = chunkData.blockEntities
+                    if (it === dummy) break
 
-                if (list.isNotEmpty()) {
-                    renderTileEntityList.addAll(list as ObjectArrayList<BlockEntity>)
+                    val builtChunk = it.chunk
+                    builtChunk as IPatchedBuiltChunk
+                    val chunkData = builtChunk.getData()
+                    val list = chunkData.blockEntities
+
+                    if (list.isNotEmpty()) {
+                        renderTileEntityList.addAll(list as ObjectArrayList<BlockEntity>)
+                    }
+
+                    if (!builtChunk.needsRebuild()) {
+                        val longOrigin = builtChunk.origin.asLong()
+                        val region = builtChunk.region
+                        for (i in layers.indices) {
+                            val dataArray = builtChunk.chunkVertexDataArray
+                            dataArray[i]?.let {
+                                if (it.builtOrigin == longOrigin) {
+                                    regionLayers[region.index][i].add(it)
+                                }
+                            }
+                        }
+                    }
+
+                    newSet.add(builtChunk.index)
+                    visibleChunks.add(it)
                 }
 
-                for (i in RenderLayer.getBlockLayers().indices) {
-                    val layer = RenderLayer.getBlockLayers()[i]
-                    if (!chunkData.isEmpty(layer)) {
-                        filterRenderInfos[i].add(builtChunk)
+                for (i in chunkArray.indices) {
+                    if (newSet.contains(i) != oldSet.contains(i)) {
+                        (chunkArray[i] as IPatchedBuiltChunk).region.dirty = true
                     }
                 }
 
-                visibleChunks.add(it)
-            }
-        }
+                withContext(scope.coroutineContext) {
+                    for (regionIndex in regionLayers.indices) {
+                        val region = regionArray[regionIndex]
+                        if (!region.dirty) continue
+                        val array = regionLayers[regionIndex] ?: continue
 
-        coroutineScope {
-            val counter = AtomicInteger(ParallelUtils.CPU_THREADS * 2)
-            for (i in chunkInfoList.indices) {
-                recursiveSetupTerrainIteration(
-                    this,
-                    frustum,
-                    frame,
-                    cameraChunkBlockPos,
-                    chunkCulling,
-                    queue,
-                    counter,
-                    chunkInfoList[i]
-                )
-            }
-        }
+                        for (layerIndex in array.indices) {
+                            val list = array[layerIndex]
+                            if (list.isNotEmpty()) {
+                                val vertexCount = list.sumOf {
+                                    it.vertexCount
+                                }
+                                val renderInfo = region.getRenderInfo(layerIndex)
+                                renderInfo.vertexCount = vertexCount
+                                glNamedBufferData(
+                                    renderInfo.vbo.id,
+                                    VertexDataTransformer.transformedSize(vertexCount).toLong(),
+                                    GL_STATIC_DRAW
+                                )
+                                var offset = 0L
+                                for (i in list.size - 1 downTo 0) {
+                                    val data = list[i]
+                                    glCopyNamedBufferSubData(
+                                        data.vbo.id,
+                                        renderInfo.vbo.id,
+                                        0L,
+                                        offset,
+                                        data.size.toLong()
+                                    )
+                                    offset += data.size
+                                }
+                            }
+                        }
 
-        queue.add(dummy)
+                        region.dirty = false
+                    }
+                }
+            }
+
+            coroutineScope {
+                val counter = AtomicInteger(ParallelUtils.CPU_THREADS * 2)
+                for (i in chunkInfoList.indices) {
+                    recursiveSetupTerrainIteration(
+                        this,
+                        frustum,
+                        frame,
+                        cameraChunkBlockPos,
+                        chunkCulling,
+                        queue,
+                        counter,
+                        chunkInfoList[i]
+                    )
+                }
+            }
+
+            queue.add(dummy)
+        }
     }
 
     fun setupTerrainIteration(
         visibleChunks: FastObjectArrayList<WorldRenderer.ChunkInfo>,
         renderTileEntityList: FastObjectArrayList<BlockEntity>,
-        filterRenderInfos: Array<FastObjectArrayList<ChunkBuilder.BuiltChunk>>,
+        chunks: RegionBuiltChunkStorage,
         frustum: Frustum,
         frame: Int,
         cameraChunkBlockPos: BlockPos,
@@ -163,7 +235,7 @@ interface IPatchedWorldRenderer {
                 this,
                 visibleChunks,
                 renderTileEntityList,
-                filterRenderInfos,
+                chunks,
                 frustum,
                 frame,
                 cameraChunkBlockPos,

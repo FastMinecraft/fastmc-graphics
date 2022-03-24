@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 
@@ -22,6 +23,7 @@ public abstract class MixinChunkBuilderChunkData implements IPatchedChunkData {
     @Shadow
     @Final
     private List<BlockEntity> blockEntities;
+
     @Shadow
     @Final
     private Set<RenderLayer> nonEmptyLayers;

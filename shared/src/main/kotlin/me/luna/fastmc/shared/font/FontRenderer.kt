@@ -45,7 +45,7 @@ class FontRenderer(
         var image = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_ARGB)
         var graphics2D = image.createGraphics()
 
-        val buffer = BufferUtils.byte(textureSize.sq)
+        val buffer = BufferUtils.allocateByte(textureSize.sq)
         val textureList = ArrayList<GlyphTexture>()
 
         asciiBlock = GlyphBlock(texture, asciiBlock(graphics2D, asciiFont, uvScale), true)

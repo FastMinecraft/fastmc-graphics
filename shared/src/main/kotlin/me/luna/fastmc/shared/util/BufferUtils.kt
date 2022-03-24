@@ -7,11 +7,11 @@ import java.nio.ShortBuffer
 
 object BufferUtils {
     @JvmStatic
-    fun float(capacity: Int): FloatBuffer = byte(capacity * 4).asFloatBuffer()
+    fun allocateFloat(capacity: Int): FloatBuffer = allocateByte(capacity * 4).asFloatBuffer()
 
     @JvmStatic
-    fun short(capacity: Int): ShortBuffer = byte(capacity * 2).asShortBuffer()
+    fun allocateShort(capacity: Int): ShortBuffer = allocateByte(capacity * 2).asShortBuffer()
 
     @JvmStatic
-    fun byte(capacity: Int): ByteBuffer = ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder())
+    fun allocateByte(capacity: Int): ByteBuffer = ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder())
 }

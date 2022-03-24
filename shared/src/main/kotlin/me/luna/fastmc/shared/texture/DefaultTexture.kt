@@ -12,7 +12,7 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
     init {
         val width = bufferedImage.width
         val height = bufferedImage.height
-        val buffer = BufferUtils.byte(width * height * 4)
+        val buffer = BufferUtils.allocateByte(width * height * 4)
 
         bufferedImage.getRGBA(buffer)
         buffer.flip()

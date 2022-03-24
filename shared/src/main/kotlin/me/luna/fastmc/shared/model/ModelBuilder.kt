@@ -20,7 +20,7 @@ open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: In
     }
 
     fun build(): ByteBuffer {
-        val buffer = BufferUtils.byte(vertexSize * 20)
+        val buffer = BufferUtils.allocateByte(vertexSize * 20)
         build(buffer)
         buffer.flip()
         return buffer

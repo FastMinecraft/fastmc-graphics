@@ -17,6 +17,7 @@ interface IGLWrapper {
 
 
     // GL15
+    fun glGenBuffers(): Int
     fun glDeleteBuffers(buffer: Int)
     fun glBindBuffer(target: Int, buffer: Int)
 
@@ -75,6 +76,7 @@ interface IGLWrapper {
     fun glCreateBuffers(): Int
     fun glNamedBufferStorage(buffer: Int, data: ByteBuffer, flags: Int)
     fun glNamedBufferStorage(buffer: Int, size: Long, flags: Int)
+    fun glNamedBufferSubData(buffer: Int, offset: Long, data: ByteBuffer)
 
     fun glCreateTextures(target: Int): Int
     fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int)
@@ -158,6 +160,7 @@ const val GL_STREAM_DRAW = 0x88E0
 const val GL_STATIC_DRAW = 0x88E4
 const val GL_DYNAMIC_DRAW = 0x88E8
 
+inline fun glGenBuffers(): Int = glWrapper.glGenBuffers()
 inline fun glDeleteBuffers(buffer: Int) = glWrapper.glDeleteBuffers(buffer)
 inline fun glBindBuffer(target: Int, buffer: Int) = glWrapper.glBindBuffer(target, buffer)
 
@@ -201,6 +204,13 @@ inline fun glUseProgram(program: Int) {
 
 
 // GL30
+const val GL_MAP_READ_BIT = 0x1
+const val GL_MAP_WRITE_BIT = 0x2
+const val GL_MAP_INVALIDATE_RANGE_BIT = 0x4
+const val GL_MAP_INVALIDATE_BUFFER_BIT = 0x8
+const val GL_MAP_FLUSH_EXPLICIT_BIT = 0x10
+const val GL_MAP_UNSYNCHRONIZED_BIT = 0x20
+
 const val GL_R8 = 0x8229
 const val GL_COMPRESSED_RED = 0x8225
 const val GL_COMPRESSED_RED_RGTC1 = 0x8DBB
@@ -232,6 +242,13 @@ inline fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float,
 
 inline fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
     glWrapper.glProgramUniformMatrix4fv(program, location, transpose, matrices)
+
+
+// GL44
+const val GL_MAP_PERSISTENT_BIT = 0x40
+const val GL_MAP_COHERENT_BIT = 0x80
+const val GL_DYNAMIC_STORAGE_BIT = 0x100
+const val GL_CLIENT_STORAGE_BIT = 0x200
 
 
 // GL45
@@ -266,6 +283,10 @@ inline fun glNamedBufferStorage(buffer: Int, data: ByteBuffer, flags: Int) =
 
 inline fun glNamedBufferStorage(buffer: Int, size: Long, flags: Int) =
     glWrapper.glNamedBufferStorage(buffer, size, flags)
+
+inline fun glNamedBufferSubData(buffer: Int, offset: Long, data: ByteBuffer) {
+    glWrapper.glNamedBufferSubData(buffer, offset, data)
+}
 
 inline fun glCreateTextures(target: Int): Int = glWrapper.glCreateTextures(target)
 

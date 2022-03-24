@@ -191,7 +191,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             }
 
             private fun buildVboBuffer(): ByteBuffer {
-                val vboBuffer = BufferUtils.byte(size * 4 * 2 * 16)
+                val vboBuffer = BufferUtils.allocateByte(size * 4 * 2 * 16)
 
                 var posIndex = 0
                 var uvIndex = 0
@@ -298,7 +298,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             }
 
             private fun buildIboBuffer(): ByteBuffer {
-                val iboBuffer = BufferUtils.byte(size * 2 * 6 * 2)
+                val iboBuffer = BufferUtils.allocateByte(size * 2 * 6 * 2)
 
                 val indexSize = size * 2 * 4
                 var index = 0

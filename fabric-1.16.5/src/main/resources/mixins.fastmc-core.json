@@ -7,17 +7,18 @@
     "MixinMinecraftClient",
     "entity.MixinEntity",
     "entity.MixinEntityCow",
-    "render.MixinChunkBuilderBuiltChunk",
-    "render.MixinChunkBuilderBuiltChunkRebuildTask",
+    "render.MixinCoreChunkBuilderBuiltChunkRebuildTask",
     "render.MixinChunkBuilderChunkData",
+    "render.MixinCoreChunkBuilderBuiltChunk",
+    "render.MixinCoreChunkBuilderBuiltChunkTask",
     "render.MixinCoreWorldRenderer",
+    "render.MixinInGameHud",
     "tileentity.MixinBedBlockEntity",
     "tileentity.MixinBlockEntity",
     "tileentity.MixinChestBlockEntity",
     "tileentity.MixinEnderChestBlockEntity",
     "tileentity.MixinShulkerBoxBlockEntity",
-    "tileentity.MixinTrappedChestBlockEntity",
-    "render.MixinInGameHud"
+    "tileentity.MixinTrappedChestBlockEntity"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -5,23 +5,24 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
-import me.luna.fastmc.mixin.IPatchedBuiltChunkStorage;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
-import me.luna.fastmc.mixin.accessor.AccessorVertexBuffer;
 import me.luna.fastmc.shared.util.*;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
+import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
+import me.luna.fastmc.terrain.RenderRegion;
+import me.luna.fastmc.terrain.ChunkVertexData;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.NotNull;
@@ -81,9 +82,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private BuiltChunkStorage chunks;
 
     @Shadow
-    public abstract void reload();
-
-    @Shadow
     public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
 
     @Shadow
@@ -92,9 +90,23 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     protected abstract int getCompletedChunkCount();
 
+    @Shadow
+    protected abstract void loadTransparencyShader();
+
+    @Shadow
+    protected abstract void resetTransparencyShader();
+
+    @Shadow
+    @Final
+    private Set<BlockEntity> noCullingBlockEntities;
+    @Shadow
+    private boolean cloudsDirty;
+    @Shadow
+    @Final
+    private BufferBuilderStorage bufferBuilders;
     private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBuffered<FastObjectArrayList<ChunkBuilder.BuiltChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinPatchWorldRenderer::clearArray);
+    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
 
     private final Matrix4f original = new Matrix4f();
     private final Matrix4f translated = new Matrix4f();
@@ -120,18 +132,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         return (FastObjectArrayList<ChunkBuilder.BuiltChunk>[]) list.toArray(new FastObjectArrayList[size]);
     }
 
-    private static void clearArray(FastObjectArrayList<ChunkBuilder.BuiltChunk>[] array) {
-        for (int i = 0; i < RenderLayer.getBlockLayers().size(); i++) {
-            array[i].clear();
-        }
-    }
-
-    private static void clearAndTrimArray(FastObjectArrayList<ChunkBuilder.BuiltChunk>[] array) {
-        for (int i = 0; i < RenderLayer.getBlockLayers().size(); i++) {
-            array[i].clearAndTrim();
-        }
-    }
-
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
         this.visibleChunks = new FastObjectArrayList<>(69696);
@@ -142,9 +142,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         if (world == null) {
             renderTileEntityList.get().clearAndTrim();
             renderTileEntityList.swapAndGet().clearAndTrim();
-
-            clearAndTrimArray(filteredRenderInfos.get());
-            clearAndTrimArray(filteredRenderInfos.swapAndGet());
 
             chunksToUpdateBitSet.get().clearFast();
             chunksToUpdateBitSet.swapAndGet().clearFast();
@@ -160,12 +157,58 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
     /**
      * @author Luna
+     * @reason Render override
+     */
+    @SuppressWarnings("SynchronizeOnNonFinalField")
+    @Overwrite
+    public void reload() {
+        if (this.world != null) {
+            WorldRenderer thisRef = (WorldRenderer) (Object) this;
+
+            if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+                this.loadTransparencyShader();
+            } else {
+                this.resetTransparencyShader();
+            }
+
+            this.world.reloadColor();
+            if (this.chunkBuilder == null) {
+                this.chunkBuilder = new ChunkBuilder(this.world, thisRef, Util.getMainWorkerExecutor(), this.client.is64Bit(), this.bufferBuilders.getBlockBufferBuilders());
+            } else {
+                this.chunkBuilder.setWorld(this.world);
+            }
+
+            this.needsTerrainUpdate = true;
+            this.cloudsDirty = true;
+            RenderLayers.setFancyGraphicsOrBetter(MinecraftClient.isFancyGraphicsOrBetter());
+            this.viewDistance = this.client.options.viewDistance;
+            if (this.chunks != null) {
+                this.chunks.clear();
+            }
+
+            this.clearChunkRenderers();
+            synchronized (this.noCullingBlockEntities) {
+                this.noCullingBlockEntities.clear();
+            }
+
+            this.chunks = new RegionBuiltChunkStorage(this.chunkBuilder, this.world, this.client.options.viewDistance, thisRef);
+            if (this.world != null) {
+                Entity entity = this.client.getCameraEntity();
+                if (entity != null) {
+                    this.chunks.updateCameraPosition(entity.getX(), entity.getZ());
+                }
+            }
+        }
+    }
+
+    /**
+     * @author Luna
      * @reason Setup terrain optimization
      */
     @Overwrite
     private void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator) {
         WorldRenderer thisRef = (WorldRenderer) (Object) this;
-        IPatchedBuiltChunkStorage patchedChunks = (IPatchedBuiltChunkStorage) this.chunks;
+        RegionBuiltChunkStorage chunks = (RegionBuiltChunkStorage) this.chunks;
 
         if (this.client.options.viewDistance != this.viewDistance) {
             this.reload();
@@ -239,7 +282,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                 Entity.setRenderDistanceMultiplier(MathHelper.clamp(this.client.options.viewDistance / 8.0D, 1.0D, 2.5D) * this.client.options.entityDistanceScaling);
                 boolean chunkCulling = this.client.chunkCullingEnabled;
 
-                ChunkBuilder.BuiltChunk builtChunk = patchedChunks.getRenderedChunk(cameraBlockPos);
+                ChunkBuilder.BuiltChunk builtChunk = chunks.getRenderedChunkByBlock(cameraBlockPos);
                 ObjectArrayList<WorldRenderer.ChunkInfo> list = new ObjectArrayList<>();
 
                 if (builtChunk != null) {
@@ -263,7 +306,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
                     for (int iChunkX = -this.viewDistance; iChunkX <= this.viewDistance; iChunkX++) {
                         for (int iChunkZ = -this.viewDistance; iChunkZ <= this.viewDistance; iChunkZ++) {
-                            ChunkBuilder.BuiltChunk builtChunk2 = patchedChunks.getRenderedChunk(cameraChunkX + iChunkX, chunkY, cameraChunkZ + iChunkZ);
+                            ChunkBuilder.BuiltChunk builtChunk2 = chunks.getRenderedChunk(cameraChunkX + iChunkX, chunkY, cameraChunkZ + iChunkZ);
                             if (builtChunk2 != null && frustum.isVisible(builtChunk2.boundingBox)) {
                                 builtChunk2.setRebuildFrame(frame);
                                 list.add(thisRef.new ChunkInfo(builtChunk2, null, 0));
@@ -280,7 +323,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     cameraBlockPos.getY() >> 4 << 4,
                     cameraBlockPos.getZ() >> 4 << 4
                 );
-                this.setupTerrainIteration((FastObjectArrayList<WorldRenderer.ChunkInfo>) visibleChunks, renderTileEntityList.get(), filteredRenderInfos.get(), frustum, frame, cameraChunkBlockPos, chunkCulling, list);
+                this.setupTerrainIteration((FastObjectArrayList<WorldRenderer.ChunkInfo>) visibleChunks, renderTileEntityList.get(), (RegionBuiltChunkStorage) this.chunks, frustum, frame, cameraChunkBlockPos, chunkCulling, list);
                 list.clear();
                 this.client.getProfiler().pop();
             }
@@ -359,19 +402,19 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             renderTileEntityList.ensureCapacity(entityCapacity);
         }
 
-        filteredRenderInfos.getAndSwap();
-        FastObjectArrayList<ChunkBuilder.BuiltChunk>[] array = filteredRenderInfos.get();
-        int renderInfoSize = this.visibleChunks.size();
-
-        for (int i = 0; i < RenderLayer.getBlockLayers().size(); i++) {
-            FastObjectArrayList<ChunkBuilder.BuiltChunk> list = array[i];
-
-            if (list.getCapacity() > renderInfoSize + renderInfoSize / 2) {
-                renderTileEntityList.trim(renderInfoSize);
-            } else {
-                list.ensureCapacity(renderInfoSize);
-            }
-        }
+//        filteredRenderInfos.getAndSwap();
+//        FastObjectArrayList<ChunkBuilder.BuiltChunk>[] array = filteredRenderInfos.get();
+//        int renderInfoSize = this.visibleChunks.size();
+//
+//        for (int i = 0; i < RenderLayer.getBlockLayers().size(); i++) {
+//            FastObjectArrayList<ChunkBuilder.BuiltChunk> list = array[i];
+//
+//            if (list.getCapacity() > renderInfoSize + renderInfoSize / 2) {
+//                renderTileEntityList.trim(renderInfoSize);
+//            } else {
+//                list.ensureCapacity(renderInfoSize);
+//            }
+//        }
     }
 
 
@@ -404,6 +447,9 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Overwrite
     private void renderLayer(RenderLayer layer, MatrixStack matrixStack, double renderPosX, double renderPosY, double renderPosZ) {
         layer.startDrawing();
+        int layerIndex = ((IPatchedRenderLayer) layer).getIndex();
+        RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
+
         if (layer == RenderLayer.getTranslucent()) {
             this.client.getProfiler().push("translucentSort");
             double xDiff = renderPosX - this.lastTranslucentSortX;
@@ -427,7 +473,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         }
 
         this.client.getProfiler().push(layer::toString);
-        FastObjectArrayList<ChunkBuilder.BuiltChunk> list = filteredRenderInfos.get()[((IPatchedRenderLayer) layer).getIndex()];
 
         AdaptersKt.toJoml(matrixStack.peek().getModel(), original);
         RenderSystem.pushMatrix();
@@ -439,14 +484,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         glEnableClientState(GL_TEXTURE_COORD_ARRAY);
         glClientActiveTexture(GL_TEXTURE0);
 
-        if (layer != RenderLayer.getTranslucent()) {
-            for (int i = 0; i < list.size(); i++) {
-                renderLayer(layer, renderPosX, renderPosY, renderPosZ, list.get(i));
-            }
-        } else {
-            for (int i = list.size() - 1; i >= 0; i--) {
-                renderLayer(layer, renderPosX, renderPosY, renderPosZ, list.get(i));
-            }
+        for (int i = 0; i < regionArray.length; i++) {
+            renderLayer(layer, renderPosX, renderPosY, renderPosZ, regionArray[i]);
         }
 
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -464,24 +503,29 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         layer.endDrawing();
     }
 
-    private void renderLayer(RenderLayer layer, double renderPosX, double renderPosY, double renderPosZ, ChunkBuilder.BuiltChunk builtChunk) {
-        VertexBuffer vertexBuffer = builtChunk.getBuffer(layer);
-        AccessorVertexBuffer accessor = ((AccessorVertexBuffer) vertexBuffer);
+    private void renderLayer(RenderLayer layerIndex, double renderPosX, double renderPosY, double renderPosZ, RenderRegion region) {
+        RenderRegion.RenderInfo renderInfo = region.getRenderInfo(layerIndex);
+        if (renderInfo != null) {
+            BlockPos regionOrigin = region.getOrigin();
+            original.translate(
+                (float) (regionOrigin.getX() - renderPosX),
+                (float) (regionOrigin.getY() - renderPosY),
+                (float) (regionOrigin.getZ() - renderPosZ),
+                translated
+            );
+            MatrixUtils.INSTANCE.putMatrix(translated);
+            glLoadMatrixf(MatrixUtils.INSTANCE.getMatrixBuffer());
 
-        BlockPos blockPos = builtChunk.getOrigin();
-        original.translate((float) (blockPos.getX() - renderPosX), (float) (blockPos.getY() - renderPosY), (float) (blockPos.getZ() - renderPosZ), translated);
-        MatrixUtils.INSTANCE.putMatrix(translated);
-        glLoadMatrixf(MatrixUtils.INSTANCE.getMatrixBuffer());
+            renderInfo.getVbo().bind();
+            glVertexPointer(3, GL_FLOAT, 28, 0);
+            glColorPointer(4, GL_UNSIGNED_BYTE, 28, 12);
+            glTexCoordPointer(2, GL_FLOAT, 28, 16);
+            glClientActiveTexture(GL_TEXTURE2);
+            glTexCoordPointer(2, GL_SHORT, 28, 24);
+            glClientActiveTexture(GL_TEXTURE0);
 
-        glBindBuffer(GL_ARRAY_BUFFER, accessor.getVertexBufferId());
-        glVertexPointer(3, GL_FLOAT, 32, 0);
-        glColorPointer(4, GL_UNSIGNED_BYTE, 32, 12);
-        glTexCoordPointer(2, GL_FLOAT, 32, 16);
-        glClientActiveTexture(GL_TEXTURE2);
-        glTexCoordPointer(2, GL_SHORT, 32, 24);
-        glClientActiveTexture(GL_TEXTURE0);
-
-        RenderSystem.drawArrays(GL_QUADS, 0, accessor.getVertexCount());
+            RenderSystem.drawArrays(GL_QUADS, 0, renderInfo.getVertexCount());
+        }
     }
 
     /**
@@ -493,9 +537,10 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         ChunkBuilder.BuiltChunk[] builtChunks = this.chunks.chunks;
         long vboSize = 0;
         for (int i = 0; i < builtChunks.length; i++) {
-            VertexBuffer[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getBufferArray();
+            ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getChunkVertexDataArray();
             for (int i2 = 0; i2 < bufferArray.length; i2++) {
-                vboSize += ((AccessorVertexBuffer) bufferArray[i2]).getVertexCount() * 32L;
+                ChunkVertexData chunkVertexDataArray = bufferArray[i2];
+                if (chunkVertexDataArray != null) vboSize += chunkVertexDataArray.getVertexCount() * 32L;
             }
         }
         return String.format(
@@ -523,5 +568,11 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Override
     public boolean getTicked() {
         return ticked;
+    }
+
+    @NotNull
+    @Override
+    public DoubleBufferedCollection<ExtendedBitSet> getVisibleChunksBitSet() {
+        return visibleChunksBitSet;
     }
 }
