@@ -38,10 +38,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.GL_ARRAY_BUFFER;
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindBuffer;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
-import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
-import static org.lwjgl.opengl.GL15.glBindBuffer;
 
 @Mixin(WorldRenderer.class)
 public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
@@ -521,8 +521,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             for (int i2 = 0; i2 < renderInfoArray.length; i2++) {
                 RenderRegion.RenderInfo renderInfo = renderInfoArray[i2];
                 if (renderInfo != null) {
-                    if (region.isVisible()) visibleRegionSize += renderInfo.getSize();
-                    regionSize += renderInfo.getSize();
+                    if (region.isVisible()) visibleRegionSize += renderInfo.getVertexSize();
+                    regionSize += renderInfo.getVertexSize();
                     isEmpty = false;
                 }
             }

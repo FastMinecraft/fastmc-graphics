@@ -15,7 +15,7 @@ class RegionBuiltChunkStorage(
     viewDistance: Int,
     worldRenderer: WorldRenderer
 ) : BuiltChunkStorage(chunkBuilder, world, viewDistance, worldRenderer) {
-    val regionSize = ((super.sizeX + 15) shr 4) + 1
+    val regionSize = (super.sizeX + 15) shr 4
     val regionArray: Array<RenderRegion>
 
     init {

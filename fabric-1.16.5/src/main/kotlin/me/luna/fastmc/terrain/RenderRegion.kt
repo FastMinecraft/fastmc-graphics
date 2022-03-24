@@ -12,6 +12,8 @@ class RenderRegion(val index: Int) {
     val renderInfoArray = arrayOfNulls<RenderInfo>(RenderLayer.getBlockLayers().size)
     val origin: BlockPos get() = origin0
     var dirty = true
+
+
     @get:JvmName("isVisible")
     var visible = false
 
@@ -25,7 +27,7 @@ class RenderRegion(val index: Int) {
             val vao = VertexArrayObject()
             val vbo = VertexBufferObject(VERTEX_ATTRIBUTE)
             vao.attachVbo(vbo)
-            renderInfo = RenderInfo(0, 0, vao, vbo)
+            renderInfo = RenderInfo(0, 0, 0, vao, vbo)
             renderInfoArray[index] = renderInfo
         }
         return renderInfo
@@ -46,7 +48,23 @@ class RenderRegion(val index: Int) {
         }
     }
 
-    class RenderInfo(var vertexCount: Int, var size: Int, val vao: VertexArrayObject, val vbo: VertexBufferObject)
+    class RenderInfo(
+        chunksCount: Int,
+        vertexCount: Int,
+        vertexSize: Int,
+        val vao: VertexArrayObject,
+        val vbo: VertexBufferObject
+    ) {
+        var chunksCount = chunksCount; private set
+        var vertexCount = vertexCount; private set
+        var vertexSize = vertexSize; private set
+
+        fun update(chunksCount: Int, vertexCount: Int, vertexSize: Int) {
+            this.chunksCount = chunksCount
+            this.vertexCount = vertexCount
+            this.vertexSize = vertexSize
+        }
+    }
 
     companion object {
         @JvmField

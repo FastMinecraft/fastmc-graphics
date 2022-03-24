@@ -4,6 +4,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import kotlinx.coroutines.*
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
 import me.luna.fastmc.shared.opengl.GL_STATIC_DRAW
+import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
+import me.luna.fastmc.shared.opengl.glNamedBufferData
 import me.luna.fastmc.shared.util.DoubleBufferedCollection
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
@@ -18,8 +20,6 @@ import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.WorldRenderer
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
-import org.lwjgl.opengl.GL45.glCopyNamedBufferSubData
-import org.lwjgl.opengl.GL45.glNamedBufferData
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntUnaryOperator
@@ -47,12 +47,14 @@ interface IPatchedWorldRenderer {
         val direction = chunkInfo.direction
 
         for (nextDirection in DIRECTIONS) {
+            if (chunkCulling) {
+                if (chunkInfo.canCull(nextDirection.opposite)) continue
+                if (direction != null && builtChunk.getData().isVisibleThrough(direction.opposite, nextDirection)) continue
+            }
+
             val nextBuiltChunk = this.invokeGetAdjacentChunk(cameraChunkBlockPos, builtChunk, nextDirection)
 
             if (nextBuiltChunk != null
-                && (!chunkCulling || !chunkInfo.canCull(nextDirection.opposite))
-                && (!chunkCulling || direction == null || builtChunk.getData()
-                    .isVisibleThrough(direction.opposite, nextDirection))
                 && nextBuiltChunk.shouldBuild()
                 && nextBuiltChunk.setRebuildFrame(frame)
                 && frustum.isVisible(nextBuiltChunk.boundingBox)
@@ -111,8 +113,8 @@ interface IPatchedWorldRenderer {
                 val oldSet = visibleChunksBitSet.getAndSwap()
                 val newSet = visibleChunksBitSet.get()
                 val chunkArray = chunks.chunks
-                newSet.ensureCapacity(chunkArray.size)
                 newSet.clear()
+                newSet.ensureCapacity(chunkArray.size)
 
                 val layers = RenderLayer.getBlockLayers()
                 val regionArray = chunks.regionArray
@@ -180,11 +182,11 @@ interface IPatchedWorldRenderer {
                                 val vertexCount = list.sumOf {
                                     it.vertexCount
                                 }
-                                val size = VertexDataTransformer.transformedSize(vertexCount)
+                                val vertexSize = VertexDataTransformer.transformedSize(vertexCount)
                                 val renderInfo = region.getInitRenderInfo(layerIndex)
-                                renderInfo.vertexCount = vertexCount
-                                renderInfo.size = size
-                                glNamedBufferData(renderInfo.vbo.id, size.toLong(), GL_STATIC_DRAW)
+                                renderInfo.update(list.size, vertexCount, vertexSize)
+                                glNamedBufferData(renderInfo.vbo.id, vertexSize.toLong(), GL_STATIC_DRAW)
+
                                 var offset = 0L
                                 for (i in list.size - 1 downTo 0) {
                                     val data = list[i]

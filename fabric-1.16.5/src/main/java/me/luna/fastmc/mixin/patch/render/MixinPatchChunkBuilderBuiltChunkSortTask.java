@@ -25,9 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glNamedBufferStorage;
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.glNamedBufferData;
 import static org.lwjgl.opengl.GL15.GL_STATIC_COPY;
-import static org.lwjgl.opengl.GL45.glNamedBufferData;
 
 @Mixin(ChunkBuilder.BuiltChunk.SortTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatchedTask {

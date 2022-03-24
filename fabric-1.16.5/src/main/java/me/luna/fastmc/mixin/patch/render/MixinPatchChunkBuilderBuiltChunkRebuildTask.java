@@ -32,8 +32,8 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.glNamedBufferData;
 import static org.lwjgl.opengl.GL15.GL_STATIC_COPY;
-import static org.lwjgl.opengl.GL45.glNamedBufferData;
 
 @Mixin(ChunkBuilder.BuiltChunk.RebuildTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPatchedTask {

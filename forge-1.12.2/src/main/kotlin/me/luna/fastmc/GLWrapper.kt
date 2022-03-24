@@ -20,7 +20,6 @@ class GLWrapper : IGLWrapper {
 
 
     // GL15
-    override fun glGenBuffers(): Int = GL15.glGenBuffers()
     override fun glDeleteBuffers(buffer: Int) = GL15.glDeleteBuffers(buffer)
     override fun glBindBuffer(target: Int, buffer: Int) = GL15.glBindBuffer(target, buffer)
 
@@ -105,8 +104,22 @@ class GLWrapper : IGLWrapper {
     override fun glNamedBufferStorage(buffer: Int, size: Long, flags: Int) =
         GL45.glNamedBufferStorage(buffer, size, flags)
 
+    override fun glNamedBufferData(buffer: Int, size: Long, usage: Int) =
+        GL45.glNamedBufferData(buffer, size, usage)
+
+    override fun glNamedBufferData(buffer: Int, data: ByteBuffer, usage: Int) =
+        GL45.glNamedBufferData(buffer, data, usage)
+
     override fun glNamedBufferSubData(buffer: Int, offset: Long, data: ByteBuffer) =
         GL45.glNamedBufferSubData(buffer, offset, data)
+
+    override fun glCopyNamedBufferSubData(
+        readBuffer: Int,
+        writeBuffer: Int,
+        readOffset: Long,
+        writeOffset: Long,
+        size: Long
+    ) = GL45.glCopyNamedBufferSubData(readBuffer, writeBuffer, readOffset, writeOffset, size)
 
     override fun glCreateTextures(target: Int): Int = GL45.glCreateTextures(target)
 
