@@ -9,9 +9,9 @@ import me.luna.fastmc.shared.renderer.IRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
-import me.luna.fastmc.shared.util.BufferUtils
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
+import me.luna.fastmc.shared.util.allocateByte
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -72,7 +72,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         builtPosX0 = renderer.renderPosX
         builtPosY0 = renderer.renderPosY
         builtPosZ0 = renderer.renderPosZ
-        buffer0 = BufferUtils.allocateByte(size * vertexSize)
+        buffer0 = allocateByte(size * vertexSize)
 
         vertexAttribute = buildAttribute(vertexSize, 1) { setupAttribute() }
     }

@@ -1,13 +1,12 @@
 package me.luna.fastmc.shared.opengl
 
 data class VboInfo(
-    @JvmField val vbo: VertexBufferObject,
+    @JvmField val vbo: ImmutableVertexBufferObject,
     @JvmField val vertexCount: Int,
-    @JvmField val vertexSize: Int,
-    @JvmField val vboSize: Int
+    @JvmField val vertexSize: Int
 ) {
-    inline fun updateVbo(newVboSize: Int, newBuffer: (Int) -> VertexBufferObject): VertexBufferObject {
-        return if (newVboSize == vboSize) {
+    inline fun updateVbo(minVboSize: Int, newVboSize: Int, maxVboSize: Int, newBuffer: (Int) -> ImmutableVertexBufferObject): ImmutableVertexBufferObject {
+        return if (vbo.size in minVboSize..maxVboSize) {
             // Invalidate and return previous vbo if resize is NOT needed
             vbo.invalidate()
             vbo

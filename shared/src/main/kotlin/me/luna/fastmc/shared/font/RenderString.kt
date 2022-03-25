@@ -4,8 +4,8 @@ import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.shorts.ShortArrayList
 import me.luna.fastmc.shared.opengl.*
-import me.luna.fastmc.shared.util.BufferUtils
 import me.luna.fastmc.shared.util.ColorARGB
+import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import me.luna.fastmc.shared.util.skip
 import org.joml.Matrix4f
@@ -191,7 +191,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             }
 
             private fun buildVboBuffer(): ByteBuffer {
-                val vboBuffer = BufferUtils.allocateByte(size * 4 * 2 * 16)
+                val vboBuffer = allocateByte(size * 4 * 2 * 16)
 
                 var posIndex = 0
                 var uvIndex = 0
@@ -298,7 +298,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             }
 
             private fun buildIboBuffer(): ByteBuffer {
-                val iboBuffer = BufferUtils.allocateByte(size * 2 * 6 * 2)
+                val iboBuffer = allocateByte(size * 2 * 6 * 2)
 
                 val indexSize = size * 2 * 4
                 var index = 0

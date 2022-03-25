@@ -5,7 +5,7 @@ import org.joml.Matrix4f
 import java.nio.FloatBuffer
 
 object MatrixUtils {
-    val matrixBuffer: FloatBuffer = BufferUtils.allocateFloat(16)
+    val matrixBuffer: FloatBuffer = allocateFloat(16)
 
     fun putMatrix(matrix: Matrix4f): MatrixUtils {
         matrix.get(matrixBuffer)

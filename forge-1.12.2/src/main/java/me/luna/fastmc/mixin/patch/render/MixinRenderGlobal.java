@@ -179,7 +179,7 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             RenderChunk renderChunk = ExtensionsKt.getRenderChunk(renderInfo);
             int index = ((AccessorRenderChunk) renderChunk).getIndex();
 
-            if (renderChunk.needsUpdate() || oldSet.contains(index)) {
+            if (renderChunk.needsUpdate() || oldSet.containsInt(index)) {
                 if (newSet.add(index)) {
                     list.add(renderChunk);
                 }

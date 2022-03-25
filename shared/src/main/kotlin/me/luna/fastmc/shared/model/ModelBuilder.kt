@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.model
 
-import me.luna.fastmc.shared.util.BufferUtils
+import me.luna.fastmc.shared.util.allocateByte
 import java.nio.ByteBuffer
 
 open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: Int) {
@@ -20,7 +20,7 @@ open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: In
     }
 
     fun build(): ByteBuffer {
-        val buffer = BufferUtils.allocateByte(vertexSize * 20)
+        val buffer = allocateByte(vertexSize * 20)
         build(buffer)
         buffer.flip()
         return buffer

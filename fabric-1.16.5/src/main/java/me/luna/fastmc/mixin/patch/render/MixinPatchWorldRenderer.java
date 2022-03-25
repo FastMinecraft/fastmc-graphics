@@ -22,6 +22,7 @@ import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
+import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.NotNull;
@@ -42,6 +43,7 @@ import static me.luna.fastmc.shared.opengl.GLWrapperKt.GL_ARRAY_BUFFER;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindBuffer;
 import static org.lwjgl.opengl.GL11.*;
 import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL14.glMultiDrawArrays;
 
 @Mixin(WorldRenderer.class)
 public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
@@ -93,14 +95,13 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
     private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
     private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet());
     private final FastObjectArrayList<ChunkBuilder.BuiltChunk> chunksToUpdateList = new FastObjectArrayList<>();
 
     private final Matrix4f original = new Matrix4f();
     private final Matrix4f translated = new Matrix4f();
     private final TickTimer loadingTimer = new TickTimer();
     private final AtomicBoolean scheduling = new AtomicBoolean(false);
-
 
     private int lastCameraX0 = Integer.MAX_VALUE;
     private int lastCameraY0 = Integer.MAX_VALUE;
@@ -120,6 +121,12 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
 
     @Shadow
     protected abstract void resetTransparencyShader();
+
+    @Shadow public abstract void reload(ResourceManager manager);
+
+    @Shadow public abstract void renderClouds(MatrixStack matrices, float tickDelta, double cameraX, double cameraY, double cameraZ);
+
+    @Shadow protected abstract void renderLightSky();
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
@@ -483,7 +490,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             glTexCoordPointer(2, GL_SHORT, 28, 24);
             glClientActiveTexture(GL_TEXTURE0);
 
-            RenderSystem.drawArrays(GL_QUADS, 0, regionLayer.vboInfo.vertexCount);
+            glMultiDrawArrays(GL_QUADS, regionLayer.firstArray, regionLayer.countArray);
         }
 
         glDisableClientState(GL_VERTEX_ARRAY);
@@ -524,7 +531,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     isEmpty = false;
                     if (region.isVisible()) visibleRegionVertexSize += regionLayer.vboInfo.vertexSize;
                     regionVertexSize += regionLayer.vboInfo.vertexSize;
-                    regionVboSize += regionLayer.vboInfo.vboSize;
+                    regionVboSize += regionLayer.vboInfo.vbo.getSize();
                 }
             }
 
@@ -547,7 +554,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                 if (data != null) {
                     isEmpty = false;
                     chunkVertexSize += data.vboInfo.vertexSize;
-                    chunkVboSize += data.vboInfo.vboSize;
+                    chunkVboSize += data.vboInfo.vbo.getSize();
                 }
             }
 

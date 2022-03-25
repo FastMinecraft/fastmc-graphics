@@ -1,7 +1,5 @@
 package me.luna.fastmc.shared.util.collection
 
-import java.util.*
-
 class ExtendedBitSet : MutableSet<Int> {
     private var bitArray = EMPTY_LONG_ARRAY
 
@@ -118,16 +116,18 @@ class ExtendedBitSet : MutableSet<Int> {
     }
 
     override fun contains(element: Int): Boolean {
+        return containsInt(element)
+    }
+
+    fun containsInt(element: Int): Boolean {
         val index = element shr 6
         if (index >= bitArray.size) return false
-
-        val bit = 1L shl (element and 0x3F)
-        return bitArray[index] and bit != 0L
+        return bitArray[index] and (1L shl (element and 0x3F)) != 0L
     }
 
     override fun containsAll(elements: Collection<Int>): Boolean {
         for (element in elements) {
-            if (!contains(element)) return false
+            if (!containsInt(element)) return false
         }
 
         return true

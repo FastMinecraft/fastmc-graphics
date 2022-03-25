@@ -43,13 +43,11 @@ public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltC
     @Inject(method = "clear", at = @At("RETURN"))
     private void clear$Inject$RETURN(CallbackInfo ci) {
         RenderRegion region = this.region;
-        if (region != null) region.setDirty(true);
     }
 
     @Inject(method = "scheduleRebuild(Z)V", at = @At("RETURN"))
     private void scheduleRebuild$Inject$RETURN(CallbackInfo ci) {
         RenderRegion region = this.region;
-        if (region != null) region.setDirty(true);
     }
 
     /**

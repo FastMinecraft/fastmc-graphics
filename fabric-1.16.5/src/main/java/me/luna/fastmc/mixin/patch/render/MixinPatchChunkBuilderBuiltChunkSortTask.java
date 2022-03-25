@@ -81,13 +81,16 @@ public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatch
                         VertexDataTransformer.INSTANCE.transform(offsetX, offsetY, offsetZ, vertexCount, bufferData.getSecond(), newBuffer);
 
                         if (!cancelled0.get()) {
-                            ((AccessorChunkBuilder) chunkBuilder).getUploadQueue().add(() -> updateVertexData(
-                                patchedBuiltChunk.getChunkVertexDataArray(),
-                                ((IPatchedRenderLayer) layer).getIndex(),
-                                builtOrigin,
-                                newBuffer,
-                                vertexCount
-                            ));
+                            ((AccessorChunkBuilder) chunkBuilder).getUploadQueue().add(() -> {
+                                updateVertexData(
+                                    patchedBuiltChunk.getChunkVertexDataArray(),
+                                    ((IPatchedRenderLayer) layer).getIndex(),
+                                    builtOrigin,
+                                    newBuffer,
+                                    vertexCount
+                                );
+                                patchedBuiltChunk.getRegion().setDirty(true);
+                            });
                             return CompletableFuture.completedFuture(ChunkBuilder.Result.SUCCESSFUL);
                         } else {
                             return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);

@@ -20,8 +20,9 @@ interface IPatchedTask {
         vertexCount: Int
     ) {
         val vertexSize = newBuffer.remaining()
-        val newVboSize = (vertexSize + 4095) shr 12 shl 12
-        val vbo = dataArray[index]?.updateVbo(newVboSize) ?: ChunkVertexData.newVbo(newVboSize)
+        val newVboSize = ((vertexSize + 4095) shr 12 shl 12) + 8192
+        val maxVboSize = newVboSize + 16384
+        val vbo = dataArray[index]?.updateVbo(vertexSize, newVboSize, maxVboSize) ?: ChunkVertexData.newVbo(newVboSize)
 
         glNamedBufferSubData(vbo.id, 0, newBuffer)
         dataArray[index] = ChunkVertexData(
@@ -29,8 +30,7 @@ interface IPatchedTask {
             VboInfo(
                 vbo,
                 vertexCount,
-                vertexSize,
-                newVboSize
+                vertexSize
             )
         )
     }

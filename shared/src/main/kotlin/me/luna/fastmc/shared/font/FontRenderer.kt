@@ -2,8 +2,8 @@ package me.luna.fastmc.shared.font
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import me.luna.fastmc.shared.opengl.*
-import me.luna.fastmc.shared.util.BufferUtils
 import me.luna.fastmc.shared.util.ColorARGB
+import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.sq
 import org.joml.Matrix4f
 import java.awt.Graphics2D
@@ -45,7 +45,7 @@ class FontRenderer(
         var image = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_ARGB)
         var graphics2D = image.createGraphics()
 
-        val buffer = BufferUtils.allocateByte(textureSize.sq)
+        val buffer = allocateByte(textureSize.sq)
         val textureList = ArrayList<GlyphTexture>()
 
         asciiBlock = GlyphBlock(texture, asciiBlock(graphics2D, asciiFont, uvScale), true)

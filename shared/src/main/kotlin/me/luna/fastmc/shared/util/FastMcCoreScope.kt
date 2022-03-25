@@ -4,13 +4,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.min
 
 private val group = ThreadGroup("FastMinecraft").apply {
     this.isDaemon = true
 }
 
 private val extendPool0 = object : ThreadPoolExecutor(
-    0,
+    ParallelUtils.CPU_THREADS,
     ParallelUtils.CPU_THREADS * 4,
     3L,
     java.util.concurrent.TimeUnit.SECONDS,
@@ -32,9 +33,9 @@ private val extendPool0 = object : ThreadPoolExecutor(
             val emptyRunnable = {}
 
             while (!this.isShutdown) {
-                lastTask = unboundQueue.poll(1L, java.util.concurrent.TimeUnit.MILLISECONDS)
+                lastTask = unboundQueue.poll(500_000L, java.util.concurrent.TimeUnit.NANOSECONDS)
                 while (lastTask != null) {
-                    if (queue.offer(lastTask, 1L, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                    if (queue.offer(lastTask, 500_000L, java.util.concurrent.TimeUnit.NANOSECONDS)) {
                         lastTask = null
                     }
                 }
@@ -47,9 +48,11 @@ private val extendPool0 = object : ThreadPoolExecutor(
                     continue
                 }
 
-                if (lastHead != null && System.nanoTime() - headAddedTime >= 5_000_000L) {
+                if (lastHead != null && System.nanoTime() - headAddedTime >= 2_500_000L) {
                     lastHead = null
-                    execute(emptyRunnable)
+                    while (queue.offer(emptyRunnable)) {
+                        //
+                    }
                 }
             }
         } catch (e: InterruptedException) {
@@ -59,6 +62,7 @@ private val extendPool0 = object : ThreadPoolExecutor(
     }, "FastMinecraft-Extend-Scheduler")
 
     init {
+        allowCoreThreadTimeOut(true)
         setRejectedExecutionHandler { r, _ ->
             synchronized(unboundQueue) {
                 unboundQueue.add(r)

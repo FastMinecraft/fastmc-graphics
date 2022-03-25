@@ -12,7 +12,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Set;
 
@@ -39,7 +38,7 @@ public abstract class MixinChunkBuilderChunkData implements IPatchedChunkData {
      */
     @Overwrite
     public boolean isEmpty(RenderLayer layer) {
-        return !this.nonEmptyLayersOverride.contains(((IPatchedRenderLayer) layer).getIndex());
+        return !this.nonEmptyLayersOverride.containsInt(((IPatchedRenderLayer) layer).getIndex());
     }
 
     @Override

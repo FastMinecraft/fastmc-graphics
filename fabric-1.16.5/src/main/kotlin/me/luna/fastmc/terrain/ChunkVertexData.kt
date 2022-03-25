@@ -6,14 +6,14 @@ class ChunkVertexData(
     @JvmField val builtOrigin: Long,
     @JvmField val vboInfo: VboInfo
 ) {
-    fun updateVbo(newVboSize: Int): VertexBufferObject {
-        return vboInfo.updateVbo(newVboSize, Companion::newVbo)
+    fun updateVbo(minVboSize: Int, newVboSize: Int, maxVboSize: Int): ImmutableVertexBufferObject {
+        return vboInfo.updateVbo(minVboSize, newVboSize, maxVboSize, Companion::newVbo)
     }
 
     companion object {
         @JvmStatic
-        fun newVbo(newVboSize: Int): VertexBufferObject {
-            return VertexBufferObject(RenderRegion.VERTEX_ATTRIBUTE).apply {
+        fun newVbo(newVboSize: Int): ImmutableVertexBufferObject {
+            return ImmutableVertexBufferObject(RenderRegion.VERTEX_ATTRIBUTE, newVboSize).apply {
                 glNamedBufferStorage(id, newVboSize.toLong(), GL_DYNAMIC_STORAGE_BIT)
             }
         }
