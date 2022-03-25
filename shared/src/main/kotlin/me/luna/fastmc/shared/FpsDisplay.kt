@@ -56,6 +56,17 @@ object FpsDisplay {
             stringBuilder.append(avg)
         }
 
+        if (FastMcMod.config.maxFrameTime) {
+            var max = 0
+
+            for ((_, value) in shortFps) {
+                if (value > max) max = value
+            }
+
+            stringBuilder.append("  MAX ")
+            stringBuilder.append("%.1f ms".format(max.toDouble() / 1_000_000.0))
+        }
+
         renderString = stringBuilder
     }
 

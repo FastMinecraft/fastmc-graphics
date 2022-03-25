@@ -9,4 +9,7 @@ class Config {
 
     val avgFps: Boolean
         get() = true
+
+    val maxFrameTime: Boolean
+        get() = true
 }
