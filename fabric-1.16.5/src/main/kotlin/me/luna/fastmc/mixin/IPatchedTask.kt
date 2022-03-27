@@ -13,6 +13,7 @@ interface IPatchedTask {
     val builtChunk: ChunkBuilder.BuiltChunk
 
     fun updateVertexData(
+        chunkIndex: Int,
         dataArray: Array<ChunkVertexData?>,
         index: Int,
         builtOrigin: Long,
@@ -26,6 +27,7 @@ interface IPatchedTask {
 
         glNamedBufferSubData(vbo.id, 0, newBuffer)
         dataArray[index] = ChunkVertexData(
+            chunkIndex,
             builtOrigin,
             VboInfo(
                 vbo,

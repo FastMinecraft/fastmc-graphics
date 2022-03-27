@@ -33,9 +33,9 @@ private val extendPool0 = object : ThreadPoolExecutor(
             val emptyRunnable = {}
 
             while (!this.isShutdown) {
-                lastTask = unboundQueue.poll(500_000L, java.util.concurrent.TimeUnit.NANOSECONDS)
+                lastTask = unboundQueue.poll(1_000_000L, java.util.concurrent.TimeUnit.NANOSECONDS)
                 while (lastTask != null) {
-                    if (queue.offer(lastTask, 500_000L, java.util.concurrent.TimeUnit.NANOSECONDS)) {
+                    if (queue.offer(lastTask, 1_000_000L, java.util.concurrent.TimeUnit.NANOSECONDS)) {
                         lastTask = null
                     }
                 }
@@ -48,7 +48,7 @@ private val extendPool0 = object : ThreadPoolExecutor(
                     continue
                 }
 
-                if (lastHead != null && System.nanoTime() - headAddedTime >= 2_500_000L) {
+                if (lastHead != null && System.nanoTime() - headAddedTime >= 5_000_000L) {
                     lastHead = null
                     while (queue.offer(emptyRunnable)) {
                         //

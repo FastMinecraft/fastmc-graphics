@@ -1,7 +1,24 @@
 package me.luna.fastmc.shared.util.collection
 
+import it.unimi.dsi.fastutil.ints.IntCollection
+import kotlin.math.max
+import kotlin.math.min
+
+@Suppress("NOTHING_TO_INLINE")
 class ExtendedBitSet : MutableSet<Int> {
-    private var bitArray = EMPTY_LONG_ARRAY
+    var bitArray: LongArray; private set
+
+    constructor() {
+        bitArray = EMPTY_LONG_ARRAY
+    }
+
+    constructor(capacity: Int) {
+        bitArray = LongArray((capacity + 63) shr 6)
+    }
+
+    constructor(other: ExtendedBitSet) {
+        bitArray = other.bitArray.copyOf()
+    }
 
     override val size: Int
         get() {
@@ -48,13 +65,103 @@ class ExtendedBitSet : MutableSet<Int> {
     }
 
     override fun addAll(elements: Collection<Int>): Boolean {
-        var modified = false
+        return addAll(toLongArrayVariableSize(elements))
+    }
 
-        for (element in elements) {
-            modified = add(element) || modified
+    fun addAll(elements: IntCollection): Boolean {
+        return addAll(toLongArrayVariableSize(elements))
+    }
+
+    fun addAll(elements: IntArray): Boolean {
+        return addAll(toLongArrayVariableSize(elements))
+    }
+
+    fun addAll(elements: Array<Int>): Boolean {
+        return addAll(toLongArrayVariableSize(elements))
+    }
+
+    fun addAll(elements: ExtendedBitSet): Boolean {
+        return addAll(elements.bitArray)
+    }
+
+    fun addAll(longArray: LongArray): Boolean {
+        var modified = false
+        val a = getMaxSize(bitArray)
+        val b = getMaxSize(longArray)
+        ensureArrayLength(max(a, b))
+
+        for (i in 0 until b) {
+            val prev = bitArray[i]
+            val result = prev or longArray[i]
+            bitArray[i] = result
+            modified = modified || result != prev
         }
 
         return modified
+    }
+
+    private inline fun toLongArrayVariableSize(elements: Collection<Int>): LongArray {
+        var longArray = LongArray(0)
+        for (element in elements) {
+            val index = element shr 6
+            if (index >= longArray.size) {
+                longArray = longArray.copyOf((index + 1) * 2)
+            }
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArrayVariableSize(elements: IntCollection): LongArray {
+        var longArray = LongArray(0)
+        val iterator = elements.iterator()
+        while (iterator.hasNext()) {
+            val element = iterator.nextInt()
+            val index = element shr 6
+            if (index >= longArray.size) {
+                longArray = longArray.copyOf((index + 1) * 2)
+            }
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArrayVariableSize(elements: Array<Int>): LongArray {
+        var longArray = LongArray(0)
+        for (i in elements.indices) {
+            val element = elements[i]
+            val index = element shr 6
+            if (index >= longArray.size) {
+                longArray = longArray.copyOf((index + 1) * 2)
+            }
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArrayVariableSize(elements: IntArray): LongArray {
+        var longArray = LongArray(0)
+        for (i in elements.indices) {
+            val element = elements[i]
+            val index = element shr 6
+            if (index >= longArray.size) {
+                longArray = longArray.copyOf((index + 1) * 2)
+            }
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
     }
 
     override fun clear() {
@@ -72,43 +179,116 @@ class ExtendedBitSet : MutableSet<Int> {
         val index = element shr 6
 
         val prev = getBit(index)
-        val result = prev xor bit
+        val result = prev and bit.inv()
         putBit(index, result)
 
         return result != prev
     }
 
     override fun removeAll(elements: Collection<Int>): Boolean {
+        return removeAll(toLongArray(elements))
+    }
+
+    fun removeAll(elements: IntCollection): Boolean {
+        return removeAll(toLongArray(elements))
+    }
+
+    fun removeAll(elements: ExtendedBitSet): Boolean {
+        return removeAll(elements.bitArray)
+    }
+
+    fun removeAll(longArray: LongArray): Boolean {
         var modified = false
-
-        for (element in elements) {
-            modified = remove(element) || modified
+        val size = min(getMaxSize(bitArray), getMaxSize(longArray))
+        for (i in 0 until size) {
+            val prev = bitArray[i]
+            val result = prev and longArray[i].inv()
+            bitArray[i] = result
+            modified = modified || result != prev
         }
-
         return modified
     }
 
     override fun retainAll(elements: Collection<Int>): Boolean {
-        val newArray = LongArray(bitArray.size)
+        return retainAll(toLongArray(elements))
+    }
+
+    fun retainAll(elements: IntCollection): Boolean {
+        return retainAll(toLongArray(elements))
+    }
+
+    fun retainAll(longArray: LongArray): Boolean {
+        var modified = false
+        for (i in bitArray.indices) {
+            val prev = bitArray[i]
+            val result = longArray[i] and prev
+            bitArray[i] = result
+            modified = modified || result != prev
+        }
+        return modified
+    }
+
+    private inline fun toLongArray(elements: Collection<Int>): LongArray {
+        val longArray = LongArray(bitArray.size)
         for (element in elements) {
             val index = element shr 6
-            if (index >= newArray.size) continue
+            if (index >= longArray.size) continue
 
             val bit = 1L shl (element and 0x3F)
-            val prev = newArray[index]
-            newArray[index] = prev or bit
+            val prev = longArray[index]
+            longArray[index] = prev or bit
         }
+        return longArray
+    }
 
-        var modified = false
+    private inline fun toLongArray(elements: IntCollection): LongArray {
+        val longArray = LongArray(bitArray.size)
+        val iterator = elements.iterator()
+        while (iterator.hasNext()) {
+            val element = iterator.nextInt()
+            val index = element shr 6
+            if (index >= longArray.size) continue
 
-        for ((i, bit) in bitArray.withIndex()) {
-            val mask = newArray[i]
-            val result = mask and bit
-            bitArray[i] = result
-            modified = modified || result != bit
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
         }
+        return longArray
+    }
 
-        return modified
+    private inline fun toLongArray(elements: Array<Int>): LongArray {
+        val longArray = LongArray(bitArray.size)
+        for (i in elements.indices) {
+            val element = elements[i]
+            val index = element shr 6
+            if (index >= longArray.size) continue
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArray(elements: IntArray): LongArray {
+        val longArray = LongArray(bitArray.size)
+        for (i in elements.indices) {
+            val element = elements[i]
+            val index = element shr 6
+            if (index >= longArray.size) continue
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun getMaxSize(longArray: LongArray): Int {
+        for (i in longArray.size - 1 downTo 0) {
+            if (longArray[i] != 0L) return i + 1
+        }
+        return 0
     }
 
     fun containsFast(element: Int): Boolean {
@@ -126,11 +306,99 @@ class ExtendedBitSet : MutableSet<Int> {
     }
 
     override fun containsAll(elements: Collection<Int>): Boolean {
-        for (element in elements) {
-            if (!containsInt(element)) return false
+        val longArray = toLongArrayNullable(elements)
+        return longArray != null && containsAll(longArray)
+    }
+
+    fun containsAll(elements: IntCollection): Boolean {
+        val longArray = toLongArrayNullable(elements)
+        return longArray != null && containsAll(longArray)
+    }
+
+    fun containsAll(elements: IntArray): Boolean {
+        val longArray = toLongArrayNullable(elements)
+        return longArray != null && containsAll(longArray)
+    }
+
+    fun containsAll(elements: Array<Int>): Boolean {
+        val longArray = toLongArrayNullable(elements)
+        return longArray != null && containsAll(longArray)
+    }
+
+    fun containsAll(elements: ExtendedBitSet): Boolean {
+        return containsAll(elements.bitArray)
+    }
+
+    fun containsAll(longArray: LongArray): Boolean {
+        val a = getMaxSize(bitArray)
+        val b = getMaxSize(longArray)
+        if (a < b) return false
+        val minSize = min(a, b)
+
+        for (i in 0 until minSize) {
+            val prev = bitArray[i]
+            val other = longArray[i]
+            val result = prev or other
+            if (result != prev) return false
         }
 
         return true
+    }
+
+    private inline fun toLongArrayNullable(elements: Collection<Int>): LongArray? {
+        val longArray = LongArray(bitArray.size)
+        for (element in elements) {
+            val index = element shr 6
+            if (index >= longArray.size) return null
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArrayNullable(elements: IntCollection): LongArray? {
+        val longArray = LongArray(bitArray.size)
+        val iterator = elements.iterator()
+        while (iterator.hasNext()) {
+            val element = iterator.nextInt()
+            val index = element shr 6
+            if (index >= longArray.size) return null
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArrayNullable(elements: Array<Int>): LongArray? {
+        val longArray = LongArray(bitArray.size)
+        for (i in elements.indices) {
+            val element = elements[i]
+            val index = element shr 6
+            if (index >= longArray.size) return null
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
+    }
+
+    private inline fun toLongArrayNullable(elements: IntArray): LongArray? {
+        val longArray = LongArray(bitArray.size)
+        for (i in elements.indices) {
+            val element = elements[i]
+            val index = element shr 6
+            if (index >= longArray.size) return null
+
+            val bit = 1L shl (element and 0x3F)
+            val prev = longArray[index]
+            longArray[index] = prev or bit
+        }
+        return longArray
     }
 
     override fun isEmpty(): Boolean {
@@ -142,7 +410,7 @@ class ExtendedBitSet : MutableSet<Int> {
     }
 
     fun ensureCapacity(capacity: Int) {
-        ensureArrayLength((capacity + 96) shr 6)
+        ensureArrayLength((capacity + 63) shr 6)
     }
 
     fun ensureArrayLength(length: Int) {
@@ -151,7 +419,7 @@ class ExtendedBitSet : MutableSet<Int> {
         }
     }
 
-    private fun getBit(index: Int): Long {
+    private inline fun getBit(index: Int): Long {
         return if (index >= bitArray.size) {
             0L
         } else {
@@ -159,7 +427,7 @@ class ExtendedBitSet : MutableSet<Int> {
         }
     }
 
-    private fun putBit(index: Int, bit: Long) {
+    private inline fun putBit(index: Int, bit: Long) {
         ensureArrayLength(index + 1)
         bitArray[index] = bit
     }

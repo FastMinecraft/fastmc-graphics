@@ -1,6 +1,7 @@
 package me.luna.fastmc.util
 
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -86,6 +87,7 @@ class OffThreadLightingProvider(
     }
 
     private companion object {
+        val channel = Channel<Runnable>(Channel.UNLIMITED)
         val mutex = Mutex()
     }
 }

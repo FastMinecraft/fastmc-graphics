@@ -3,6 +3,7 @@ package me.luna.fastmc.mixin.accessor;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.ChunkBuilder;
+import net.minecraft.client.render.chunk.ChunkOcclusionData;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
@@ -21,4 +22,7 @@ public interface AccessorChunkData {
 
     @Accessor
     Set<RenderLayer> getNonEmptyLayers();
+
+    @Accessor
+    ChunkOcclusionData getOcclusionGraph();
 }

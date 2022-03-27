@@ -17,6 +17,7 @@ accessible method net/minecraft/client/util/math/MatrixStack$Entry <init> (Lnet/
 accessible field net/minecraft/client/render/RenderPhase PARTICLES_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
 accessible field net/minecraft/client/render/RenderPhase CLOUDS_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
 accessible field net/minecraft/client/render/RenderPhase WEATHER_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
+accessible field net/minecraft/client/render/RenderPhase name Ljava/lang/String;
 
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo chunk Lnet/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk;
 accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo direction Lnet/minecraft/util/math/Direction;

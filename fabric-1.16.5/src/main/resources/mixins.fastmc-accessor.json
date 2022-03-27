@@ -7,6 +7,7 @@
     "AccessorBuiltChunk",
     "AccessorChunkBuilder",
     "AccessorChunkData",
+    "AccessorChunkOcclusionData",
     "AccessorVertexBuffer",
     "AccessorWorldRenderer"
   ],

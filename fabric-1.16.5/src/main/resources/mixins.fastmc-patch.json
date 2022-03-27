@@ -4,7 +4,6 @@
   "compatibilityLevel": "JAVA_8",
   "package": "me.luna.fastmc.mixin.patch",
   "client": [
-    "MixinPatchMinecraftClient",
     "render.MixinChunkBuilderChunkData",
     "render.MixinModelPart",
     "render.MixinPatchBackgroundRenderer",

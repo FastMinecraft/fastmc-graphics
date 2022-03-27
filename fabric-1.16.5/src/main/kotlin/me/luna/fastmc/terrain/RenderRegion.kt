@@ -1,7 +1,6 @@
 package me.luna.fastmc.terrain
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
-import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
@@ -9,17 +8,15 @@ import me.luna.fastmc.shared.util.toIntBuffer
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.util.math.BlockPos
 import java.nio.IntBuffer
-import kotlin.coroutines.CoroutineContext
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Suppress("NOTHING_TO_INLINE")
 class RenderRegion(val index: Int) {
     private val origin0 = BlockPos.Mutable()
     val regionLayerArray = arrayOfNulls<RegionLayer>(RenderLayer.getBlockLayers().size)
-    val chunks = ExtendedBitSet().apply {
-        ensureCapacity(4096)
-    }
+    val chunks = ExtendedBitSet()
     val origin: BlockPos get() = origin0
-    var dirty = true
+    val dirty = AtomicBoolean(true)
 
     @get:JvmName("isVisible")
     var visible = false
@@ -28,16 +25,13 @@ class RenderRegion(val index: Int) {
         return regionLayerArray[index]
     }
 
-    suspend inline fun updateRegionLayer(
-        mainThreadContext: CoroutineContext,
+    inline fun updateRegionLayer(
         index: Int,
         dataList: FastObjectArrayList<ChunkVertexData>,
         firstArray: IntArrayList,
         countArray: IntArrayList,
         vertexCount: Int,
-        vertexSize: Int,
-        chunkBitSet: ExtendedBitSet,
-        chunkIndices: IntArray
+        vertexSize: Int
     ) {
         val newVboSize = ((vertexSize + 1048575) shr 20 shl 20) + 2097152
         val maxVboSize = newVboSize + 4194304
@@ -60,19 +54,17 @@ class RenderRegion(val index: Int) {
             }
         }
 
-        withContext(mainThreadContext) {
-            var offset = 0L
-            for (i in dataList.indices) {
-                val data = dataList[i]
-                glCopyNamedBufferSubData(
-                    data.vboInfo.vbo.id,
-                    vbo.id,
-                    0L,
-                    offset,
-                    data.vboInfo.vertexSize.toLong()
-                )
-                offset += data.vboInfo.vertexSize
-            }
+        var offset = 0L
+        for (i in dataList.indices) {
+            val data = dataList[i]
+            glCopyNamedBufferSubData(
+                data.vboInfo.vbo.id,
+                vbo.id,
+                0L,
+                offset,
+                data.vboInfo.vertexSize.toLong()
+            )
+            offset += data.vboInfo.vertexSize
         }
 
         regionLayerArray[index] = RegionLayer(
@@ -80,21 +72,21 @@ class RenderRegion(val index: Int) {
             firstArray.toIntBuffer(),
             countArray.toIntBuffer(),
             VboInfo(vbo, vertexCount, vertexSize),
-            chunkBitSet,
-            chunkIndices
+            dataList
         )
     }
 
     fun updateRegionLayerVisibility(index: Int, firstArray: IntArrayList, countArray: IntArrayList) {
         regionLayerArray[index]?.let {
-            regionLayerArray[index] = it.copy(firstArray = firstArray.toIntBuffer(), countArray = countArray.toIntBuffer())
+            regionLayerArray[index] =
+                it.copy(firstArray = firstArray.toIntBuffer(), countArray = countArray.toIntBuffer())
         }
     }
 
     fun setOrigin(x: Int, z: Int) {
         if (x != origin0.x || z != origin0.z) {
             origin0.set(x, 0, z)
-            dirty = true
+            dirty.set(true)
         }
     }
 
@@ -110,8 +102,7 @@ class RenderRegion(val index: Int) {
         @JvmField val firstArray: IntBuffer,
         @JvmField val countArray: IntBuffer,
         @JvmField val vboInfo: VboInfo,
-        @JvmField val chunkBitSet: ExtendedBitSet,
-        @JvmField val chunkIndices: IntArray
+        @JvmField val dataList: FastObjectArrayList<ChunkVertexData>
     )
 
     companion object {

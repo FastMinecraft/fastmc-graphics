@@ -362,12 +362,6 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.disableBlend();
         RenderSystem.popMatrix();
         BackgroundRenderer.method_23792();
-
-        try {
-            ((IPatchedWorldRenderer) this).setTicked(false);
-        } catch (Exception e) {
-            // Ignored
-        }
     }
 
     @SuppressWarnings("deprecation")
@@ -424,7 +418,7 @@ public abstract class MixinCoreWorldRenderer {
 
     @SuppressWarnings("SynchronizeOnNonFinalField")
     public void renderTileEntityVanilla(@NotNull MatrixStack matrices, float tickDelta, double renderPosX, double renderPosY, double renderPosZ, @NotNull VertexConsumerProvider.Immediate immediate) {
-        for (BlockEntity blockEntity : ((IPatchedWorldRenderer) this).getRenderTileEntityList()) {
+        for (BlockEntity blockEntity : ((IPatchedWorldRenderer) this).getRenderTileEntityList().get()) {
             BlockPos blockPos = blockEntity.getPos();
             VertexConsumerProvider vertexConsumerProvider = immediate;
 

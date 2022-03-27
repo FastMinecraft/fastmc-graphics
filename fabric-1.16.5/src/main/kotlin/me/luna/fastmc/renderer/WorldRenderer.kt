@@ -3,6 +3,7 @@ package me.luna.fastmc.renderer
 import com.mojang.blaze3d.systems.RenderSystem
 import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongArrayList
+import it.unimi.dsi.fastutil.longs.LongList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
@@ -38,11 +39,12 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
             LightType.BLOCK -> pendingBlockLightUpdate
         }
         list.add(longPos)
-        list.add(System.currentTimeMillis() + 15000L)
+        list.add(System.currentTimeMillis() + 30000L)
     }
 
-    fun runLightUpdates() {
-        if (lightUpdate.isNotEmpty()) {
+    fun runLightUpdates(): LongArrayList? {
+        return if (lightUpdate.isNotEmpty()) {
+            val list = LongArrayList()
             val worldRenderer = mc.worldRenderer
             val chunks = (worldRenderer as AccessorWorldRenderer).chunks as RegionBuiltChunkStorage
             val iterator = lightUpdate.long2LongEntrySet().iterator()
@@ -60,13 +62,16 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
                     for (ix in -1..1) {
                         for (iy in -1..1) {
                             for (iz in -1..1) {
-                                worldRenderer.scheduleBlockRender(x + ix, y + iy, z + iz)
+                                list.add(BlockPos.asLong(x + ix, y + iy, z + iz))
                             }
                         }
                     }
                     iterator.remove()
                 }
             }
+            list
+        } else {
+            null
         }
     }
 

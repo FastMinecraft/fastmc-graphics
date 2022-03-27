@@ -1,14 +1,15 @@
 package me.luna.fastmc.mixin.patch.render;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectList;
-import me.luna.fastmc.FastMcMod;
+import it.unimi.dsi.fastutil.objects.ObjectLists;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
-import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
-import me.luna.fastmc.shared.util.*;
+import me.luna.fastmc.shared.util.DoubleBufferedCollection;
+import me.luna.fastmc.shared.util.FastMcExtendScope;
+import me.luna.fastmc.shared.util.MatrixUtils;
+import me.luna.fastmc.shared.util.TickTimer;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.terrain.ChunkVertexData;
@@ -21,10 +22,7 @@ import net.minecraft.client.render.*;
 import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.resource.ResourceManager;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
@@ -33,9 +31,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -71,18 +66,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     private int viewDistance;
     @Shadow
-    private double lastCameraChunkUpdateX;
-    @Shadow
-    private double lastCameraChunkUpdateY;
-    @Shadow
-    private double lastCameraChunkUpdateZ;
-    @Shadow
-    private int cameraChunkX;
-    @Shadow
-    private int cameraChunkY;
-    @Shadow
-    private int cameraChunkZ;
-    @Shadow
     private BuiltChunkStorage chunks;
     @Shadow
     @Final
@@ -93,10 +76,9 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Final
     private BufferBuilderStorage bufferBuilders;
 
-    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
-    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunksBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet());
-    private final FastObjectArrayList<ChunkBuilder.BuiltChunk> chunksToUpdateList = new FastObjectArrayList<>();
+    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), it -> {});
+    private final DoubleBufferedCollection<ExtendedBitSet> updatingChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
 
     private final Matrix4f original = new Matrix4f();
     private final Matrix4f translated = new Matrix4f();
@@ -108,7 +90,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private int lastCameraZ0 = Integer.MAX_VALUE;
     private int lastCameraYaw0 = Integer.MAX_VALUE;
     private int lastCameraPitch0 = Integer.MAX_VALUE;
-    private boolean ticked = false;
 
     @Shadow
     public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
@@ -122,33 +103,43 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     protected abstract void resetTransparencyShader();
 
-    @Shadow public abstract void reload(ResourceManager manager);
+    @Shadow
+    private double lastCameraChunkUpdateX;
 
-    @Shadow public abstract void renderClouds(MatrixStack matrices, float tickDelta, double cameraX, double cameraY, double cameraZ);
+    @Shadow
+    private double lastCameraChunkUpdateY;
 
-    @Shadow protected abstract void renderLightSky();
+    @Shadow
+    private double lastCameraChunkUpdateZ;
+
+    @Shadow
+    private int cameraChunkX;
+
+    @Shadow
+    private int cameraChunkY;
+
+    @Shadow
+    private int cameraChunkZ;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
-        this.visibleChunks = new FastObjectArrayList<>(69696);
+        this.visibleChunks = ObjectLists.emptyList();
     }
 
     @Inject(method = "setWorld", at = @At("HEAD"))
     public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
         if (world == null) {
             renderTileEntityList.get().clearAndTrim();
-            renderTileEntityList.swapAndGet().clearAndTrim();
+            renderTileEntityList.getSwap().clearAndTrim();
 
-            chunksToUpdateBitSet.get().clearFast();
-            chunksToUpdateBitSet.swapAndGet().clearFast();
+            clearFast(updatingChunkBitSet);
+            clearFast(visibleChunkBitSet);
         }
+    }
 
-        lastCameraX0 = Integer.MAX_VALUE;
-        lastCameraY0 = Integer.MAX_VALUE;
-        lastCameraZ0 = Integer.MAX_VALUE;
-        lastCameraYaw0 = Integer.MAX_VALUE;
-        lastCameraPitch0 = Integer.MAX_VALUE;
-        scheduling.set(false);
+    private static void clearFast(DoubleBufferedCollection<ExtendedBitSet> input) {
+        input.get().clear();
+        input.getSwap().clearFast();
     }
 
     /**
@@ -188,12 +179,30 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             }
 
             this.chunks = new RegionBuiltChunkStorage(this.chunkBuilder, this.world, this.client.options.viewDistance, thisRef);
-            if (this.world != null) {
-                Entity entity = this.client.getCameraEntity();
-                if (entity != null) {
-                    this.chunks.updateCameraPosition(entity.getX(), entity.getZ());
-                }
-            }
+
+            this.lastCameraChunkUpdateX = Double.MAX_VALUE;
+            this.lastCameraChunkUpdateY = Double.MAX_VALUE;
+            this.lastCameraChunkUpdateZ = Double.MAX_VALUE;
+            this.cameraChunkX = Integer.MAX_VALUE;
+            this.cameraChunkY = Integer.MAX_VALUE;
+            this.cameraChunkZ = Integer.MAX_VALUE;
+
+            this.lastTranslucentSortX = Double.MAX_VALUE;
+            this.lastTranslucentSortY = Double.MAX_VALUE;
+            this.lastTranslucentSortZ = Double.MAX_VALUE;
+
+            lastCameraX0 = Integer.MAX_VALUE;
+            lastCameraY0 = Integer.MAX_VALUE;
+            lastCameraZ0 = Integer.MAX_VALUE;
+            lastCameraYaw0 = Integer.MAX_VALUE;
+            lastCameraPitch0 = Integer.MAX_VALUE;
+            scheduling.set(false);
+
+            renderTileEntityList.get().clearAndTrim();
+            renderTileEntityList.getSwap().clearAndTrim();
+
+            clearFast(updatingChunkBitSet);
+            clearFast(visibleChunkBitSet);
         }
     }
 
@@ -203,202 +212,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     private void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator) {
-        WorldRenderer thisRef = (WorldRenderer) (Object) this;
-        RegionBuiltChunkStorage chunks = (RegionBuiltChunkStorage) this.chunks;
-
-        if (this.client.options.viewDistance != this.viewDistance) {
-            this.reload();
-        }
-
-        this.world.getProfiler().push("camera");
-        assert this.client.player != null;
-        double cameraUpdateDeltaX = this.client.player.getX() - this.lastCameraChunkUpdateX;
-        double cameraUpdateDeltaY = this.client.player.getY() - this.lastCameraChunkUpdateY;
-        double cameraUpdateDeltaZ = this.client.player.getZ() - this.lastCameraChunkUpdateZ;
-
-        if (this.cameraChunkX != this.client.player.chunkX
-            || this.cameraChunkY != this.client.player.chunkY
-            || this.cameraChunkZ != this.client.player.chunkZ
-            || cameraUpdateDeltaX * cameraUpdateDeltaX + cameraUpdateDeltaY * cameraUpdateDeltaY + cameraUpdateDeltaZ * cameraUpdateDeltaZ > 16.0D) {
-            this.lastCameraChunkUpdateX = this.client.player.getX();
-            this.lastCameraChunkUpdateY = this.client.player.getY();
-            this.lastCameraChunkUpdateZ = this.client.player.getZ();
-            this.cameraChunkX = this.client.player.chunkX;
-            this.cameraChunkY = this.client.player.chunkY;
-            this.cameraChunkZ = this.client.player.chunkZ;
-            this.chunks.updateCameraPosition(this.client.player.getX(), this.client.player.getZ());
-        }
-
-        if (!this.getTicked()) {
-            this.client.getProfiler().swap("updateChunks");
-            this.chunkBuilder.setCameraPosition(camera.getPos());
-            if (this.chunkBuilder.upload()) {
-                this.needsTerrainUpdate = true;
-            }
-
-            this.client.getProfiler().swap("culling");
-            BlockPos cameraBlockPos = camera.getBlockPos();
-
-            boolean update = false;
-            if (!hasForcedFrustum) {
-                int cameraPosX0 = cameraBlockPos.getX() >> 1;
-                int cameraPosY0 = cameraBlockPos.getY() >> 1;
-                int cameraPosZ0 = cameraBlockPos.getZ() >> 1;
-                int cameraYaw0 = MathHelper.floor(camera.getYaw());
-                int cameraPitch0 = MathUtilsKt.fastFloor(camera.getPitch());
-
-                if (cameraPosX0 != lastCameraX0
-                    || cameraPosY0 != lastCameraY0
-                    || cameraPosZ0 != lastCameraZ0
-                    || cameraYaw0 != lastCameraYaw0
-                    || cameraPitch0 != lastCameraPitch0) {
-                    lastCameraX0 = cameraPosX0;
-                    lastCameraY0 = cameraPosY0;
-                    lastCameraZ0 = cameraPosZ0;
-                    lastCameraYaw0 = cameraYaw0;
-                    lastCameraPitch0 = cameraPitch0;
-                    loadingTimer.reset();
-                    update = true;
-                } else if (this.needsTerrainUpdate && loadingTimer.tick(250L)) {
-                    lastCameraX0 = cameraPosX0;
-                    lastCameraY0 = cameraPosY0;
-                    lastCameraZ0 = cameraPosZ0;
-                    lastCameraYaw0 = cameraYaw0;
-                    lastCameraPitch0 = cameraPitch0;
-                    update = true;
-                }
-            }
-
-            if (update) {
-                needsTerrainUpdate = false;
-
-                this.visibleChunks.clear();
-                clearRenderLists();
-
-                Entity.setRenderDistanceMultiplier(MathHelper.clamp(this.client.options.viewDistance / 8.0D, 1.0D, 2.5D) * this.client.options.entityDistanceScaling);
-                boolean chunkCulling = this.client.chunkCullingEnabled;
-
-                ChunkBuilder.BuiltChunk builtChunk = chunks.getRenderedChunkByBlock(cameraBlockPos);
-                ObjectArrayList<WorldRenderer.ChunkInfo> list = new ObjectArrayList<>();
-
-                if (builtChunk != null) {
-                    if (spectator && this.world.getBlockState(cameraBlockPos).isOpaqueFullCube(this.world, cameraBlockPos)) {
-                        chunkCulling = false;
-                    }
-
-                    builtChunk.setRebuildFrame(frame);
-                    list.add(thisRef.new ChunkInfo(builtChunk, null, 0));
-                } else {
-                    int chunkY = cameraBlockPos.getY() > 0 ? 248 : 8;
-                    int cameraChunkX = cameraBlockPos.getX() >> 4;
-                    int cameraChunkZ = cameraBlockPos.getZ() >> 4;
-                    Comparator<WorldRenderer.ChunkInfo> comparator = Comparator.comparingInt(it -> {
-                        BlockPos chunkOrigin = it.chunk.getOrigin();
-                        int diffX = cameraBlockPos.getX() - (chunkOrigin.getX() + 8);
-                        int diffY = cameraBlockPos.getY() - (chunkOrigin.getY() + 8);
-                        int diffZ = cameraBlockPos.getZ() - (chunkOrigin.getZ() + 8);
-                        return diffX * diffX + diffY * diffY + diffZ * diffZ;
-                    });
-
-                    for (int iChunkX = -this.viewDistance; iChunkX <= this.viewDistance; iChunkX++) {
-                        for (int iChunkZ = -this.viewDistance; iChunkZ <= this.viewDistance; iChunkZ++) {
-                            ChunkBuilder.BuiltChunk builtChunk2 = chunks.getRenderedChunk(cameraChunkX + iChunkX, chunkY, cameraChunkZ + iChunkZ);
-                            if (builtChunk2 != null && frustum.isVisible(builtChunk2.boundingBox)) {
-                                builtChunk2.setRebuildFrame(frame);
-                                list.add(thisRef.new ChunkInfo(builtChunk2, null, 0));
-                            }
-                        }
-                    }
-
-                    Arrays.sort(list.elements(), 0, list.size(), comparator);
-                }
-
-                this.client.getProfiler().push("iteration");
-                BlockPos cameraChunkBlockPos = new BlockPos(
-                    cameraBlockPos.getX() >> 4 << 4,
-                    cameraBlockPos.getY() >> 4 << 4,
-                    cameraBlockPos.getZ() >> 4 << 4
-                );
-                this.setupTerrainIteration((FastObjectArrayList<WorldRenderer.ChunkInfo>) visibleChunks, renderTileEntityList.get(), (RegionBuiltChunkStorage) this.chunks, frustum, frame, cameraChunkBlockPos, chunkCulling, list);
-                list.clear();
-                this.client.getProfiler().pop();
-            }
-
-            if (!scheduling.get() && ((AccessorChunkBuilder) this.chunkBuilder).getQueuedTaskCount() < ParallelUtils.CPU_THREADS * 4) {
-                this.client.getProfiler().swap("rebuildNear");
-                this.rebuildNear(cameraBlockPos);
-            }
-        }
-        this.client.getProfiler().pop();
+        setupTerrain0(camera, frustum, hasForcedFrustum, frame, spectator);
     }
-
-    private void rebuildNear(BlockPos cameraBlockPos) {
-        ExtendedBitSet oldSet = chunksToUpdateBitSet.get();
-        ExtendedBitSet newSet = chunksToUpdateBitSet.swapAndGet();
-        ChunkBuilder.BuiltChunk[] chunks = this.chunks.chunks;
-        newSet.ensureCapacity(chunks.length);
-
-        ((me.luna.fastmc.renderer.WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).runLightUpdates();
-
-        for (WorldRenderer.ChunkInfo renderInfo : this.visibleChunks) {
-            ChunkBuilder.BuiltChunk builtChunk = renderInfo.chunk;
-            int index = ((IPatchedBuiltChunk) builtChunk).getIndex();
-
-            if (builtChunk.needsRebuild()) {
-                if (newSet.add(index)) {
-                    chunksToUpdateList.add(builtChunk);
-                }
-            }
-        }
-
-        oldSet.clear();
-
-        if (!chunksToUpdateList.isEmpty()) {
-            scheduling.set(true);
-            FastMcCoreScope.INSTANCE.getPool().submit(() -> {
-                Arrays.sort(chunksToUpdateList.elements(), 0, chunksToUpdateList.size(), Comparator.comparingInt(it -> {
-                    BlockPos chunkPos = it.getOrigin();
-                    int diffX = cameraBlockPos.getX() - (chunkPos.getX() + 8);
-                    int diffY = cameraBlockPos.getY() - (chunkPos.getY() + 8);
-                    int diffZ = cameraBlockPos.getZ() - (chunkPos.getZ() + 8);
-                    return diffX * diffX + diffY * diffY + diffZ * diffZ;
-                }));
-
-                ChunkBuilder.BuiltChunk[] array = new ChunkBuilder.BuiltChunk[Math.min(chunksToUpdateList.size(), ParallelUtils.CPU_THREADS * 2)];
-                for (int i = 0; i < array.length; i++) {
-                    ChunkBuilder.BuiltChunk builtChunk = chunksToUpdateList.get(i);
-                    builtChunk.cancelRebuild();
-                    newSet.remove(((IPatchedBuiltChunk) builtChunk).getIndex());
-                    array[i] = builtChunk;
-                }
-
-                for (int i = 0; i < array.length; i++) {
-                    ChunkBuilder.BuiltChunk builtChunk = array[i];
-                    ChunkBuilder.BuiltChunk.Task task = builtChunk.createRebuildTask();
-                    builtChunk.cancelRebuild();
-                    this.chunkBuilder.send(task);
-                }
-
-                chunksToUpdateList.clear();
-                scheduling.set(false);
-            });
-        }
-    }
-
-    private void clearRenderLists() {
-        renderTileEntityList.getAndSwap();
-        int entityCapacity = world.blockEntities.size();
-        entityCapacity = MathUtils.ceilToPOT(entityCapacity + entityCapacity / 2);
-
-        FastObjectArrayList<BlockEntity> renderTileEntityList = this.renderTileEntityList.get();
-
-        if (renderTileEntityList.getCapacity() > entityCapacity << 1) {
-            renderTileEntityList.trim(entityCapacity);
-        } else {
-            renderTileEntityList.ensureCapacity(entityCapacity);
-        }
-    }
-
 
     /**
      * @author Luna
@@ -406,8 +221,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     public void clearChunkRenderers() {
-        chunksToUpdateBitSet.get().clear();
-        chunksToUpdateBitSet.getSwap().clear();
         chunksToRebuild.clear();
         chunkBuilder.reset();
     }
@@ -418,7 +231,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     public boolean isTerrainRenderComplete() {
-        return this.chunksToUpdateBitSet.get().isEmpty() && this.chunkBuilder.isEmpty();
+        return updatingChunkBitSet.get().isEmpty() && this.updatingChunkBitSet.getSwap().isEmpty() && this.chunkBuilder.isEmpty();
     }
 
     /**
@@ -454,7 +267,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             this.client.getProfiler().pop();
         }
 
-        this.client.getProfiler().push(layer::toString);
+        this.client.getProfiler().push(layer.name);
 
         AdaptersKt.toJoml(matrixStack.peek().getModel(), original);
         RenderSystem.pushMatrix();
@@ -542,11 +355,19 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         }
 
         ChunkBuilder.BuiltChunk[] builtChunks = this.chunks.chunks;
+        ExtendedBitSet visibleChunkBitSet = this.visibleChunkBitSet.get();
+
         long chunkVertexSize = 0;
         long chunkVboSize = 0;
         int chunkCount = 0;
+
+        long visibleChunkSize = 0;
+        int visibleChunkCount = 0;
+
         for (int i = 0; i < builtChunks.length; i++) {
-            ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) builtChunks[i]).getChunkVertexDataArray();
+            IPatchedBuiltChunk patchedBuiltChunk = (IPatchedBuiltChunk) builtChunks[i];
+            ChunkVertexData[] bufferArray = patchedBuiltChunk.getChunkVertexDataArray();
+            boolean visible = visibleChunkBitSet.contains(patchedBuiltChunk.getIndex());
             boolean isEmpty = true;
 
             for (int i2 = 0; i2 < bufferArray.length; i2++) {
@@ -555,28 +376,14 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
                     isEmpty = false;
                     chunkVertexSize += data.vboInfo.vertexSize;
                     chunkVboSize += data.vboInfo.vbo.getSize();
+                    if (visible) visibleChunkSize += data.vboInfo.vertexSize;
                 }
             }
 
-            if (!isEmpty) chunkCount++;
-        }
-
-        long visibleChunkSize = 0;
-        int visibleChunkCount = 0;
-        ObjectList<WorldRenderer.ChunkInfo> visibleChunks = this.visibleChunks;
-        for (int i = 0; i < visibleChunks.size(); i++) {
-            ChunkVertexData[] bufferArray = ((IPatchedBuiltChunk) visibleChunks.get(i).chunk).getChunkVertexDataArray();
-            boolean isEmpty = true;
-
-            for (int i2 = 0; i2 < bufferArray.length; i2++) {
-                ChunkVertexData chunkVertexDataArray = bufferArray[i2];
-                if (chunkVertexDataArray != null) {
-                    isEmpty = false;
-                    visibleChunkSize += chunkVertexDataArray.vboInfo.vertexSize;
-                }
+            if (!isEmpty) {
+                chunkCount++;
+                if (visible) visibleChunkCount++;
             }
-
-            if (!isEmpty) visibleChunkCount++;
         }
 
         return String.format(
@@ -599,25 +406,81 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         );
     }
 
+    @Override
+    public int getLastCameraX0() {
+        return lastCameraX0;
+    }
+
+    @Override
+    public void setLastCameraX0(int lastCameraX0) {
+        this.lastCameraX0 = lastCameraX0;
+    }
+
+    @Override
+    public int getLastCameraY0() {
+        return lastCameraY0;
+    }
+
+    @Override
+    public void setLastCameraY0(int lastCameraY0) {
+        this.lastCameraY0 = lastCameraY0;
+    }
+
+    @Override
+    public int getLastCameraZ0() {
+        return lastCameraZ0;
+    }
+
+    @Override
+    public void setLastCameraZ0(int lastCameraZ0) {
+        this.lastCameraZ0 = lastCameraZ0;
+    }
+
+    @Override
+    public int getLastCameraYaw0() {
+        return lastCameraYaw0;
+    }
+
+    @Override
+    public void setLastCameraYaw0(int lastCameraYaw0) {
+        this.lastCameraYaw0 = lastCameraYaw0;
+    }
+
+    @Override
+    public int getLastCameraPitch0() {
+        return lastCameraPitch0;
+    }
+
+    @Override
+    public void setLastCameraPitch0(int lastCameraPitch0) {
+        this.lastCameraPitch0 = lastCameraPitch0;
+    }
+
     @NotNull
     @Override
-    public List<BlockEntity> getRenderTileEntityList() {
-        return renderTileEntityList.get();
-    }
-
-    @Override
-    public boolean getTicked() {
-        return ticked;
-    }
-
-    @Override
-    public void setTicked(boolean ticked) {
-        this.ticked = ticked;
+    public TickTimer getLoadingTimer() {
+        return loadingTimer;
     }
 
     @NotNull
     @Override
-    public DoubleBufferedCollection<ExtendedBitSet> getVisibleChunksBitSet() {
-        return visibleChunksBitSet;
+    public AtomicBoolean getScheduling() {
+        return scheduling;
+    }
+
+    @Override
+    public @NotNull DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> getRenderTileEntityList() {
+        return renderTileEntityList;
+    }
+
+    @Override
+    public @NotNull DoubleBufferedCollection<ExtendedBitSet> getUpdatingChunkBitSet() {
+        return updatingChunkBitSet;
+    }
+
+    @NotNull
+    @Override
+    public DoubleBufferedCollection<ExtendedBitSet> getVisibleChunkBitSet() {
+        return visibleChunkBitSet;
     }
 }

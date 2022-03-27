@@ -1,357 +1,542 @@
 package me.luna.fastmc.mixin
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
-import it.unimi.dsi.fastutil.objects.ObjectArrayList
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import me.luna.fastmc.FastMcMod
+import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
-import me.luna.fastmc.shared.util.DoubleBufferedCollection
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ParallelUtils
+import me.luna.fastmc.shared.util.*
+import me.luna.fastmc.shared.util.MathUtils.ceilToPOT
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
-import me.luna.fastmc.terrain.ChunkVertexData
-import me.luna.fastmc.terrain.RegionBuiltChunkStorage
-import me.luna.fastmc.terrain.RenderRegion
-import me.luna.fastmc.terrain.VertexDataTransformer
+import me.luna.fastmc.terrain.*
 import net.minecraft.block.entity.BlockEntity
+import net.minecraft.client.render.Camera
 import net.minecraft.client.render.Frustum
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.WorldRenderer
 import net.minecraft.client.render.chunk.ChunkBuilder
+import net.minecraft.client.render.chunk.ChunkBuilder.BuiltChunk
+import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
-import net.minecraft.util.math.Direction
-import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.IntUnaryOperator
+import net.minecraft.util.math.MathHelper
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
-import kotlin.math.max
 
 @Suppress("NOTHING_TO_INLINE")
 interface IPatchedWorldRenderer {
-    var ticked: Boolean
-    val renderTileEntityList: List<BlockEntity>
-    val visibleChunksBitSet: DoubleBufferedCollection<ExtendedBitSet>
+    val renderTileEntityList: DoubleBufferedCollection<FastObjectArrayList<BlockEntity>>
+    val updatingChunkBitSet: DoubleBufferedCollection<ExtendedBitSet>
+    val visibleChunkBitSet: DoubleBufferedCollection<ExtendedBitSet>
 
-    suspend fun setupTerrainIteration0(
+    var lastCameraX0: Int
+    var lastCameraY0: Int
+    var lastCameraZ0: Int
+    var lastCameraYaw0: Int
+    var lastCameraPitch0: Int
+    val loadingTimer: TickTimer
+    val scheduling: AtomicBoolean
+
+    fun setupTerrain0(camera: Camera, frustum: Frustum, hasForcedFrustum: Boolean, frame: Int, spectator: Boolean) {
+        this@IPatchedWorldRenderer as WorldRenderer
+        this@IPatchedWorldRenderer as AccessorWorldRenderer
+
+        client.profiler.push("pre")
+        val chunkBuilder = chunkBuilder
+        chunkBuilder as AccessorChunkBuilder
+        chunkBuilder as IPatchedChunkBuilder
+
+        val chunks = chunks as RegionBuiltChunkStorage
+        val player = client.player ?: return
+
+        if (client.options.viewDistance != viewDistance) {
+            reload()
+        }
+
+        runBlocking {
+            var cameraJob: Job
+            val lightUpdateDeferred = async(FastMcCoreScope.context, CoroutineStart.LAZY) {
+                (FastMcMod.worldRenderer as me.luna.fastmc.renderer.WorldRenderer).runLightUpdates()
+            }
+            var cullingJob: Job? = null
+
+            withContext(FastMcCoreScope.context) {
+                client.profiler.swap("updateChunks")
+                val running = booleanArrayOf(true)
+                val updateChunksJob = launch(this@runBlocking.coroutineContext) {
+                    chunkBuilder.cameraPosition = camera.pos
+                    needsTerrainUpdate = chunkBuilder.upload(running) || needsTerrainUpdate
+                }
+
+
+                world.profiler.swap("camera")
+                val cameraBlockPos = camera.blockPos
+                val cameraChunkOrigin = BlockPos(
+                    cameraBlockPos.x shr 4 shl 4,
+                    cameraBlockPos.y shr 4 shl 4,
+                    cameraBlockPos.z shr 4 shl 4
+                )
+                cameraJob = launch(FastMcCoreScope.context) {
+                    val cameraUpdateDeltaX = player.x - lastCameraChunkUpdateX
+                    val cameraUpdateDeltaY = player.y - lastCameraChunkUpdateY
+                    val cameraUpdateDeltaZ = player.z - lastCameraChunkUpdateZ
+                    if (cameraChunkX != player.chunkX || cameraChunkY != player.chunkY || cameraChunkZ != player.chunkZ
+                        || cameraUpdateDeltaX * cameraUpdateDeltaX + cameraUpdateDeltaY * cameraUpdateDeltaY + cameraUpdateDeltaZ * cameraUpdateDeltaZ > 16.0
+                    ) {
+                        lastCameraChunkUpdateX = player.x
+                        lastCameraChunkUpdateY = player.y
+                        lastCameraChunkUpdateZ = player.z
+                        cameraChunkX = player.chunkX
+                        cameraChunkY = player.chunkY
+                        cameraChunkZ = player.chunkZ
+                        chunks.updateCameraPosition(
+                            cameraChunkOrigin,
+                            player.x,
+                            player.z
+                        )
+                    }
+                    lightUpdateDeferred.start()
+                }
+
+                client.profiler.swap("culling")
+                var update = false
+
+                needsTerrainUpdate = chunks.updateCulling(cameraChunkOrigin, frame) || needsTerrainUpdate
+
+                if (!hasForcedFrustum) {
+                    val cameraPosX0 = cameraBlockPos.x shr 1
+                    val cameraPosY0 = cameraBlockPos.y shr 1
+                    val cameraPosZ0 = cameraBlockPos.z shr 1
+                    val cameraYaw0 = MathHelper.floor(camera.yaw)
+                    val cameraPitch0 = camera.pitch.fastFloor()
+
+                    if (cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0 || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0) {
+                        lastCameraX0 = cameraPosX0
+                        lastCameraY0 = cameraPosY0
+                        lastCameraZ0 = cameraPosZ0
+                        lastCameraYaw0 = cameraYaw0
+                        lastCameraPitch0 = cameraPitch0
+                        loadingTimer.reset()
+                        update = true
+                    } else if (needsTerrainUpdate && loadingTimer.tick(250L)) {
+                        lastCameraX0 = cameraPosX0
+                        lastCameraY0 = cameraPosY0
+                        lastCameraZ0 = cameraPosZ0
+                        lastCameraYaw0 = cameraYaw0
+                        lastCameraPitch0 = cameraPitch0
+                        update = true
+                    }
+                }
+
+                if (update) {
+                    needsTerrainUpdate = false
+
+                    Entity.setRenderDistanceMultiplier(
+                        MathHelper.clamp(
+                            client.options.viewDistance / 8.0,
+                            1.0,
+                            2.5
+                        ) * client.options.entityDistanceScaling
+                    )
+
+                    client.profiler.swap("camera")
+                    cameraJob.join()
+
+                    client.profiler.swap("lightUpdates")
+                    lightUpdateDeferred.await()?.let { list ->
+                        for (i in list.indices) {
+                            val longPos = list.getLong(i)
+                            val builtChunk = chunks.getRenderedChunk(
+                                BlockPos.unpackLongX(longPos),
+                                BlockPos.unpackLongY(longPos),
+                                BlockPos.unpackLongZ(longPos)
+                            ) ?: continue
+                            builtChunk.scheduleRebuild(false)
+                        }
+                    }
+
+                    client.profiler.push("iteration")
+                    cullingJob = setupTerrainCulling(
+                        this@runBlocking,
+                        this@runBlocking.coroutineContext,
+                        running,
+                        updateChunksJob,
+                        chunks,
+                        frustum,
+                        cameraChunkOrigin,
+                        client.chunkCullingEnabled
+                            && !spectator
+                            && !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)
+                    )
+
+                    client.profiler.pop()
+                }
+
+                if (!scheduling.get()
+                    && chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 4
+                    && chunkBuilder.uploadQueue.size < ParallelUtils.CPU_THREADS * 4
+                ) {
+                    cullingJob?.let {
+                        client.profiler.swap("culling")
+                        client.profiler.push("iteration")
+                        it.join()
+                        client.profiler.pop()
+                    } ?: run {
+                        client.profiler.swap("camera")
+                        cameraJob.join()
+                        chunks.getChunkIndices()
+                    }
+
+                    client.profiler.swap("updateChunks")
+                    running[0] = false
+                    updateChunksJob.join()
+
+                    client.profiler.swap("rebuildNear")
+                    rebuildNear(cameraBlockPos)
+                }
+
+                cullingJob?.let {
+                    client.profiler.swap("culling")
+                    client.profiler.push("iteration")
+                    it.join()
+                    client.profiler.pop()
+                }
+
+                client.profiler.swap("post")
+            }
+
+            client.profiler.pop()
+        }
+    }
+
+    suspend fun rebuildNear(cameraBlockPos: BlockPos) {
+        this as AccessorWorldRenderer
+        val updatingChunkBitSet = updatingChunkBitSet.get()
+        if (!updatingChunkBitSet.isEmpty()) {
+            scheduling.set(true)
+            FastMcCoreScope.launch {
+                val chunks = chunks as RegionBuiltChunkStorage
+                var count = ParallelUtils.CPU_THREADS * 2
+                val chunkIndices = chunks.getChunkIndices()
+                val chunkArray = chunks.chunks
+
+                updatingChunkBitSet.ensureArrayLength(chunkArray.size)
+                for (i in chunkIndices.size - 1 downTo 0) {
+                    val chunkIndex = chunkIndices[i]
+                    if (!updatingChunkBitSet.containsFast(chunkIndex)) continue
+
+                    val builtChunk = chunkArray[chunkIndex]
+                    val task = builtChunk.createRebuildTask()
+                    builtChunk.cancelRebuild()
+                    updatingChunkBitSet.remove((builtChunk as IPatchedBuiltChunk).index)
+                    chunkBuilder.send(task)
+
+                    if (--count <= 0) break
+                }
+
+                scheduling.set(false)
+            }
+        }
+    }
+
+    private fun setupTerrainCulling(
+        scope: CoroutineScope,
         mainThreadContext: CoroutineContext,
-        visibleChunks: FastObjectArrayList<WorldRenderer.ChunkInfo>,
-        renderTileEntityList: FastObjectArrayList<BlockEntity>,
+        running: BooleanArray,
+        updateChunksJob: Job,
         chunkStorage: RegionBuiltChunkStorage,
         frustum: Frustum,
-        frame: Int,
-        cameraChunkBlockPos: BlockPos,
-        chunkCulling: Boolean,
-        chunkInfoList: ObjectArrayList<WorldRenderer.ChunkInfo>
-    ) {
-        withContext(FastMcCoreScope.context) {
-            this@IPatchedWorldRenderer as WorldRenderer
-            val queue = ConcurrentLinkedQueue(chunkInfoList)
-            val dummy = this@IPatchedWorldRenderer.ChunkInfo(null, null, 0)
+        cameraChunkOrigin: BlockPos,
+        caveCulling: Boolean,
+    ): Job {
+        this as AccessorWorldRenderer
+        this as WorldRenderer
+
+        return scope.launch(FastMcCoreScope.context) {
+            val channel = Channel<CullingInfo>(ParallelUtils.CPU_THREADS)
 
             launch(FastMcCoreScope.context) {
                 val layers = RenderLayer.getBlockLayers()
                 val chunkArray: Array<ChunkBuilder.BuiltChunk> = chunkStorage.chunks
                 val regionArray = chunkStorage.regionArray
 
-                val job = launch(FastMcCoreScope.context) {
-                    chunkStorage.updateSorting(cameraChunkBlockPos)
+                val updatingChunkBitSet0 = updatingChunkBitSet.getSwap()
+                val renderTileEntityList0 = renderTileEntityList.getSwap()
+                val visibleChunkBitSet0 = visibleChunkBitSet.getSwap()
+
+                updatingChunkBitSet0.clear()
+                renderTileEntityList0.clear()
+                visibleChunkBitSet0.clear()
+
+                updatingChunkBitSet0.ensureCapacity(chunkArray.size)
+                visibleChunkBitSet0.ensureCapacity(chunkArray.size)
+
+                var entityCapacity = world.blockEntities.size
+                entityCapacity = ceilToPOT(entityCapacity + entityCapacity / 2)
+                if (renderTileEntityList0.capacity > entityCapacity shl 1) {
+                    renderTileEntityList0.trim(entityCapacity)
+                } else {
+                    renderTileEntityList0.ensureCapacity(entityCapacity)
                 }
 
-                val newSet = visibleChunksBitSet.swapAndGet()
-                newSet.clear()
-                newSet.ensureCapacity(chunkArray.size)
-
-                for (i in regionArray.indices) {
-                    regionArray[i].visible = false
+                for (info in channel) {
+                    updatingChunkBitSet0.addAll(info.updating)
+                    visibleChunkBitSet0.addAll(info.visible)
+                    renderTileEntityList0.addAll(info.tileEntity)
                 }
 
-                var it: WorldRenderer.ChunkInfo?
-                while (true) {
-                    do {
-                        it = queue.poll()
-                    } while (it == null)
+                updatingChunkBitSet.getAndSwap()
+                renderTileEntityList.getAndSwap()
+                visibleChunkBitSet.getAndSwap()
 
-                    if (it === dummy) break
+                running[0] = false
+                updateChunksJob.join()
+                val chunkIndices = chunkStorage.getChunkIndices()
 
-                    val builtChunk = it.chunk
-                    builtChunk as IPatchedBuiltChunk
-                    val chunkData = builtChunk.getData()
-                    val list = chunkData.blockEntities
-
-                    if (list.isNotEmpty()) {
-                        renderTileEntityList.addAll(list as ObjectArrayList<BlockEntity>)
-                    }
-
-                    if (!chunkData.isEmpty) {
-                        builtChunk.region.visible = true
-                    }
-
-                    newSet.add(builtChunk.index)
-                    visibleChunks.add(it)
-                }
-
-                job.join()
-                val chunkIndices = chunkStorage.sortedChunkIndices
-
-                for (regionIndex in regionArray.indices) {
-                    val region = regionArray[regionIndex]
-                    if (region.dirty) {
-                        updateRegionVbo(mainThreadContext, chunkIndices, chunkArray, newSet, region, layers)
-                    } else {
-                        updateRegionVisibility(chunkArray, newSet, region, layers)
-                    }
-                    region.dirty = false
-                }
+                updateRegion(
+                    this,
+                    regionArray,
+                    mainThreadContext,
+                    chunkArray,
+                    chunkIndices,
+                    visibleChunkBitSet0,
+                    layers
+                )
             }
 
             coroutineScope {
-                val counter = AtomicInteger(ParallelUtils.CPU_THREADS * 2)
-                for (i in chunkInfoList.indices) {
-                    recursiveSetupTerrainIteration(
-                        this,
-                        frustum,
-                        frame,
-                        cameraChunkBlockPos,
-                        chunkCulling,
-                        queue,
-                        counter,
-                        chunkInfoList[i]
-                    )
+                val regionArray = chunkStorage.regionArray
+                for (region in regionArray) {
+                    region.visible = false
                 }
+                val nonEmptyChunkSet = NonEmptyChunkSet(world, viewDistance, cameraChunkOrigin)
+                val caveCullingBitSet = (chunks as RegionBuiltChunkStorage).getCaveCullingBitSet()
+                cullingIteration(this, caveCulling, frustum, nonEmptyChunkSet, caveCullingBitSet, channel)
             }
 
-            queue.add(dummy)
+            channel.close()
         }
     }
 
-    fun setupTerrainIteration(
-        visibleChunks: FastObjectArrayList<WorldRenderer.ChunkInfo>,
-        renderTileEntityList: FastObjectArrayList<BlockEntity>,
-        chunks: RegionBuiltChunkStorage,
-        frustum: Frustum,
-        frame: Int,
-        cameraChunkBlockPos: BlockPos,
-        chunkCulling: Boolean,
-        chunkInfoList: ObjectArrayList<WorldRenderer.ChunkInfo>
+    fun updateRegion(
+        scope: CoroutineScope,
+        regionArray: Array<RenderRegion>,
+        mainThreadContext: CoroutineContext,
+        chunkArray: Array<BuiltChunk>,
+        chunkIndices: IntArray,
+        visibleChunkBitSet0: ExtendedBitSet,
+        layers: MutableList<RenderLayer>
     ) {
-        runBlocking {
-            setupTerrainIteration0(
-                this.coroutineContext,
-                visibleChunks,
-                renderTileEntityList,
-                chunks,
-                frustum,
-                frame,
-                cameraChunkBlockPos,
-                chunkCulling,
-                chunkInfoList
+        for (regionIndex in regionArray.indices) {
+            val region = regionArray[regionIndex]
+            if (region.dirty.getAndSet(false)) {
+                updateRegionVbo(scope, mainThreadContext, chunkArray, chunkIndices, visibleChunkBitSet0, region, layers)
+            } else if (region.visible) {
+                updateRegionVisibility(scope, visibleChunkBitSet0, region, layers)
+            }
+        }
+    }
+
+    private fun cullingIteration(
+        scope: CoroutineScope,
+        caveCulling: Boolean,
+        frustum: Frustum,
+        nonEmptyChunkSet: NonEmptyChunkSet,
+        caveCullingBitSet: ExtendedBitSet,
+        channel: Channel<CullingInfo>
+    ) {
+        this as AccessorWorldRenderer
+        this as WorldRenderer
+
+        val chunkArray = chunks.chunks
+
+        if (caveCulling) {
+            ParallelUtils.splitListIndex(
+                total = chunkArray.size,
+                parallelism = ParallelUtils.CPU_THREADS,
+                blockForEach = { start, end ->
+                    scope.launch(FastMcCoreScope.context) {
+                        val cullingInfo = CullingInfo(chunkArray.size)
+
+                        for (i in start until end) {
+                            val builtChunk = chunkArray[i]
+                            builtChunk as IPatchedBuiltChunk
+                            val index = builtChunk.index
+
+                            if (!builtChunk.shouldBuild(nonEmptyChunkSet)) continue
+                            if (!frustum.isVisible(builtChunk.boundingBox)) continue
+                            if (!caveCullingBitSet.containsFast(index)) continue
+
+                            if (builtChunk.needsRebuild()) cullingInfo.updating.addFast(index)
+                            cullingInfo.visible.addFast(index)
+                            builtChunk.region.visible = true
+                        }
+
+                        channel.trySend(cullingInfo)
+                    }
+                }
+            )
+        } else {
+            ParallelUtils.splitListIndex(
+                total = chunkArray.size,
+                parallelism = ParallelUtils.CPU_THREADS,
+                blockForEach = { start, end ->
+                    scope.launch(FastMcCoreScope.context) {
+                        val cullingInfo = CullingInfo(chunkArray.size)
+
+                        for (i in start until end) {
+                            val builtChunk = chunkArray[i]
+                            builtChunk as IPatchedBuiltChunk
+                            val index = builtChunk.index
+
+                            if (!builtChunk.shouldBuild(nonEmptyChunkSet)) continue
+                            if (!frustum.isVisible(builtChunk.boundingBox)) continue
+
+                            if (builtChunk.needsRebuild()) cullingInfo.updating.addFast(index)
+                            cullingInfo.visible.addFast(index)
+                            builtChunk.region.visible = true
+                        }
+
+                        channel.trySend(cullingInfo)
+                    }
+                }
             )
         }
     }
 
-    companion object {
-        @JvmField
-        val DIRECTIONS = Direction.values()
+    private inline fun updateRegionVbo(
+        scope: CoroutineScope,
+        mainThreadContext: CoroutineContext,
+        chunkArray: Array<BuiltChunk>,
+        chunkIndices: IntArray,
+        visibleChunkBitSet: ExtendedBitSet,
+        region: RenderRegion,
+        layers: List<RenderLayer>
+    ) {
+        for (layerIndex in layers.indices) {
+            scope.launch(FastMcExtendScope.context) {
+                val list = FastObjectArrayList<ChunkVertexData>()
+                val size = visibleChunkBitSet.size
+                val firstList = IntArrayList(size)
+                val countList = IntArrayList(size)
+                var rendering = false
+                var pointer = 0
+                var first = 0
+                var count = 0
 
-        @JvmField
-        val UPDATE_FUNCTION = IntUnaryOperator {
-            max(it - 1, 0)
-        }
+                for (chunkIndex in chunkIndices) {
+                    if (!region.chunks.containsInt(chunkIndex)) continue
+                    val builtChunk = chunkArray[chunkIndex]
+                    if (builtChunk.getData().isEmpty) continue
 
-        private fun IPatchedWorldRenderer.recursiveSetupTerrainIteration(
-            scope: CoroutineScope,
-            frustum: Frustum,
-            frame: Int,
-            cameraChunkBlockPos: BlockPos,
-            chunkCulling: Boolean,
-            queue: ConcurrentLinkedQueue<WorldRenderer.ChunkInfo>,
-            counter: AtomicInteger,
-            chunkInfo: WorldRenderer.ChunkInfo
-        ) {
-            this as AccessorWorldRenderer
-            this as WorldRenderer
+                    builtChunk as IPatchedBuiltChunk
+                    val longOrigin = builtChunk.origin.asLong()
+                    val data = builtChunk.chunkVertexDataArray[layerIndex]
+                    if (data != null && data.builtOrigin == longOrigin) {
+                        if (visibleChunkBitSet.containsInt(chunkIndex)) {
+                            if (!rendering) {
+                                rendering = true
+                                first = pointer
+                            }
+                            count += data.vboInfo.vertexCount
+                        } else {
+                            if (rendering) {
+                                rendering = false
+                                firstList.add(first)
+                                countList.add(count)
+                                count = 0
+                            }
+                        }
 
-            val builtChunk = chunkInfo.chunk
-            val direction = chunkInfo.direction
-            val data = builtChunk.getData()
-
-            for (nextDirection in DIRECTIONS) {
-                if (chunkCulling) {
-                    if (chunkInfo.canCull(nextDirection.opposite)) continue
-                    if (direction != null && !data.isVisibleThrough(direction.opposite, nextDirection)) continue
+                        list.add(data)
+                        pointer += data.vboInfo.vertexCount
+                    }
                 }
 
-                val nextBuiltChunk = this.invokeGetAdjacentChunk(cameraChunkBlockPos, builtChunk, nextDirection)
+                if (rendering) {
+                    firstList.add(first)
+                    countList.add(count)
+                }
 
-                if (nextBuiltChunk != null
-                    && nextBuiltChunk.shouldBuild()
-                    && nextBuiltChunk.setRebuildFrame(frame)
-                    && frustum.isVisible(nextBuiltChunk.boundingBox)
-                ) {
-                    val nextChunkInfo = this.ChunkInfo(nextBuiltChunk, nextDirection, chunkInfo.propagationLevel + 1)
-                    nextChunkInfo.updateCullingState(chunkInfo.cullingState, nextDirection)
-                    queue.add(nextChunkInfo)
+                if (list.isNotEmpty()) {
+                    val vertexCount = list.sumOf {
+                        it.vboInfo.vertexCount
+                    }
+                    val vertexSize = VertexDataTransformer.transformedSize(vertexCount)
 
-                    if (counter.getAndUpdate(UPDATE_FUNCTION) > 0) {
-                        scope.launch(FastMcCoreScope.context) {
-                            recursiveSetupTerrainIteration(
-                                scope,
-                                frustum,
-                                frame,
-                                cameraChunkBlockPos,
-                                chunkCulling,
-                                queue,
-                                counter,
-                                nextChunkInfo
-                            )
-                            counter.getAndIncrement()
-                        }
-                    } else {
-                        recursiveSetupTerrainIteration(
-                            scope,
-                            frustum,
-                            frame,
-                            cameraChunkBlockPos,
-                            chunkCulling,
-                            queue,
-                            counter,
-                            nextChunkInfo
+                    withContext(mainThreadContext) {
+                        region.updateRegionLayer(
+                            layerIndex,
+                            list,
+                            firstList,
+                            countList,
+                            vertexCount,
+                            vertexSize
                         )
                     }
                 }
             }
         }
+    }
 
-        private inline fun CoroutineScope.updateRegionVisibility(
-            chunkArray: Array<ChunkBuilder.BuiltChunk>,
-            visibleChunkBitSet: ExtendedBitSet,
-            region: RenderRegion,
-            layers: List<RenderLayer>
-        ) {
-            for (layerIndex in layers.indices) {
-                val regionLayer = region.getRegionLayer(layerIndex) ?: continue
-                launch(FastMcCoreScope.context) {
-                    val firstList = IntArrayList()
-                    val countList = IntArrayList()
-                    var rendering = false
-                    var pointer = 0
-                    var first = 0
-                    var count = 0
+    private inline fun updateRegionVisibility(
+        scope: CoroutineScope,
+        visibleChunkBitSet: ExtendedBitSet,
+        region: RenderRegion,
+        layers: List<RenderLayer>
+    ) {
+        for (layerIndex in layers.indices) {
+            val regionLayer = region.getRegionLayer(layerIndex) ?: continue
+            scope.launch(FastMcExtendScope.context) {
+                val size = visibleChunkBitSet.size
+                val firstList = IntArrayList(size)
+                val countList = IntArrayList(size)
+                var rendering = false
+                var pointer = 0
+                var first = 0
+                var count = 0
 
-                    for (chunkIndex in regionLayer.chunkIndices) {
-                        if (!regionLayer.chunkBitSet.containsInt(chunkIndex)) continue
-                        val builtChunk = chunkArray[chunkIndex]
-                        builtChunk as IPatchedBuiltChunk
-                        val data = builtChunk.chunkVertexDataArray[layerIndex]
+                for (i in regionLayer.dataList.indices) {
+                    val data = regionLayer.dataList[i]
 
-                        if (data != null) {
-                            if (visibleChunkBitSet.containsInt(chunkIndex)) {
-                                if (!rendering) {
-                                    rendering = true
-                                    first = pointer
-                                }
-                                count += data.vboInfo.vertexCount
-                            } else {
-                                if (rendering) {
-                                    rendering = false
-                                    firstList.add(first)
-                                    countList.add(count)
-                                    count = 0
-                                }
-                            }
-
-                            pointer += data.vboInfo.vertexCount
+                    if (visibleChunkBitSet.containsFast(data.chunkIndex)) {
+                        if (!rendering) {
+                            rendering = true
+                            first = pointer
+                        }
+                        count += data.vboInfo.vertexCount
+                    } else {
+                        if (rendering) {
+                            rendering = false
+                            firstList.add(first)
+                            countList.add(count)
+                            count = 0
                         }
                     }
 
-                    if (rendering) {
-                        firstList.add(first)
-                        countList.add(count)
-                    }
-
-                    region.updateRegionLayerVisibility(layerIndex, firstList, countList)
+                    pointer += data.vboInfo.vertexCount
                 }
+
+                if (rendering) {
+                    firstList.add(first)
+                    countList.add(count)
+                }
+
+                region.updateRegionLayerVisibility(layerIndex, firstList, countList)
             }
         }
+    }
 
-        private inline fun CoroutineScope.updateRegionVbo(
-            mainThreadContext: CoroutineContext,
-            chunkIndices: IntArray,
-            chunkArray: Array<ChunkBuilder.BuiltChunk>,
-            visibleChunkBitSet: ExtendedBitSet,
-            region: RenderRegion,
-            layers: List<RenderLayer>
-        ) {
-            for (layerIndex in layers.indices) {
-                launch(FastMcCoreScope.context) {
-                    val list = FastObjectArrayList<ChunkVertexData>()
-                    val chunkBitSet = ExtendedBitSet()
-                    val firstList = IntArrayList()
-                    val countList = IntArrayList()
-                    var rendering = false
-                    var pointer = 0
-                    var first = 0
-                    var count = 0
+    private inline fun ChunkBuilder.BuiltChunk.shouldBuild(
+        nonEmptyChunkSet: NonEmptyChunkSet,
+    ): Boolean {
+        val chunkX = origin.x shr 4
+        val chunkZ = origin.z shr 4
 
-                    chunkBitSet.ensureCapacity(chunkArray.size)
-
-                    for (chunkIndex in chunkIndices) {
-                        if (!region.chunks.containsInt(chunkIndex)) continue
-                        val builtChunk = chunkArray[chunkIndex]
-                        if (builtChunk.getData().isEmpty) continue
-
-                        builtChunk as IPatchedBuiltChunk
-                        val longOrigin = builtChunk.origin.asLong()
-                        val data = builtChunk.chunkVertexDataArray[layerIndex]
-                        if (data != null && data.builtOrigin == longOrigin) {
-                            if (visibleChunkBitSet.containsInt(chunkIndex)) {
-                                if (!rendering) {
-                                    rendering = true
-                                    first = pointer
-                                }
-                                count += data.vboInfo.vertexCount
-                            } else {
-                                if (rendering) {
-                                    rendering = false
-                                    firstList.add(first)
-                                    countList.add(count)
-                                    count = 0
-                                }
-                            }
-
-                            chunkBitSet.addFast(chunkIndex)
-                            list.add(data)
-                            pointer += data.vboInfo.vertexCount
-                        }
-                    }
-
-                    if (rendering) {
-                        firstList.add(first)
-                        countList.add(count)
-                    }
-
-                    if (list.isNotEmpty()) {
-                        val vertexCount = list.sumOf {
-                            it.vboInfo.vertexCount
-                        }
-                        val vertexSize = VertexDataTransformer.transformedSize(vertexCount)
-
-                        withContext(mainThreadContext) {
-                            region.updateRegionLayer(
-                                mainThreadContext,
-                                layerIndex,
-                                list,
-                                firstList,
-                                countList,
-                                vertexCount,
-                                vertexSize,
-                                chunkBitSet,
-                                chunkIndices
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        return nonEmptyChunkSet.isNotEmpty(chunkX, chunkZ + 1)
+            && nonEmptyChunkSet.isNotEmpty(chunkX - 1, chunkZ)
+            && nonEmptyChunkSet.isNotEmpty(chunkX, chunkZ - 1)
+            && nonEmptyChunkSet.isNotEmpty(chunkX + 1, chunkZ)
     }
 }

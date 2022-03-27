@@ -5,12 +5,11 @@ import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedChunkData;
 import me.luna.fastmc.mixin.IPatchedTask;
-import me.luna.fastmc.mixin.accessor.AccessorBuiltChunk;
-import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder;
-import me.luna.fastmc.mixin.accessor.AccessorChunkData;
+import me.luna.fastmc.mixin.accessor.*;
 import me.luna.fastmc.renderer.TileEntityRenderer;
 import me.luna.fastmc.shared.util.BufferUtils;
 import me.luna.fastmc.terrain.ChunkVertexData;
+import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
 import me.luna.fastmc.terrain.VertexDataTransformer;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.render.BufferBuilder;
@@ -66,14 +65,14 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                 float f = (float) vec3d.x;
                 float g = (float) vec3d.y;
                 float h = (float) vec3d.z;
-                ChunkBuilder.ChunkData chunkData = new ChunkBuilder.ChunkData();
-                Set<BlockEntity> set = this.render(f, g, h, chunkData, buffers);
+                ChunkBuilder.ChunkData newData = new ChunkBuilder.ChunkData();
+                Set<BlockEntity> set = this.render(f, g, h, newData, buffers);
                 ((AccessorBuiltChunk) builtChunk).callSetNoCullingBlockEntities(set);
                 if (cancelled0.get()) {
                     return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
                 } else {
                     List<RenderLayer> layers = RenderLayer.getBlockLayers();
-                    Set<RenderLayer> initializedLayers = ((AccessorChunkData) chunkData).getInitializedLayers();
+                    Set<RenderLayer> initializedLayers = ((AccessorChunkData) newData).getInitializedLayers();
 
                     long builtOrigin = builtChunk.getOrigin().asLong();
                     ByteBuffer[] bufferArray = new ByteBuffer[layers.size()];
@@ -100,61 +99,77 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                     }
 
                     if (!cancelled0.get()) {
-                        ((AccessorChunkBuilder) chunkBuilder).getUploadQueue().add(() -> {
-                            ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
+                        AccessorChunkBuilder accessorChunkBuilder = (AccessorChunkBuilder) chunkBuilder;
+                        List<BlockEntity> oldList = ((IPatchedChunkData) builtChunk.data.get()).getInstancingRenderTileEntities();
+                        List<BlockEntity> newList = ((IPatchedChunkData) newData).getInstancingRenderTileEntities();
 
-                            for (int i = 0; i < bufferArray.length; i++) {
-                                ByteBuffer newBuffer = bufferArray[i];
-                                if (newBuffer != null) {
-                                    updateVertexData(
-                                        chunkVertexDataArray,
-                                        i,
-                                        builtOrigin,
-                                        newBuffer,
-                                        vertexCountArray[i]
-                                    );
+                        TileEntityRenderer renderer = ((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer());
+                        boolean oldEmpty = oldList.isEmpty();
+                        boolean newEmpty = newList.isEmpty();
+                        List<BlockEntity> adding = Collections.emptyList();
+                        List<BlockEntity> removing = Collections.emptyList();
+
+                        if (!oldEmpty || !newEmpty) {
+
+                            if (oldEmpty) {
+                                adding = newList;
+                            } else if (newEmpty) {
+                                removing = oldList;
+                            } else {
+                                Set<BlockEntity> oldSet = new HashSet<>(oldList);
+                                Set<BlockEntity> newSet = new HashSet<>(newList);
+
+                                adding = new ArrayList<>();
+                                removing = new ArrayList<>();
+
+                                for (BlockEntity e : newList) {
+                                    if (!oldSet.contains(e)) {
+                                        adding.add(e);
+                                    }
+                                }
+
+                                for (BlockEntity e : oldList) {
+                                    if (!newSet.contains(e)) {
+                                        removing.add(e);
+                                    }
                                 }
                             }
+                        }
 
-                            List<BlockEntity> oldList = ((IPatchedChunkData) builtChunk.data.get()).getInstancingRenderTileEntities();
-                            List<BlockEntity> newList = ((IPatchedChunkData) chunkData).getInstancingRenderTileEntities();
+                        ChunkBuilder.ChunkData oldData = builtChunk.getData();
+                        boolean cullingDirty = oldData.isEmpty()
+                            || !((AccessorChunkOcclusionData) ((AccessorChunkData) oldData).getOcclusionGraph()).getVisibility()
+                            .equals(((AccessorChunkOcclusionData) ((AccessorChunkData) newData).getOcclusionGraph()).getVisibility());
+                        List<BlockEntity> finalAdding = adding;
+                        List<BlockEntity> finalRemoving = removing;
 
-                            boolean oldEmpty = oldList.isEmpty();
-                            boolean newEmpty = newList.isEmpty();
+                        accessorChunkBuilder.getUploadQueue().add(() -> {
+                            if (!cancelled0.get()) {
+                                ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
 
-                            if (!oldEmpty || !newEmpty) {
-                                TileEntityRenderer renderer = ((TileEntityRenderer) FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer());
-
-                                if (oldEmpty) {
-                                    renderer.updateEntities(newList, Collections.emptyList());
-                                } else if (newEmpty) {
-                                    renderer.updateEntities(Collections.emptyList(), oldList);
-                                } else {
-                                    Set<BlockEntity> oldSet = new HashSet<>(oldList);
-                                    Set<BlockEntity> newSet = new HashSet<>(newList);
-
-                                    List<BlockEntity> adding = new ArrayList<>();
-                                    List<BlockEntity> removing = new ArrayList<>();
-
-                                    for (BlockEntity e : newList) {
-                                        if (!oldSet.contains(e)) {
-                                            adding.add(e);
-                                        }
+                                for (int i = 0; i < bufferArray.length; i++) {
+                                    ByteBuffer newBuffer = bufferArray[i];
+                                    if (newBuffer != null) {
+                                        updateVertexData(
+                                            patchedBuiltChunk.getIndex(),
+                                            chunkVertexDataArray,
+                                            i,
+                                            builtOrigin,
+                                            newBuffer,
+                                            vertexCountArray[i]
+                                        );
                                     }
+                                }
 
-                                    for (BlockEntity e : oldList) {
-                                        if (!newSet.contains(e)) {
-                                            removing.add(e);
-                                        }
-                                    }
 
-                                    renderer.updateEntities(adding, removing);
+                                renderer.updateEntities(finalAdding, finalRemoving);
+                                builtChunk.data.set(newData);
+                                ((IPatchedChunkData) newData).onComplete();
+                                patchedBuiltChunk.getRegion().getDirty().set(true);
+                                if (cullingDirty) {
+                                    ((RegionBuiltChunkStorage) ((AccessorWorldRenderer) ((AccessorChunkBuilder) getChunkBuilder()).getWorldRenderer()).getChunks()).markCaveCullingDirty();
                                 }
                             }
-
-                            patchedBuiltChunk.getRegion().setDirty(true);
-                            builtChunk.data.set(chunkData);
-                            ((IPatchedChunkData) builtChunk.getData()).onComplete();
                         });
                         return CompletableFuture.completedFuture(ChunkBuilder.Result.SUCCESSFUL);
                     } else {
@@ -164,4 +179,5 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
             }
         }
     }
+
 }

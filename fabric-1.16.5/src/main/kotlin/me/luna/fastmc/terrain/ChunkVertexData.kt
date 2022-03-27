@@ -3,6 +3,7 @@ package me.luna.fastmc.terrain
 import me.luna.fastmc.shared.opengl.*
 
 class ChunkVertexData(
+    @JvmField val chunkIndex: Int,
     @JvmField val builtOrigin: Long,
     @JvmField val vboInfo: VboInfo
 ) {

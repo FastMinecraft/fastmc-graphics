@@ -1,20 +1,25 @@
 package me.luna.fastmc.terrain
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import me.luna.fastmc.mixin.IPatchedBuiltChunk
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ParallelUtils
-import me.luna.fastmc.shared.util.distanceSq
+import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
+import me.luna.fastmc.shared.util.*
+import me.luna.fastmc.shared.util.collection.ExtendedBitSet
+import me.luna.fastmc.util.isDoneOrNull
 import net.minecraft.client.render.BuiltChunkStorage
 import net.minecraft.client.render.WorldRenderer
 import net.minecraft.client.render.chunk.ChunkBuilder
 import net.minecraft.client.render.chunk.ChunkBuilder.BuiltChunk
 import net.minecraft.util.math.BlockPos
+import net.minecraft.util.math.Direction
 import net.minecraft.util.math.MathHelper
 import net.minecraft.world.World
 import java.util.*
+import java.util.concurrent.Future
+import kotlin.math.max
+import kotlin.math.min
 
 @Suppress("NOTHING_TO_INLINE")
 class RegionBuiltChunkStorage(
@@ -23,12 +28,30 @@ class RegionBuiltChunkStorage(
     viewDistance: Int,
     worldRenderer: WorldRenderer
 ) : BuiltChunkStorage(chunkBuilder, world, viewDistance, worldRenderer) {
-    val regionSize = (super.sizeX + 7) shr 3
+    val regionSize = (super.sizeX + 15) shr 4
     val regionArray: Array<RenderRegion>
 
-    private var lastSorting = BlockPos.ORIGIN
     private val sortedChunkArray: Array<ChunkBuilder.BuiltChunk> = chunks.copyOf()
-    var sortedChunkIndices = IntArray(chunks.size); private set
+    private var chunkIndices = IntArray(chunks.size)
+    private var deferredChunkIndices = CompletableDeferred(chunkIndices)
+    private var lastSortingJob: Future<*>? = null
+
+    private var updateCount = 0
+    private var lastGetUpdateCount = Int.MIN_VALUE
+    private var caveCullingDirty = true
+
+    private var caveCullingBitSet = ExtendedBitSet(chunks.size)
+    private var deferredCaveCullingBitSet = CompletableDeferred(caveCullingBitSet)
+    private var lastCaveCullingJob: Future<*>? = null
+
+    val sizeX0: Int
+        get() = super.sizeX
+
+    val sizeZ0: Int
+        get() = super.sizeZ
+
+    val sizeY0: Int
+        get() = super.sizeY
 
     init {
         for (i in chunks.indices) {
@@ -40,9 +63,9 @@ class RegionBuiltChunkStorage(
 
         for (x in 0 until regionSize) {
             for (z in 0 until regionSize) {
-                val i = getRegionIndex(x, z)
+                val i = regionPos2Index(x, z)
                 val region = RenderRegion(i)
-                region.setOrigin(x shl 7, z shl 7)
+                region.setOrigin(x shl 8, z shl 8)
                 region.chunks.ensureCapacity(chunks.size)
                 regionArray[i] = region
             }
@@ -56,69 +79,82 @@ class RegionBuiltChunkStorage(
         }
     }
 
-    private inline fun getChunkIndex(x: Int, y: Int, z: Int): Int {
-        return y + (x + z * sizeX) * sizeY
+
+    suspend fun getChunkIndices(): IntArray {
+        return deferredChunkIndices.await()
     }
 
-    private inline fun getRegionIndex(x: Int, z: Int): Int {
-        return x + z * regionSize
+    suspend fun getCaveCullingBitSet(): ExtendedBitSet {
+        return deferredCaveCullingBitSet.await()
     }
 
     override fun updateCameraPosition(x: Double, z: Double) {
-        runBlocking {
-            val floorX = MathHelper.floor(x)
-            val floorZ = MathHelper.floor(z)
+        throw UnsupportedOperationException()
+    }
 
-            coroutineScope {
-                for (k in 0 until sizeX) {
-                    launch(FastMcCoreScope.context) {
-                        val l = sizeX * 16
-                        val m = floorX - 8 - l / 2
-                        val n = m + Math.floorMod(k * 16 - m, l)
-                        for (o in 0 until sizeZ) {
-                            val p = sizeZ * 16
-                            val q = floorZ - 8 - p / 2
-                            val r = q + Math.floorMod(o * 16 - q, p)
-                            for (s in 0 until sizeY) {
-                                val t = s * 16
-                                val builtChunk = chunks[getChunkIndex(k, s, o)]
-                                builtChunk.setOrigin(n, t, r)
+    suspend fun updateCameraPosition(cameraChunkOrigin: BlockPos, playerX: Double, playerZ: Double) {
+        updateRegions(playerX, playerZ)
+        startSorting(cameraChunkOrigin)
+    }
+
+    private suspend inline fun updateRegions(playerX: Double, playerZ: Double) {
+        coroutineScope {
+            val floorPlayerX = playerX.fastFloor()
+            val floorPlayerZ = playerZ.fastFloor()
+
+            val startChunkX = (floorPlayerX shr 4) - (sizeX0 shr 1)
+            val startChunkZ = (floorPlayerZ shr 4) - (sizeZ0 shr 1)
+            val endChunkX = startChunkX + sizeX0
+            val endChunkZ = startChunkZ + sizeZ0
+
+            val regionCenter = regionSize shr 1
+            val originX = (floorPlayerX shr 8) - regionCenter
+            val originZ = (floorPlayerZ shr 8) - regionCenter
+            val centerX = Math.floorMod(originX + 128, regionSize)
+            val centerZ = Math.floorMod(originZ + 128, regionSize)
+
+            for (i in regionArray.indices) {
+                launch(FastMcCoreScope.context) {
+                    val region = regionArray[i]
+
+                    val blockX = (Math.floorMod(i % regionSize - centerX, regionSize) + originX) shl 8
+                    val blockZ = (Math.floorMod(i / regionSize - centerZ, regionSize) + originZ) shl 8
+
+                    region.setOrigin(blockX, blockZ)
+                    region.chunks.clear()
+                    region.chunks.ensureCapacity(chunks.size)
+
+                    val startX = max(blockX shr 4, startChunkX)
+                    val startZ = max(blockZ shr 4, startChunkZ)
+                    val endX = min((blockX shr 4) + 15, endChunkX)
+                    val endZ = min((blockZ shr 4) + 15, endChunkZ)
+
+                    for (x in startX..endX) {
+                        for (z in startZ..endZ) {
+                            for (y in 0 until 16) {
+                                val builtChunk = getRenderedChunk0(x, y, z)
+                                builtChunk as IPatchedBuiltChunk
+                                builtChunk.setOrigin(x shl 4, y shl 4, z shl 4)
+                                region.chunks.addFast(builtChunk.index)
+                                builtChunk.region = region
                             }
                         }
                     }
                 }
-
-                for (region in regionArray) {
-                    region.chunks.clear()
-                    region.chunks.ensureCapacity(chunks.size)
-                }
             }
-
-            ParallelUtils.splitListIndex(
-                chunks.size,
-                blockForEach = { start, end ->
-                    launch(FastMcCoreScope.context) {
-                        for (i in start until end) {
-                            val builtChunk = chunks[i]
-                            builtChunk as IPatchedBuiltChunk
-                            val region = getRegionByBlock(builtChunk.origin)
-                            region.setOrigin(builtChunk.origin.x shr 7 shl 7, builtChunk.origin.z shr 7 shl 7)
-                            region.chunks.addFast(builtChunk.index)
-                            builtChunk.region = region
-                        }
-                    }
-                }
-            )
         }
     }
 
-    fun updateSorting(cameraChunkBlockPos: BlockPos) {
-        if (cameraChunkBlockPos != lastSorting) {
+    private inline fun startSorting(cameraChunkOrigin: BlockPos) {
+        val newDeferred = CompletableDeferred<IntArray>()
+        deferredChunkIndices = newDeferred
+
+        lastSortingJob = FastMcExtendScope.pool.submit {
             val comparator = Comparator.comparingInt<ChunkBuilder.BuiltChunk> {
                 val chunkOrigin = it.origin
                 -distanceSq(
-                    cameraChunkBlockPos.x, cameraChunkBlockPos.y, cameraChunkBlockPos.z,
-                    chunkOrigin.x, chunkOrigin.y, chunkOrigin.y
+                    cameraChunkOrigin.x, cameraChunkOrigin.y, cameraChunkOrigin.z,
+                    chunkOrigin.x, chunkOrigin.y, chunkOrigin.z
                 )
             }
             Arrays.sort(sortedChunkArray, comparator)
@@ -127,41 +163,113 @@ class RegionBuiltChunkStorage(
             for (i in indexArray.indices) {
                 indexArray[i] = (sortedChunkArray[i] as IPatchedBuiltChunk).index
             }
-            sortedChunkIndices = indexArray
-            lastSorting = cameraChunkBlockPos
+            chunkIndices = indexArray
+            newDeferred.complete(indexArray)
         }
     }
 
+    fun markCaveCullingDirty() {
+        caveCullingDirty = true
+    }
+
+    fun updateCulling(cameraChunkOrigin: BlockPos, frame: Int): Boolean {
+        if (caveCullingDirty && lastCaveCullingJob.isDoneOrNull && deferredCaveCullingBitSet.isCompleted) {
+            caveCullingDirty = false
+            val builtChunk = getRenderedChunkByBlock(cameraChunkOrigin) ?: sortedChunkArray[sortedChunkArray.size - 1]
+            val newDeferred = CompletableDeferred<ExtendedBitSet>()
+            deferredCaveCullingBitSet = newDeferred
+
+            lastCaveCullingJob = FastMcExtendScope.pool.submit {
+                val newCullingBitSet = ExtendedBitSet(chunks.size)
+                newCullingBitSet.addFast((builtChunk as IPatchedBuiltChunk).index)
+                recursiveUpdateCulling(
+                    cameraChunkOrigin,
+                    frame,
+                    newCullingBitSet,
+                    builtChunk,
+                    null,
+                    0
+                )
+                updateCount++
+                caveCullingBitSet = newCullingBitSet
+                newDeferred.complete(newCullingBitSet)
+            }
+        }
+
+        val lastGet = lastGetUpdateCount
+        val current = updateCount
+        lastGetUpdateCount = current
+        return lastGet != current
+    }
+
+    private fun recursiveUpdateCulling(
+        cameraChunkBlockPos: BlockPos,
+        frame: Int,
+        cullingBitSet: ExtendedBitSet,
+        builtChunk: BuiltChunk,
+        direction: Direction?,
+        excludedDirections: Int
+    ) {
+        val data = builtChunk.getData()
+
+        for (nextDirection in DIRECTIONS) {
+            val nextBuiltChunk = getAdjacentChunk(cameraChunkBlockPos, builtChunk, nextDirection) ?: continue
+            val index = (nextBuiltChunk as IPatchedBuiltChunk).index
+            if (cullingBitSet.containsFast(index)) continue
+
+            if (excludedDirections and (1 shl nextDirection.ordinal) != 0) continue
+            if (direction != null && !data.isVisibleThrough(direction.opposite, nextDirection)) continue
+
+            cullingBitSet.addFast(index)
+            recursiveUpdateCulling(
+                cameraChunkBlockPos,
+                frame,
+                cullingBitSet,
+                nextBuiltChunk,
+                nextDirection,
+                excludedDirections or (1 shl nextDirection.opposite.ordinal)
+            )
+        }
+    }
+
+    private inline fun getAdjacentChunk(pos: BlockPos, chunk: BuiltChunk, direction: Direction): BuiltChunk? {
+        val blockPos = chunk.getNeighborPosition(direction)
+        if (blockPos.y < 0 || blockPos.y >= 256) return null
+        val range = ((worldRenderer as AccessorWorldRenderer).viewDistance shl 4).sq
+        if ((pos.x - blockPos.x).sq > range || (pos.z - blockPos.z).sq > range) return null
+        return getRenderedChunkByBlock(blockPos)
+    }
+
     fun getRegionByBlock(pos: BlockPos): RenderRegion {
-        return regionArray[getRegionIndex(
-            Math.floorMod(pos.x shr 7, regionSize),
-            Math.floorMod(pos.z shr 7, regionSize)
+        return regionArray[regionPos2Index(
+            Math.floorMod(pos.x shr 8, regionSize),
+            Math.floorMod(pos.z shr 8, regionSize)
         )]
     }
 
     fun getRegionByBlock(blockX: Int, blockZ: Int): RenderRegion {
-        return regionArray[getRegionIndex(
-            Math.floorMod(blockX shr 7, regionSize),
-            Math.floorMod(blockZ shr 7, regionSize)
+        return regionArray[regionPos2Index(
+            Math.floorMod(blockX shr 8, regionSize),
+            Math.floorMod(blockZ shr 8, regionSize)
         )]
     }
 
     fun getRegionByChunk(chunkX: Int, chunkZ: Int): RenderRegion {
-        return regionArray[getRegionIndex(
-            Math.floorMod(chunkX shr 3, regionSize),
-            Math.floorMod(chunkZ shr 3, regionSize)
+        return regionArray[regionPos2Index(
+            Math.floorMod(chunkX shr 4, regionSize),
+            Math.floorMod(chunkZ shr 4, regionSize)
         )]
     }
 
     fun getRegion(regionX: Int, regionZ: Int): RenderRegion {
-        return regionArray[getRegionIndex(
+        return regionArray[regionPos2Index(
             Math.floorMod(regionX, regionSize),
             Math.floorMod(regionZ, regionSize)
         )]
     }
 
     override fun scheduleRebuild(x: Int, y: Int, z: Int, important: Boolean) {
-        chunks[getChunkIndex(
+        chunks[chunkPos2Index(
             Math.floorMod(x, sizeX),
             Math.floorMod(y, sizeY),
             Math.floorMod(z, sizeZ)
@@ -170,7 +278,7 @@ class RegionBuiltChunkStorage(
 
     fun getRenderedChunk(chunkX: Int, chunkY: Int, chunkZ: Int): BuiltChunk? {
         return if (chunkY in 0 until sizeY) {
-            chunks[getChunkIndex(
+            chunks[chunkPos2Index(
                 MathHelper.floorMod(chunkX, sizeX),
                 chunkY,
                 MathHelper.floorMod(chunkZ, sizeZ)
@@ -178,6 +286,14 @@ class RegionBuiltChunkStorage(
         } else {
             null
         }
+    }
+
+    fun getRenderedChunk0(chunkX: Int, chunkY: Int, chunkZ: Int): BuiltChunk {
+        return chunks[chunkPos2Index(
+            MathHelper.floorMod(chunkX, sizeX),
+            chunkY,
+            MathHelper.floorMod(chunkZ, sizeZ)
+        )]
     }
 
     override fun getRenderedChunk(pos: BlockPos): BuiltChunk? {
@@ -188,6 +304,13 @@ class RegionBuiltChunkStorage(
         return getRenderedChunk(pos.x shr 4, pos.y shr 4, pos.z shr 4)
     }
 
+    inline fun chunkPos2Index(x: Int, y: Int, z: Int): Int {
+        return y + (x + z * sizeX0) * sizeY0
+    }
+
+    inline fun regionPos2Index(x: Int, z: Int): Int {
+        return x + z * regionSize
+    }
 
     override fun clear() {
         for (builtChunk in chunks) {
@@ -196,5 +319,12 @@ class RegionBuiltChunkStorage(
         for (region in regionArray) {
             region.clear()
         }
+        lastSortingJob?.cancel(true)
+        lastCaveCullingJob?.cancel(true)
+    }
+
+    private companion object {
+        @JvmField
+        val DIRECTIONS = Direction.values()
     }
 }
