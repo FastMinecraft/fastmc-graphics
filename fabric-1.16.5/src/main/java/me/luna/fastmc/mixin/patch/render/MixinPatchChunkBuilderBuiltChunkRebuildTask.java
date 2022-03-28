@@ -52,12 +52,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
             ChunkBuilder.BuiltChunk builtChunk = getBuiltChunk();
             IPatchedBuiltChunk patchedBuiltChunk = (IPatchedBuiltChunk) builtChunk;
 
-            if (!builtChunk.shouldBuild()) {
-                this.region = null;
-                builtChunk.scheduleRebuild(false);
-                cancelled0.set(true);
-                return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
-            } else if (cancelled0.get()) {
+            if (cancelled0.get()) {
                 return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
             } else {
                 ChunkBuilder chunkBuilder = getChunkBuilder();

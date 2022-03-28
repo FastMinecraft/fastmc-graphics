@@ -5,7 +5,7 @@ import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import me.luna.fastmc.util.TileEntity
 
 class CullingInfo(capacity: Int) {
-    val updating = ExtendedBitSet(capacity)
+    val preLoad = ExtendedBitSet(capacity)
     val visible = ExtendedBitSet(capacity)
     val tileEntity = FastObjectArrayList<TileEntity>()
 }

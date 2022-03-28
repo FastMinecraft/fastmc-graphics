@@ -39,10 +39,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatch
             IPatchedBuiltChunk patchedBuiltChunk = (IPatchedBuiltChunk) builtChunk;
             AccessorChunkData accessorChunkData = (AccessorChunkData) builtChunk.getData();
 
-            if (!builtChunk.shouldBuild()) {
-                cancelled0.set(true);
-                return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
-            } else if (cancelled0.get()) {
+            if (cancelled0.get()) {
                 return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
             } else {
                 ChunkBuilder chunkBuilder = getChunkBuilder();

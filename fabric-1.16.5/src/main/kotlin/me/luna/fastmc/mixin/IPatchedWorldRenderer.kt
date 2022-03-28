@@ -21,13 +21,12 @@ import net.minecraft.client.render.chunk.ChunkBuilder.BuiltChunk
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.MathHelper
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 @Suppress("NOTHING_TO_INLINE")
 interface IPatchedWorldRenderer {
     val renderTileEntityList: DoubleBufferedCollection<FastObjectArrayList<BlockEntity>>
-    val updatingChunkBitSet: DoubleBufferedCollection<ExtendedBitSet>
+    val preLoadChunkBitSet: DoubleBufferedCollection<ExtendedBitSet>
     val visibleChunkBitSet: DoubleBufferedCollection<ExtendedBitSet>
 
     var lastCameraX0: Int
@@ -36,7 +35,6 @@ interface IPatchedWorldRenderer {
     var lastCameraYaw0: Int
     var lastCameraPitch0: Int
     val loadingTimer: TickTimer
-    val scheduling: AtomicBoolean
 
     fun setupTerrain0(camera: Camera, frustum: Frustum, hasForcedFrustum: Boolean, frame: Int, spectator: Boolean) {
         this@IPatchedWorldRenderer as WorldRenderer
@@ -173,8 +171,7 @@ interface IPatchedWorldRenderer {
                     client.profiler.pop()
                 }
 
-                if (!scheduling.get()
-                    && chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 4
+                if (chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 4
                     && chunkBuilder.uploadQueue.size < ParallelUtils.CPU_THREADS * 4
                 ) {
                     cullingJob?.let {
@@ -192,8 +189,8 @@ interface IPatchedWorldRenderer {
                     running[0] = false
                     updateChunksJob.join()
 
-                    client.profiler.swap("rebuildNear")
-                    rebuildNear(cameraBlockPos)
+                    client.profiler.swap("scheduleRebuild")
+                    scheduleRebuild(cameraBlockPos)
                 }
 
                 cullingJob?.let {
@@ -210,32 +207,49 @@ interface IPatchedWorldRenderer {
         }
     }
 
-    suspend fun rebuildNear(cameraBlockPos: BlockPos) {
+    suspend fun scheduleRebuild(cameraBlockPos: BlockPos) {
         this as AccessorWorldRenderer
-        val updatingChunkBitSet = updatingChunkBitSet.get()
-        if (!updatingChunkBitSet.isEmpty()) {
-            scheduling.set(true)
+        val visible = visibleChunkBitSet.get()
+        val preLoad = preLoadChunkBitSet.get()
+        val visibleNotEmpty = visible.isNotEmpty()
+        val preLoadNotEmpty = preLoad.isNotEmpty()
+
+        if (visibleNotEmpty || preLoadNotEmpty) {
             FastMcCoreScope.launch {
                 val chunks = chunks as RegionBuiltChunkStorage
                 var count = ParallelUtils.CPU_THREADS * 2
                 val chunkIndices = chunks.getChunkIndices()
                 val chunkArray = chunks.chunks
 
-                updatingChunkBitSet.ensureArrayLength(chunkArray.size)
-                for (i in chunkIndices.size - 1 downTo 0) {
-                    val chunkIndex = chunkIndices[i]
-                    if (!updatingChunkBitSet.containsFast(chunkIndex)) continue
+                if (visibleNotEmpty) {
+                    visible.ensureArrayLength(chunkArray.size)
+                    for (i in chunkIndices.size - 1 downTo 0) {
+                        val chunkIndex = chunkIndices[i]
+                        if (!visible.containsFast(chunkIndex)) continue
 
-                    val builtChunk = chunkArray[chunkIndex]
-                    val task = builtChunk.createRebuildTask()
-                    builtChunk.cancelRebuild()
-                    updatingChunkBitSet.remove((builtChunk as IPatchedBuiltChunk).index)
-                    chunkBuilder.send(task)
+                        val builtChunk = chunkArray[chunkIndex]
+                        if (!builtChunk.needsRebuild()) continue
+                        val task = builtChunk.createRebuildTask()
+                        builtChunk.cancelRebuild()
+                        chunkBuilder.send(task)
 
-                    if (--count <= 0) break
+                        if (--count == 0) return@launch
+                    }
                 }
 
-                scheduling.set(false)
+                preLoad.ensureArrayLength(chunkArray.size)
+                for (i in chunkIndices.size - 1 downTo 0) {
+                    val chunkIndex = chunkIndices[i]
+                    if (!preLoad.containsFast(chunkIndex)) continue
+
+                    val builtChunk = chunkArray[chunkIndex]
+                    if (!builtChunk.needsRebuild()) continue
+                    val task = builtChunk.createRebuildTask()
+                    builtChunk.cancelRebuild()
+                    chunkBuilder.send(task)
+
+                    if (--count == 0) return@launch
+                }
             }
         }
     }
@@ -261,15 +275,15 @@ interface IPatchedWorldRenderer {
                 val chunkArray: Array<ChunkBuilder.BuiltChunk> = chunkStorage.chunks
                 val regionArray = chunkStorage.regionArray
 
-                val updatingChunkBitSet0 = updatingChunkBitSet.getSwap()
+                val preLoadChunkBitSet0 = preLoadChunkBitSet.getSwap()
                 val renderTileEntityList0 = renderTileEntityList.getSwap()
                 val visibleChunkBitSet0 = visibleChunkBitSet.getSwap()
 
-                updatingChunkBitSet0.clear()
+                preLoadChunkBitSet0.clear()
                 renderTileEntityList0.clear()
                 visibleChunkBitSet0.clear()
 
-                updatingChunkBitSet0.ensureCapacity(chunkArray.size)
+                preLoadChunkBitSet0.ensureCapacity(chunkArray.size)
                 visibleChunkBitSet0.ensureCapacity(chunkArray.size)
 
                 var entityCapacity = world.blockEntities.size
@@ -281,12 +295,12 @@ interface IPatchedWorldRenderer {
                 }
 
                 for (info in channel) {
-                    updatingChunkBitSet0.addAll(info.updating)
+                    preLoadChunkBitSet0.addAll(info.preLoad)
                     visibleChunkBitSet0.addAll(info.visible)
                     renderTileEntityList0.addAll(info.tileEntity)
                 }
 
-                updatingChunkBitSet.getAndSwap()
+                preLoadChunkBitSet.getAndSwap()
                 renderTileEntityList.getAndSwap()
                 visibleChunkBitSet.getAndSwap()
 
@@ -363,12 +377,10 @@ interface IPatchedWorldRenderer {
                             val builtChunk = chunkArray[i]
                             builtChunk as IPatchedBuiltChunk
                             val index = builtChunk.index
-
+                            if (!caveCullingBitSet.containsFast(index)) continue
+                            cullingInfo.preLoad.addFast(index)
                             if (!builtChunk.shouldBuild(nonEmptyChunkSet)) continue
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
-                            if (!caveCullingBitSet.containsFast(index)) continue
-
-                            if (builtChunk.needsRebuild()) cullingInfo.updating.addFast(index)
                             cullingInfo.visible.addFast(index)
                             builtChunk.region.visible = true
                         }
@@ -389,11 +401,9 @@ interface IPatchedWorldRenderer {
                             val builtChunk = chunkArray[i]
                             builtChunk as IPatchedBuiltChunk
                             val index = builtChunk.index
-
+                            cullingInfo.preLoad.addFast(index)
                             if (!builtChunk.shouldBuild(nonEmptyChunkSet)) continue
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
-
-                            if (builtChunk.needsRebuild()) cullingInfo.updating.addFast(index)
                             cullingInfo.visible.addFast(index)
                             builtChunk.region.visible = true
                         }

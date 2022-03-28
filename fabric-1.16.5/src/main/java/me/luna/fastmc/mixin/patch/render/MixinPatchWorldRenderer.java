@@ -77,13 +77,12 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private BufferBuilderStorage bufferBuilders;
 
     private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> updatingChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
+    private final DoubleBufferedCollection<ExtendedBitSet> preLoadChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
     private final DoubleBufferedCollection<ExtendedBitSet> visibleChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
 
     private final Matrix4f original = new Matrix4f();
     private final Matrix4f translated = new Matrix4f();
     private final TickTimer loadingTimer = new TickTimer();
-    private final AtomicBoolean scheduling = new AtomicBoolean(false);
 
     private int lastCameraX0 = Integer.MAX_VALUE;
     private int lastCameraY0 = Integer.MAX_VALUE;
@@ -132,7 +131,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             renderTileEntityList.get().clearAndTrim();
             renderTileEntityList.getSwap().clearAndTrim();
 
-            clearFast(updatingChunkBitSet);
+            clearFast(preLoadChunkBitSet);
             clearFast(visibleChunkBitSet);
         }
     }
@@ -196,12 +195,11 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             lastCameraZ0 = Integer.MAX_VALUE;
             lastCameraYaw0 = Integer.MAX_VALUE;
             lastCameraPitch0 = Integer.MAX_VALUE;
-            scheduling.set(false);
 
             renderTileEntityList.get().clearAndTrim();
             renderTileEntityList.getSwap().clearAndTrim();
 
-            clearFast(updatingChunkBitSet);
+            clearFast(preLoadChunkBitSet);
             clearFast(visibleChunkBitSet);
         }
     }
@@ -231,7 +229,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     public boolean isTerrainRenderComplete() {
-        return updatingChunkBitSet.get().isEmpty() && this.updatingChunkBitSet.getSwap().isEmpty() && this.chunkBuilder.isEmpty();
+        return preLoadChunkBitSet.get().isEmpty() && this.preLoadChunkBitSet.getSwap().isEmpty() && this.chunkBuilder.isEmpty();
     }
 
     /**
@@ -462,20 +460,14 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         return loadingTimer;
     }
 
-    @NotNull
-    @Override
-    public AtomicBoolean getScheduling() {
-        return scheduling;
-    }
-
     @Override
     public @NotNull DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> getRenderTileEntityList() {
         return renderTileEntityList;
     }
 
     @Override
-    public @NotNull DoubleBufferedCollection<ExtendedBitSet> getUpdatingChunkBitSet() {
-        return updatingChunkBitSet;
+    public @NotNull DoubleBufferedCollection<ExtendedBitSet> getPreLoadChunkBitSet() {
+        return preLoadChunkBitSet;
     }
 
     @NotNull

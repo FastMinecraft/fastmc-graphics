@@ -33,14 +33,13 @@ public class MixinPatchChunkBuilder implements IPatchedChunkBuilder {
     @Override
     public boolean upload(boolean @NotNull [] running) {
         boolean uploaded = false;
-        int count = Math.max(ParallelUtils.CPU_THREADS, this.uploadQueue.size() / 2);
-        int min = count / 2;
+        int count = ParallelUtils.CPU_THREADS;
         Runnable runnable;
 
         while (count-- > 0 && (runnable = this.uploadQueue.poll()) != null) {
             runnable.run();
             uploaded = true;
-            if (count <= min && !running[0]) break;
+            if (!running[0]) break;
         }
 
         return uploaded;
