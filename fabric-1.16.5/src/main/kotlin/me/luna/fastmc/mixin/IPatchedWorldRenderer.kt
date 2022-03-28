@@ -160,7 +160,6 @@ interface IPatchedWorldRenderer {
                         this@runBlocking.coroutineContext,
                         running,
                         updateChunksJob,
-                        chunks,
                         frustum,
                         cameraChunkOrigin,
                         client.chunkCullingEnabled
@@ -217,11 +216,11 @@ interface IPatchedWorldRenderer {
         if (visibleNotEmpty || preLoadNotEmpty) {
             FastMcCoreScope.launch {
                 val chunks = chunks as RegionBuiltChunkStorage
-                var count = ParallelUtils.CPU_THREADS * 2
                 val chunkIndices = chunks.getChunkIndices()
                 val chunkArray = chunks.chunks
 
                 if (visibleNotEmpty) {
+                    var count = ParallelUtils.CPU_THREADS * 2
                     visible.ensureArrayLength(chunkArray.size)
                     for (i in chunkIndices.size - 1 downTo 0) {
                         val chunkIndex = chunkIndices[i]
@@ -233,22 +232,23 @@ interface IPatchedWorldRenderer {
                         builtChunk.cancelRebuild()
                         chunkBuilder.send(task)
 
-                        if (--count == 0) return@launch
+                        if (--count <= 0) return@launch
                     }
-                }
+                } else {
+                    var count = ParallelUtils.CPU_THREADS
+                    preLoad.ensureArrayLength(chunkArray.size)
+                    for (i in chunkIndices.size - 1 downTo 0) {
+                        val chunkIndex = chunkIndices[i]
+                        if (!preLoad.containsFast(chunkIndex)) continue
 
-                preLoad.ensureArrayLength(chunkArray.size)
-                for (i in chunkIndices.size - 1 downTo 0) {
-                    val chunkIndex = chunkIndices[i]
-                    if (!preLoad.containsFast(chunkIndex)) continue
+                        val builtChunk = chunkArray[chunkIndex]
+                        if (!builtChunk.needsRebuild()) continue
+                        val task = builtChunk.createRebuildTask()
+                        builtChunk.cancelRebuild()
+                        chunkBuilder.send(task)
 
-                    val builtChunk = chunkArray[chunkIndex]
-                    if (!builtChunk.needsRebuild()) continue
-                    val task = builtChunk.createRebuildTask()
-                    builtChunk.cancelRebuild()
-                    chunkBuilder.send(task)
-
-                    if (--count == 0) return@launch
+                        if (--count <= 0) return@launch
+                    }
                 }
             }
         }
@@ -259,21 +259,21 @@ interface IPatchedWorldRenderer {
         mainThreadContext: CoroutineContext,
         running: BooleanArray,
         updateChunksJob: Job,
-        chunkStorage: RegionBuiltChunkStorage,
         frustum: Frustum,
         cameraChunkOrigin: BlockPos,
         caveCulling: Boolean,
     ): Job {
         this as AccessorWorldRenderer
         this as WorldRenderer
+        val chunks = chunks as RegionBuiltChunkStorage
 
         return scope.launch(FastMcCoreScope.context) {
             val channel = Channel<CullingInfo>(ParallelUtils.CPU_THREADS)
 
             launch(FastMcCoreScope.context) {
                 val layers = RenderLayer.getBlockLayers()
-                val chunkArray: Array<ChunkBuilder.BuiltChunk> = chunkStorage.chunks
-                val regionArray = chunkStorage.regionArray
+                val chunkArray: Array<ChunkBuilder.BuiltChunk> = chunks.chunks
+                val regionArray = chunks.regionArray
 
                 val preLoadChunkBitSet0 = preLoadChunkBitSet.getSwap()
                 val renderTileEntityList0 = renderTileEntityList.getSwap()
@@ -306,7 +306,7 @@ interface IPatchedWorldRenderer {
 
                 running[0] = false
                 updateChunksJob.join()
-                val chunkIndices = chunkStorage.getChunkIndices()
+                val chunkIndices = chunks.getChunkIndices()
 
                 updateRegion(
                     this,
@@ -320,12 +320,13 @@ interface IPatchedWorldRenderer {
             }
 
             coroutineScope {
-                val regionArray = chunkStorage.regionArray
-                for (region in regionArray) {
+                for (region in chunks.regionArray) {
                     region.visible = false
                 }
+
                 val nonEmptyChunkSet = NonEmptyChunkSet(world, viewDistance, cameraChunkOrigin)
-                val caveCullingBitSet = (chunks as RegionBuiltChunkStorage).getCaveCullingBitSet()
+                val caveCullingBitSet = chunks.getCaveCullingBitSet()
+
                 cullingIteration(this, caveCulling, frustum, nonEmptyChunkSet, caveCullingBitSet, channel)
             }
 
@@ -377,10 +378,13 @@ interface IPatchedWorldRenderer {
                             val builtChunk = chunkArray[i]
                             builtChunk as IPatchedBuiltChunk
                             val index = builtChunk.index
+
                             if (!caveCullingBitSet.containsFast(index)) continue
                             cullingInfo.preLoad.addFast(index)
+
                             if (!builtChunk.shouldBuild(nonEmptyChunkSet)) continue
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
+
                             cullingInfo.visible.addFast(index)
                             builtChunk.region.visible = true
                         }
@@ -401,9 +405,12 @@ interface IPatchedWorldRenderer {
                             val builtChunk = chunkArray[i]
                             builtChunk as IPatchedBuiltChunk
                             val index = builtChunk.index
+
                             cullingInfo.preLoad.addFast(index)
+
                             if (!builtChunk.shouldBuild(nonEmptyChunkSet)) continue
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
+
                             cullingInfo.visible.addFast(index)
                             builtChunk.region.visible = true
                         }

@@ -28,7 +28,7 @@ class RegionBuiltChunkStorage(
     viewDistance: Int,
     worldRenderer: WorldRenderer
 ) : BuiltChunkStorage(chunkBuilder, world, viewDistance, worldRenderer) {
-    val regionSize = (super.sizeX + 15) shr 4
+    val regionSize = ((super.sizeX + 15) shr 4) + 1
     val regionArray: Array<RenderRegion>
 
     private val sortedChunkArray: Array<ChunkBuilder.BuiltChunk> = chunks.copyOf()
@@ -110,15 +110,15 @@ class RegionBuiltChunkStorage(
             val regionCenter = regionSize shr 1
             val originX = (floorPlayerX shr 8) - regionCenter
             val originZ = (floorPlayerZ shr 8) - regionCenter
-            val centerX = Math.floorMod(originX + 128, regionSize)
-            val centerZ = Math.floorMod(originZ + 128, regionSize)
+            val centerX = Math.floorMod(originX, regionSize)
+            val centerZ = Math.floorMod(originZ, regionSize)
 
             for (i in regionArray.indices) {
                 launch(FastMcCoreScope.context) {
                     val region = regionArray[i]
 
-                    val blockX = (Math.floorMod(i % regionSize - centerX, regionSize) + originX) shl 8
-                    val blockZ = (Math.floorMod(i / regionSize - centerZ, regionSize) + originZ) shl 8
+                    val blockX = (Math.floorMod((i % regionSize) - centerX, regionSize) + originX) shl 8
+                    val blockZ = (Math.floorMod((i / regionSize) - centerZ, regionSize) + originZ) shl 8
 
                     region.setOrigin(blockX, blockZ)
                     region.chunks.clear()
