@@ -7,14 +7,12 @@ import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import net.minecraft.world.chunk.ChunkStatus;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.Redirect;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,30 +34,15 @@ public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltC
     @Final
     private BlockPos.Mutable[] neighborPositions;
 
-    @Shadow
-    @Final
-    private BlockPos.Mutable origin;
+    private static final int LAYER_SIZE = RenderLayer.getBlockLayers().size();
+
     private int index = 0;
     private RenderRegion region;
-    private final ChunkVertexData[] chunkVertexDataArray = new ChunkVertexData[RenderLayer.getBlockLayers().size()];
+    private final ChunkVertexData[] chunkVertexDataArray = new ChunkVertexData[LAYER_SIZE];
 
-    @Inject(method = "<init>", at = @At("RETURN"))
-    private void init$Inject$RETURN(ChunkBuilder chunkBuilder, CallbackInfo ci) {
-        List<RenderLayer> layers = RenderLayer.getBlockLayers();
-        for (int i = 0; i < layers.size(); i++) {
-            buffers.get(layers.get(i)).close();
-        }
-        this.buffers = null;
-    }
-
-    @Inject(method = "clear", at = @At("RETURN"))
-    private void clear$Inject$RETURN(CallbackInfo ci) {
-        RenderRegion region = this.region;
-    }
-
-    @Inject(method = "scheduleRebuild(Z)V", at = @At("RETURN"))
-    private void scheduleRebuild$Inject$RETURN(CallbackInfo ci) {
-        RenderRegion region = this.region;
+    @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/RenderLayer;getBlockLayers()Ljava/util/List;"))
+    private List<RenderLayer> init$Redirect$INVOKE$getBlockLayers() {
+        return Collections.emptyList();
     }
 
     /**
