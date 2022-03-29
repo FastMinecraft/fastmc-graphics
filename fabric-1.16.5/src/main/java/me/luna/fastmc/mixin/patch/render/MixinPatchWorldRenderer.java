@@ -263,7 +263,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             glTexCoordPointer(2, GL_SHORT, 28, 24);
             glClientActiveTexture(GL_TEXTURE0);
 
-            glMultiDrawArrays(GL_QUADS, regionLayer.firstArray, regionLayer.countArray);
+            glMultiDrawArrays(GL_QUADS, regionLayer.firstBuffer.get(), regionLayer.countBuffer.get());
         }
 
         glDisableClientState(GL_VERTEX_ARRAY);

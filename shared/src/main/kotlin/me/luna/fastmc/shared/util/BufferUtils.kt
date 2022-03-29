@@ -24,3 +24,37 @@ inline fun IntArrayList.toIntBuffer(): IntBuffer {
 inline fun Buffer.skip(count: Int) {
     this.position(position() + count)
 }
+
+class CachedByteBuffer(initialCapacity: Int) {
+    private var buffer = allocateByte(initialCapacity)
+
+    fun getWithCapacity(minCapacity: Int, newCapacity: Int): ByteBuffer {
+        if (buffer.capacity() > minCapacity) {
+            buffer = allocateByte(newCapacity)
+        }
+
+        buffer.clear()
+        return buffer
+    }
+
+    fun get(): ByteBuffer {
+        return buffer
+    }
+}
+
+class CachedIntBuffer(initialCapacity: Int) {
+    private var buffer = allocateInt(initialCapacity)
+
+    fun getWithCapacity(minCapacity: Int, newCapacity: Int): IntBuffer {
+        if (buffer.capacity() > minCapacity) {
+            buffer = allocateInt(newCapacity)
+        }
+
+        buffer.clear()
+        return buffer
+    }
+
+    fun get(): IntBuffer {
+        return buffer
+    }
+}

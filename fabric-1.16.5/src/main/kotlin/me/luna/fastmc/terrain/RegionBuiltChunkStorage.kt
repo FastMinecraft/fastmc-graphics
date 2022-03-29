@@ -27,7 +27,7 @@ class RegionBuiltChunkStorage(
     viewDistance: Int,
     worldRenderer: WorldRenderer
 ) : BuiltChunkStorage(chunkBuilder, world, viewDistance, worldRenderer) {
-    val regionSize = (super.sizeX + 30) shr 4
+    val regionSize = (super.sizeX + 31) shr 4
     val regionArray: Array<RenderRegion>
 
     private val sortingUpdateCounter = UpdateCounter()
@@ -95,8 +95,8 @@ class RegionBuiltChunkStorage(
             val endChunkZ = startChunkZ + sizeZ0
 
             val regionCenter = regionSize shr 1
-            val originX = ((floorPlayerX + 128) shr 8) - regionCenter
-            val originZ = ((floorPlayerZ + 128) shr 8) - regionCenter
+            val originX = (floorPlayerX shr 8) - regionCenter
+            val originZ = (floorPlayerZ shr 8) - regionCenter
             val centerX = Math.floorMod(originX, regionSize)
             val centerZ = Math.floorMod(originZ, regionSize)
 

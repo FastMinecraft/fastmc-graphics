@@ -3,12 +3,11 @@ package me.luna.fastmc.terrain
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.util.CachedIntBuffer
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
-import me.luna.fastmc.shared.util.toIntBuffer
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.util.math.BlockPos
-import java.nio.IntBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -27,7 +26,7 @@ class RenderRegion(val index: Int) {
         return regionLayerArray[index]
     }
 
-    inline suspend fun updateRegionLayer(
+    suspend fun updateRegionLayer(
         mainThreadContext: CoroutineContext,
         index: Int,
         dataList: FastObjectArrayList<ChunkVertexData>,
@@ -77,8 +76,8 @@ class RenderRegion(val index: Int) {
 
         regionLayerArray[index] = RegionLayer(
             vao,
-            firstArray.toIntBuffer(),
-            countArray.toIntBuffer(),
+            layer?.firstBuffer.putList(firstArray),
+            layer?.countBuffer.putList(countArray),
             VboInfo(vbo, vertexCount, vertexSize),
             dataList
         )
@@ -86,9 +85,21 @@ class RenderRegion(val index: Int) {
 
     fun updateRegionLayerVisibility(index: Int, firstArray: IntArrayList, countArray: IntArrayList) {
         regionLayerArray[index]?.let {
-            regionLayerArray[index] =
-                it.copy(firstArray = firstArray.toIntBuffer(), countArray = countArray.toIntBuffer())
+            regionLayerArray[index] = it.copy(
+                firstBuffer = it.firstBuffer.putList(firstArray),
+                countBuffer = it.countBuffer.putList(countArray)
+            )
         }
+    }
+
+    private fun CachedIntBuffer?.putList(list: IntArrayList): CachedIntBuffer {
+        val newCapacity = (list.size + 2047) shr 10 shl 10
+        val cachedIntBuffer = this ?: CachedIntBuffer(newCapacity)
+        val buffer = cachedIntBuffer.getWithCapacity(list.size, newCapacity)
+        buffer.clear()
+        buffer.put(list.elements(), 0, list.size)
+        buffer.flip()
+        return cachedIntBuffer
     }
 
     fun setOrigin(x: Int, z: Int) {
@@ -107,8 +118,8 @@ class RenderRegion(val index: Int) {
 
     data class RegionLayer(
         @JvmField val vao: VertexArrayObject,
-        @JvmField val firstArray: IntBuffer,
-        @JvmField val countArray: IntBuffer,
+        @JvmField val firstBuffer: CachedIntBuffer,
+        @JvmField val countBuffer: CachedIntBuffer,
         @JvmField val vboInfo: VboInfo,
         @JvmField val dataList: FastObjectArrayList<ChunkVertexData>
     )

@@ -2,12 +2,12 @@ package me.luna.fastmc.mixin.patch.render;
 
 import com.mojang.datafixers.util.Pair;
 import me.luna.fastmc.FastMcMod;
+import me.luna.fastmc.mixin.IPatchedBlockBufferBuilderStorage;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedChunkData;
 import me.luna.fastmc.mixin.IPatchedTask;
 import me.luna.fastmc.mixin.accessor.*;
 import me.luna.fastmc.renderer.TileEntityRenderer;
-import me.luna.fastmc.shared.util.BufferUtils;
 import me.luna.fastmc.terrain.ChunkVertexData;
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
 import me.luna.fastmc.terrain.VertexDataTransformer;
@@ -16,10 +16,8 @@ import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.BlockBufferBuilderStorage;
 import net.minecraft.client.render.chunk.ChunkBuilder;
-import net.minecraft.client.render.chunk.ChunkRendererRegion;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
@@ -68,6 +66,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                     long builtOrigin = builtChunk.getOrigin().asLong();
                     ByteBuffer[] bufferArray = new ByteBuffer[layers.size()];
                     int[] vertexCountArray = new int[layers.size()];
+                    IPatchedBlockBufferBuilderStorage patchedBuffers = (IPatchedBlockBufferBuilderStorage) buffers;
 
                     for (int i = 0; i < layers.size(); i++) {
                         RenderLayer layer = layers.get(i);
@@ -75,7 +74,6 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                             Pair<BufferBuilder.DrawArrayParameters, ByteBuffer> bufferData = buffers.get(layer).popData();
                             int vertexCount = bufferData.getFirst().getCount();
                             if (vertexCount == 0) continue;
-                            ByteBuffer newBuffer = BufferUtils.allocateByte(VertexDataTransformer.INSTANCE.transformedSize(vertexCount));
 
                             BlockPos regionOrigin = patchedBuiltChunk.getRegion().getOrigin();
                             BlockPos chunkOrigin = builtChunk.getOrigin();
@@ -83,8 +81,18 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                             float offsetY = (float) (chunkOrigin.getY() - regionOrigin.getY());
                             float offsetZ = (float) (chunkOrigin.getZ() - regionOrigin.getZ());
 
-                            VertexDataTransformer.INSTANCE.transform(offsetX, offsetY, offsetZ, vertexCount, bufferData.getSecond(), newBuffer);
-                            bufferArray[i] = newBuffer;
+                            int minCapacity = VertexDataTransformer.INSTANCE.transformedSize(vertexCount);
+                            int newCapacity = (minCapacity + 2097151) >> 20 << 20;
+
+                            ByteBuffer swapBuffer = patchedBuffers.getCachedByteBuffer().getWithCapacity(minCapacity, newCapacity);
+                            ByteBuffer buffer = bufferData.getSecond();
+
+                            VertexDataTransformer.INSTANCE.transform(offsetX, offsetY, offsetZ, vertexCount, buffer, swapBuffer);
+                            buffer.clear();
+                            buffer.put(swapBuffer);
+                            buffer.flip();
+
+                            bufferArray[i] = buffer;
                             vertexCountArray[i] = vertexCount;
                         }
                     }
@@ -134,41 +142,38 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                         List<BlockEntity> finalAdding = adding;
                         List<BlockEntity> finalRemoving = removing;
 
-                        accessorChunkBuilder.getUploadQueue().add(() -> {
-                            if (!cancelled0.get()) {
-                                ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
+                        return scheduleUpload(() -> {
+                            ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
 
-                                for (int i = 0; i < bufferArray.length; i++) {
-                                    ByteBuffer newBuffer = bufferArray[i];
-                                    if (newBuffer != null) {
-                                        updateVertexData(
-                                            patchedBuiltChunk.getIndex(),
-                                            chunkVertexDataArray,
-                                            i,
-                                            builtOrigin,
-                                            newBuffer,
-                                            vertexCountArray[i]
-                                        );
-                                    } else {
-                                        clearVertexData(
-                                            patchedBuiltChunk.getIndex(),
-                                            chunkVertexDataArray,
-                                            i,
-                                            builtOrigin
-                                        );
-                                    }
-                                }
-
-                                renderer.updateEntities(finalAdding, finalRemoving);
-                                builtChunk.data.set(newData);
-                                ((IPatchedChunkData) newData).onComplete();
-                                patchedBuiltChunk.getRegion().getDirty().set(true);
-                                if (cullingDirty) {
-                                    ((RegionBuiltChunkStorage) ((AccessorWorldRenderer) ((AccessorChunkBuilder) getChunkBuilder()).getWorldRenderer()).getChunks()).markCaveCullingDirty();
+                            for (int i = 0; i < bufferArray.length; i++) {
+                                ByteBuffer newBuffer = bufferArray[i];
+                                if (newBuffer != null) {
+                                    updateVertexData(
+                                        patchedBuiltChunk.getIndex(),
+                                        chunkVertexDataArray,
+                                        i,
+                                        builtOrigin,
+                                        newBuffer,
+                                        vertexCountArray[i]
+                                    );
+                                } else {
+                                    clearVertexData(
+                                        patchedBuiltChunk.getIndex(),
+                                        chunkVertexDataArray,
+                                        i,
+                                        builtOrigin
+                                    );
                                 }
                             }
+
+                            renderer.updateEntities(finalAdding, finalRemoving);
+                            builtChunk.data.set(newData);
+                            ((IPatchedChunkData) newData).onComplete();
+                            patchedBuiltChunk.getRegion().getDirty().set(true);
+                            if (cullingDirty) {
+                                ((RegionBuiltChunkStorage) ((AccessorWorldRenderer) (accessorChunkBuilder).getWorldRenderer()).getChunks()).markCaveCullingDirty();
+                            }
                         });
-                        return CompletableFuture.completedFuture(ChunkBuilder.Result.SUCCESSFUL);
                     } else {
                         return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
                     }
