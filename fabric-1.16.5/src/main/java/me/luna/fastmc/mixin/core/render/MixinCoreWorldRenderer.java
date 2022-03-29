@@ -418,7 +418,7 @@ public abstract class MixinCoreWorldRenderer {
 
     @SuppressWarnings("SynchronizeOnNonFinalField")
     public void renderTileEntityVanilla(@NotNull MatrixStack matrices, float tickDelta, double renderPosX, double renderPosY, double renderPosZ, @NotNull VertexConsumerProvider.Immediate immediate) {
-        for (BlockEntity blockEntity : ((IPatchedWorldRenderer) this).getRenderTileEntityList().get()) {
+        for (BlockEntity blockEntity : ((IPatchedWorldRenderer) this).getPatch().getRenderTileEntityList().get()) {
             BlockPos blockPos = blockEntity.getPos();
             VertexConsumerProvider vertexConsumerProvider = immediate;
 

@@ -25,8 +25,8 @@ import java.util.List;
 
 @Mixin(WorldServer.class)
 public abstract class MixinWorldServer extends World {
-    private final DoubleBufferedCollection<IntSet> blockEventDataSet = new DoubleBufferedCollection<>(new IntOpenHashSet());
-    private final DoubleBufferedCollection<List<BlockEventData>> blockEventDataList = new DoubleBufferedCollection<>(new ArrayList<>());
+    private final DoubleBufferedCollection<IntSet> blockEventDataSet = new DoubleBufferedCollection<>(new IntOpenHashSet(), new IntOpenHashSet());
+    private final DoubleBufferedCollection<List<BlockEventData>> blockEventDataList = new DoubleBufferedCollection<>(new ArrayList<>(), new ArrayList<>());
     @Shadow
     @Final
     private MinecraftServer server;

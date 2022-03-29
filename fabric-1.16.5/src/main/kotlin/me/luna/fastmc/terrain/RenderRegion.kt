@@ -1,6 +1,7 @@
 package me.luna.fastmc.terrain
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
@@ -9,6 +10,7 @@ import net.minecraft.client.render.RenderLayer
 import net.minecraft.util.math.BlockPos
 import java.nio.IntBuffer
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.coroutines.CoroutineContext
 
 @Suppress("NOTHING_TO_INLINE")
 class RenderRegion(val index: Int) {
@@ -25,46 +27,52 @@ class RenderRegion(val index: Int) {
         return regionLayerArray[index]
     }
 
-    inline fun updateRegionLayer(
+    inline suspend fun updateRegionLayer(
+        mainThreadContext: CoroutineContext,
         index: Int,
         dataList: FastObjectArrayList<ChunkVertexData>,
         firstArray: IntArrayList,
-        countArray: IntArrayList,
-        vertexCount: Int,
-        vertexSize: Int
+        countArray: IntArrayList
     ) {
+        val vertexCount = dataList.sumOf {
+            it.vboInfo.vertexCount
+        }
+        val vertexSize = VertexDataTransformer.transformedSize(vertexCount)
+
         val newVboSize = ((vertexSize + 1048575) shr 20 shl 20) + 2097152
         val maxVboSize = newVboSize + 4194304
         val layer = regionLayerArray[index]
         val vao: VertexArrayObject
-        val vbo: VertexBufferObject
+        val vbo: ImmutableVertexBufferObject
 
-        if (layer == null) {
-            vao = VertexArrayObject()
-            vbo = newVbo(newVboSize)
-            vao.attachVbo(vbo)
-        } else {
-            vbo = layer.vboInfo.updateVbo(vertexSize, newVboSize, maxVboSize, Companion::newVbo)
-            if (vbo !== layer.vboInfo.vbo) {
-                layer.vao.destroyVao()
+        withContext(mainThreadContext) {
+            if (layer == null) {
                 vao = VertexArrayObject()
+                vbo = newVbo(newVboSize)
                 vao.attachVbo(vbo)
             } else {
-                vao = layer.vao
+                vbo = layer.vboInfo.updateVbo(vertexSize, newVboSize, maxVboSize, Companion::newVbo)
+                if (vbo !== layer.vboInfo.vbo) {
+                    layer.vao.destroyVao()
+                    vao = VertexArrayObject()
+                    vao.attachVbo(vbo)
+                } else {
+                    vao = layer.vao
+                }
             }
-        }
 
-        var offset = 0L
-        for (i in dataList.indices) {
-            val data = dataList[i]
-            glCopyNamedBufferSubData(
-                data.vboInfo.vbo.id,
-                vbo.id,
-                0L,
-                offset,
-                data.vboInfo.vertexSize.toLong()
-            )
-            offset += data.vboInfo.vertexSize
+            var offset = 0L
+            for (i in dataList.indices) {
+                val data = dataList[i]
+                glCopyNamedBufferSubData(
+                    data.vboInfo.vbo.id,
+                    vbo.id,
+                    0L,
+                    offset,
+                    data.vboInfo.vertexSize.toLong()
+                )
+                offset += data.vboInfo.vertexSize
+            }
         }
 
         regionLayerArray[index] = RegionLayer(

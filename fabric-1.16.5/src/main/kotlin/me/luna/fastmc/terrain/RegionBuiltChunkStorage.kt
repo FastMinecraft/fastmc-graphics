@@ -1,6 +1,5 @@
 package me.luna.fastmc.terrain
 
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import me.luna.fastmc.mixin.IPatchedBuiltChunk
@@ -28,30 +27,27 @@ class RegionBuiltChunkStorage(
     viewDistance: Int,
     worldRenderer: WorldRenderer
 ) : BuiltChunkStorage(chunkBuilder, world, viewDistance, worldRenderer) {
-    val regionSize = ((super.sizeX + 15) shr 4) + 1
+    val regionSize = (super.sizeX + 30) shr 4
     val regionArray: Array<RenderRegion>
 
-    private val sortedChunkArray: Array<ChunkBuilder.BuiltChunk> = chunks.copyOf()
-    private var chunkIndices = IntArray(chunks.size)
-    private var deferredChunkIndices = CompletableDeferred(chunkIndices)
+    private val sortingUpdateCounter = UpdateCounter()
     private var lastSortingJob: Future<*>? = null
+    private var lastSortedChunkArray: Array<ChunkBuilder.BuiltChunk> = chunks.copyOf()
+    var chunkIndices = IntArray(chunks.size); private set
 
-    private var updateCount = 0
-    private var lastGetUpdateCount = Int.MIN_VALUE
-    private var caveCullingDirty = true
-
-    private var caveCullingBitSet = ExtendedBitSet(chunks.size)
-    private var deferredCaveCullingBitSet = CompletableDeferred(caveCullingBitSet)
+    private val caveCullingUpdateCounter = UpdateCounter()
     private var lastCaveCullingJob: Future<*>? = null
+    private var caveCullingDirty = true
+    var caveCullingBitSet = ExtendedBitSet(chunks.size); private set
 
     val sizeX0: Int
         get() = super.sizeX
 
-    val sizeZ0: Int
-        get() = super.sizeZ
-
     val sizeY0: Int
         get() = super.sizeY
+
+    val sizeZ0: Int
+        get() = super.sizeZ
 
     init {
         for (i in chunks.indices) {
@@ -79,25 +75,16 @@ class RegionBuiltChunkStorage(
         }
     }
 
-
-    suspend fun getChunkIndices(): IntArray {
-        return deferredChunkIndices.await()
-    }
-
-    suspend fun getCaveCullingBitSet(): ExtendedBitSet {
-        return deferredCaveCullingBitSet.await()
-    }
-
     override fun updateCameraPosition(x: Double, z: Double) {
         throw UnsupportedOperationException()
     }
 
     suspend fun updateCameraPosition(cameraChunkOrigin: BlockPos, playerX: Double, playerZ: Double) {
         updateRegions(playerX, playerZ)
-        startSorting(cameraChunkOrigin)
+        updateChunkIndices(cameraChunkOrigin)
     }
 
-    private suspend inline fun updateRegions(playerX: Double, playerZ: Double) {
+    private suspend fun updateRegions(playerX: Double, playerZ: Double) {
         coroutineScope {
             val floorPlayerX = playerX.fastFloor()
             val floorPlayerZ = playerZ.fastFloor()
@@ -145,11 +132,9 @@ class RegionBuiltChunkStorage(
         }
     }
 
-    private inline fun startSorting(cameraChunkOrigin: BlockPos) {
-        val newDeferred = CompletableDeferred<IntArray>()
-        deferredChunkIndices = newDeferred
-
+    private fun updateChunkIndices(cameraChunkOrigin: BlockPos) {
         lastSortingJob = FastMcExtendScope.pool.submit {
+            val chunkArray = lastSortedChunkArray.copyOf()
             val comparator = Comparator.comparingInt<ChunkBuilder.BuiltChunk> {
                 val chunkOrigin = it.origin
                 -distanceSq(
@@ -157,54 +142,54 @@ class RegionBuiltChunkStorage(
                     chunkOrigin.x, chunkOrigin.y, chunkOrigin.z
                 )
             }
-            Arrays.sort(sortedChunkArray, comparator)
+            Arrays.sort(chunkArray, comparator)
 
-            val indexArray = IntArray(sortedChunkArray.size)
+            val indexArray = IntArray(chunkArray.size)
             for (i in indexArray.indices) {
-                indexArray[i] = (sortedChunkArray[i] as IPatchedBuiltChunk).index
+                indexArray[i] = (chunkArray[i] as IPatchedBuiltChunk).index
             }
+
+            lastSortedChunkArray = chunkArray
             chunkIndices = indexArray
-            newDeferred.complete(indexArray)
+            sortingUpdateCounter.update()
         }
+    }
+
+    fun checkChunkIndicesUpdate(): Boolean {
+        return sortingUpdateCounter.check()
     }
 
     fun markCaveCullingDirty() {
         caveCullingDirty = true
     }
 
-    fun updateCulling(cameraChunkOrigin: BlockPos, frame: Int): Boolean {
-        if (caveCullingDirty && lastCaveCullingJob.isDoneOrNull && deferredCaveCullingBitSet.isCompleted) {
+    fun updateCulling(cameraChunkOrigin: BlockPos): Boolean {
+        if (caveCullingDirty && lastCaveCullingJob.isDoneOrNull) {
             caveCullingDirty = false
-            val builtChunk = getRenderedChunkByBlock(cameraChunkOrigin) ?: sortedChunkArray[sortedChunkArray.size - 1]
-            val newDeferred = CompletableDeferred<ExtendedBitSet>()
-            deferredCaveCullingBitSet = newDeferred
-
             lastCaveCullingJob = FastMcExtendScope.pool.submit {
+                val builtChunk = getRenderedChunkByBlock(cameraChunkOrigin)
+                    ?: lastSortedChunkArray[lastSortedChunkArray.size - 1]
                 val newCullingBitSet = ExtendedBitSet(chunks.size)
                 newCullingBitSet.addFast((builtChunk as IPatchedBuiltChunk).index)
+
                 recursiveUpdateCulling(
                     cameraChunkOrigin,
-                    frame,
                     newCullingBitSet,
                     builtChunk,
                     null,
                     0
                 )
-                updateCount++
+
+                caveCullingUpdateCounter.update()
                 caveCullingBitSet = newCullingBitSet
-                newDeferred.complete(newCullingBitSet)
             }
         }
 
-        val lastGet = lastGetUpdateCount
-        val current = updateCount
-        lastGetUpdateCount = current
-        return lastGet != current
+        return caveCullingUpdateCounter.check()
     }
 
     private fun recursiveUpdateCulling(
         cameraChunkBlockPos: BlockPos,
-        frame: Int,
         cullingBitSet: ExtendedBitSet,
         builtChunk: BuiltChunk,
         direction: Direction?,
@@ -223,7 +208,6 @@ class RegionBuiltChunkStorage(
             cullingBitSet.addFast(index)
             recursiveUpdateCulling(
                 cameraChunkBlockPos,
-                frame,
                 cullingBitSet,
                 nextBuiltChunk,
                 nextDirection,

@@ -156,7 +156,6 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                                     }
                                 }
 
-
                                 renderer.updateEntities(finalAdding, finalRemoving);
                                 builtChunk.data.set(newData);
                                 ((IPatchedChunkData) newData).onComplete();

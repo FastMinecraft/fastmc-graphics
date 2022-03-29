@@ -46,9 +46,9 @@ import java.util.List;
 
 @Mixin(World.class)
 public abstract class MixinWorld implements IPatchedWorld {
-    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(new IntOpenHashSet());
-    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(new IntOpenHashSet());
-    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(new ArrayList<>());
+    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(new IntOpenHashSet(), new IntOpenHashSet());
+    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(new IntOpenHashSet(), new IntOpenHashSet());
+    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(new ArrayList<>(), new ArrayList<>());
     private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
     @Shadow
     @Final

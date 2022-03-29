@@ -49,11 +49,6 @@ import java.util.*;
 
 @Mixin(RenderGlobal.class)
 public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
-
-    private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
-    private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), FastObjectArrayList::clear);
-    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBuffered<FastObjectArrayList<RenderChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinRenderGlobal::clearArray);
     @Shadow
     private WorldClient world;
     @Shadow
@@ -81,6 +76,12 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
     @Shadow
     private boolean displayListEntitiesDirty;
 
+    private final DoubleBufferedCollection<FastObjectArrayList<TileEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), new FastObjectArrayList<>(), FastObjectArrayList::clear);
+    private final DoubleBufferedCollection<FastObjectArrayList<Entity>> renderEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), new FastObjectArrayList<>(), FastObjectArrayList::clear);
+    private final DoubleBufferedCollection<ExtendedBitSet> chunksToUpdateBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), new ExtendedBitSet(),  DoubleBufferedCollection.emptyInitAction());
+    private final DoubleBuffered<FastObjectArrayList<RenderChunk>[]> filteredRenderInfos = new DoubleBuffered<>(getArray(), getArray(), MixinRenderGlobal::clearArray);
+
+    @SuppressWarnings("unchecked")
     private static FastObjectArrayList<RenderChunk>[] getArray() {
         int size = BlockRenderLayer.values().length;
         ArrayList<FastObjectArrayList<RenderChunk>> list = new ArrayList<>();
@@ -89,7 +90,6 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
             list.add(new FastObjectArrayList<>());
         }
 
-        //noinspection unchecked
         return (FastObjectArrayList<RenderChunk>[]) list.toArray(new FastObjectArrayList[size]);
     }
 
@@ -251,7 +251,6 @@ public abstract class MixinRenderGlobal implements IPatchedRenderGlobal {
         }
     }
 
-    @SuppressWarnings("InvalidInjectorMethodSignature")
     @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false), locals = LocalCapture.CAPTURE_FAILHARD)
     private void renderEntities$Inject$INVOKE$drawBatch(Entity renderViewEntity, ICamera camera, float partialTicks, CallbackInfo ci, int pass) {
         for (TileEntity tileEntity : renderTileEntityList.get()) {

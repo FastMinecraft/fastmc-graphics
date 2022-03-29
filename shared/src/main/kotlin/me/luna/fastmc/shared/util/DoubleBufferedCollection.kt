@@ -2,12 +2,25 @@ package me.luna.fastmc.shared.util
 
 import java.util.function.Consumer
 
-class DoubleBufferedCollection<T : MutableCollection<*>>(value: T, private val initAction: Consumer<T>) {
-    @Suppress("UNCHECKED_CAST")
-    constructor(value: T) : this(value, DEFAULT_INIT_ACTION as Consumer<T>)
+@Suppress("UNCHECKED_CAST")
+class DoubleBufferedCollection<T : MutableCollection<*>> {
+    constructor(delegate: T, swap: T)  {
+        this.delegate = delegate
+        this.swap = swap
+        this.initAction = DEFAULT_INIT_ACTION as Consumer<T>
+    }
 
-    private var delegate = value
-    private var swap: T = delegate.javaClass.newInstance()
+    constructor(delegate: T, swap: T, initAction: Consumer<T>) {
+        this.delegate = delegate
+        this.swap = swap
+        this.initAction = initAction
+    }
+
+    @Volatile
+    private var delegate: T
+    @Volatile
+    private var swap: T
+    private val initAction: Consumer<T>
 
     fun get(): T {
         return delegate
@@ -34,9 +47,20 @@ class DoubleBufferedCollection<T : MutableCollection<*>>(value: T, private val i
     }
 
 
-    private companion object {
+    companion object {
+        @JvmField
         val DEFAULT_INIT_ACTION = Consumer<MutableCollection<*>> {
             it.clear()
+        }
+
+        @JvmStatic
+        private val EMPTY_INIT_ACTION = Consumer<MutableCollection<*>> {
+
+        }
+
+        @JvmStatic
+        fun <T> emptyInitAction(): Consumer<T> {
+            return EMPTY_INIT_ACTION as Consumer<T>
         }
     }
 }

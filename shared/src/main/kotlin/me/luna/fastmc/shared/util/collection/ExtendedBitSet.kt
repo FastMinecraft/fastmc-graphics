@@ -20,6 +20,10 @@ class ExtendedBitSet : MutableSet<Int> {
         bitArray = other.bitArray.copyOf()
     }
 
+    constructor(array: LongArray) {
+        bitArray = array.copyOf()
+    }
+
     override val size: Int
         get() {
             var sum = 0

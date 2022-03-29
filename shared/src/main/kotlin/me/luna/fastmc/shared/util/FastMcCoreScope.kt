@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.min
 
 private val group = ThreadGroup("FastMinecraft").apply {
     this.isDaemon = true
@@ -64,9 +63,7 @@ private val extendPool0 = object : ThreadPoolExecutor(
     init {
         allowCoreThreadTimeOut(true)
         setRejectedExecutionHandler { r, _ ->
-            synchronized(unboundQueue) {
-                unboundQueue.add(r)
-            }
+            unboundQueue.add(r)
         }
 
         schedulerThread.priority = Thread.MIN_PRIORITY

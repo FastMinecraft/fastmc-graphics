@@ -6,12 +6,10 @@ import it.unimi.dsi.fastutil.objects.ObjectLists;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
-import me.luna.fastmc.shared.util.DoubleBufferedCollection;
+import me.luna.fastmc.mixin.PatchedWorldRenderer;
 import me.luna.fastmc.shared.util.FastMcExtendScope;
 import me.luna.fastmc.shared.util.MatrixUtils;
-import me.luna.fastmc.shared.util.TickTimer;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.terrain.ChunkVertexData;
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
 import me.luna.fastmc.terrain.RenderRegion;
@@ -32,7 +30,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.GL_ARRAY_BUFFER;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindBuffer;
@@ -75,20 +72,18 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     @Final
     private BufferBuilderStorage bufferBuilders;
-
-    private final DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> renderTileEntityList = new DoubleBufferedCollection<>(new FastObjectArrayList<>(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> preLoadChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-    private final DoubleBufferedCollection<ExtendedBitSet> visibleChunkBitSet = new DoubleBufferedCollection<>(new ExtendedBitSet(), it -> {});
-
-    private final Matrix4f original = new Matrix4f();
-    private final Matrix4f translated = new Matrix4f();
-    private final TickTimer loadingTimer = new TickTimer();
-
-    private int lastCameraX0 = Integer.MAX_VALUE;
-    private int lastCameraY0 = Integer.MAX_VALUE;
-    private int lastCameraZ0 = Integer.MAX_VALUE;
-    private int lastCameraYaw0 = Integer.MAX_VALUE;
-    private int lastCameraPitch0 = Integer.MAX_VALUE;
+    @Shadow
+    private double lastCameraChunkUpdateX;
+    @Shadow
+    private double lastCameraChunkUpdateY;
+    @Shadow
+    private double lastCameraChunkUpdateZ;
+    @Shadow
+    private int cameraChunkX;
+    @Shadow
+    private int cameraChunkY;
+    @Shadow
+    private int cameraChunkZ;
 
     @Shadow
     public abstract void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, net.minecraft.util.math.Matrix4f matrix4f);
@@ -102,23 +97,9 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     protected abstract void resetTransparencyShader();
 
-    @Shadow
-    private double lastCameraChunkUpdateX;
-
-    @Shadow
-    private double lastCameraChunkUpdateY;
-
-    @Shadow
-    private double lastCameraChunkUpdateZ;
-
-    @Shadow
-    private int cameraChunkX;
-
-    @Shadow
-    private int cameraChunkY;
-
-    @Shadow
-    private int cameraChunkZ;
+    private final PatchedWorldRenderer patch = new PatchedWorldRenderer((WorldRenderer) (Object) this);
+    private final Matrix4f original = new Matrix4f();
+    private final Matrix4f translated = new Matrix4f();
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
@@ -128,17 +109,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Inject(method = "setWorld", at = @At("HEAD"))
     public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
         if (world == null) {
-            renderTileEntityList.get().clearAndTrim();
-            renderTileEntityList.getSwap().clearAndTrim();
-
-            clearFast(preLoadChunkBitSet);
-            clearFast(visibleChunkBitSet);
+            patch.clear();
         }
-    }
-
-    private static void clearFast(DoubleBufferedCollection<ExtendedBitSet> input) {
-        input.get().clear();
-        input.getSwap().clearFast();
     }
 
     /**
@@ -190,17 +162,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             this.lastTranslucentSortY = Double.MAX_VALUE;
             this.lastTranslucentSortZ = Double.MAX_VALUE;
 
-            lastCameraX0 = Integer.MAX_VALUE;
-            lastCameraY0 = Integer.MAX_VALUE;
-            lastCameraZ0 = Integer.MAX_VALUE;
-            lastCameraYaw0 = Integer.MAX_VALUE;
-            lastCameraPitch0 = Integer.MAX_VALUE;
-
-            renderTileEntityList.get().clearAndTrim();
-            renderTileEntityList.getSwap().clearAndTrim();
-
-            clearFast(preLoadChunkBitSet);
-            clearFast(visibleChunkBitSet);
+            patch.clear();
         }
     }
 
@@ -210,7 +172,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     private void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator) {
-        setupTerrain0(camera, frustum, hasForcedFrustum, frame, spectator);
+        patch.setupTerrain0(camera, frustum, hasForcedFrustum, spectator);
     }
 
     /**
@@ -229,7 +191,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     public boolean isTerrainRenderComplete() {
-        return preLoadChunkBitSet.get().isEmpty() && this.preLoadChunkBitSet.getSwap().isEmpty() && this.chunkBuilder.isEmpty();
+        return this.chunkBuilder.isEmpty();
     }
 
     /**
@@ -353,7 +315,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         }
 
         ChunkBuilder.BuiltChunk[] builtChunks = this.chunks.chunks;
-        ExtendedBitSet visibleChunkBitSet = this.visibleChunkBitSet.get();
+        ExtendedBitSet visibleChunkBitSet = patch.getVisibleChunkBitSet().get();
 
         long chunkVertexSize = 0;
         long chunkVboSize = 0;
@@ -404,75 +366,9 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         );
     }
 
-    @Override
-    public int getLastCameraX0() {
-        return lastCameraX0;
-    }
-
-    @Override
-    public void setLastCameraX0(int lastCameraX0) {
-        this.lastCameraX0 = lastCameraX0;
-    }
-
-    @Override
-    public int getLastCameraY0() {
-        return lastCameraY0;
-    }
-
-    @Override
-    public void setLastCameraY0(int lastCameraY0) {
-        this.lastCameraY0 = lastCameraY0;
-    }
-
-    @Override
-    public int getLastCameraZ0() {
-        return lastCameraZ0;
-    }
-
-    @Override
-    public void setLastCameraZ0(int lastCameraZ0) {
-        this.lastCameraZ0 = lastCameraZ0;
-    }
-
-    @Override
-    public int getLastCameraYaw0() {
-        return lastCameraYaw0;
-    }
-
-    @Override
-    public void setLastCameraYaw0(int lastCameraYaw0) {
-        this.lastCameraYaw0 = lastCameraYaw0;
-    }
-
-    @Override
-    public int getLastCameraPitch0() {
-        return lastCameraPitch0;
-    }
-
-    @Override
-    public void setLastCameraPitch0(int lastCameraPitch0) {
-        this.lastCameraPitch0 = lastCameraPitch0;
-    }
-
     @NotNull
     @Override
-    public TickTimer getLoadingTimer() {
-        return loadingTimer;
-    }
-
-    @Override
-    public @NotNull DoubleBufferedCollection<FastObjectArrayList<BlockEntity>> getRenderTileEntityList() {
-        return renderTileEntityList;
-    }
-
-    @Override
-    public @NotNull DoubleBufferedCollection<ExtendedBitSet> getPreLoadChunkBitSet() {
-        return preLoadChunkBitSet;
-    }
-
-    @NotNull
-    @Override
-    public DoubleBufferedCollection<ExtendedBitSet> getVisibleChunkBitSet() {
-        return visibleChunkBitSet;
+    public PatchedWorldRenderer getPatch() {
+        return patch;
     }
 }
