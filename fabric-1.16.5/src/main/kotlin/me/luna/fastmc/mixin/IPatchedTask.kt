@@ -36,4 +36,24 @@ interface IPatchedTask {
             )
         )
     }
+
+    fun clearVertexData(
+        chunkIndex: Int,
+        dataArray: Array<ChunkVertexData?>,
+        index: Int,
+        builtOrigin: Long
+    ) {
+        val oldVertexData = dataArray[index]
+        if (oldVertexData != null) oldVertexData.let {
+            dataArray[index] = ChunkVertexData(
+                chunkIndex,
+                builtOrigin,
+                VboInfo(
+                    oldVertexData.vboInfo.vbo,
+                    0,
+                    oldVertexData.vboInfo.vertexSize
+                )
+            )
+        }
+    }
 }

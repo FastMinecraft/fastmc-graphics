@@ -32,10 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Mixin(ChunkBuilder.BuiltChunk.RebuildTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPatchedTask {
     @Shadow
-    @Nullable
-    protected ChunkRendererRegion region;
-
-    @Shadow
     protected abstract Set<BlockEntity> render(float cameraX, float cameraY, float cameraZ, ChunkBuilder.ChunkData data, BlockBufferBuilderStorage buffers);
 
     /**
@@ -152,6 +148,13 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                                             builtOrigin,
                                             newBuffer,
                                             vertexCountArray[i]
+                                        );
+                                    } else {
+                                        clearVertexData(
+                                            patchedBuiltChunk.getIndex(),
+                                            chunkVertexDataArray,
+                                            i,
+                                            builtOrigin
                                         );
                                     }
                                 }

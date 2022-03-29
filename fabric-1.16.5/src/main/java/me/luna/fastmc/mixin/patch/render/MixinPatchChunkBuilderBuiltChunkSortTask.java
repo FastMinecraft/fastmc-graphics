@@ -24,7 +24,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Mixin(ChunkBuilder.BuiltChunk.SortTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatchedTask {
-
     /**
      * @author Luna
      * @reason Render override

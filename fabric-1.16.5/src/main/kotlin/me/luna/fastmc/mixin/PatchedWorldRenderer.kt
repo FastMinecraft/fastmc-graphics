@@ -14,6 +14,7 @@ import me.luna.fastmc.terrain.ChunkVertexData
 import me.luna.fastmc.terrain.CullingInfo
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage
 import me.luna.fastmc.terrain.RenderRegion
+import me.luna.fastmc.util.isDoneOrNull
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.client.render.Camera
 import net.minecraft.client.render.Frustum
@@ -23,6 +24,7 @@ import net.minecraft.client.render.chunk.ChunkBuilder
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.MathHelper
+import java.util.concurrent.Future
 import kotlin.coroutines.CoroutineContext
 
 class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
@@ -33,7 +35,10 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     )
     val preLoadChunkBitSet = DoubleBufferedCollection(ExtendedBitSet(), ExtendedBitSet(), emptyInitAction())
     val visibleChunkBitSet = DoubleBufferedCollection(ExtendedBitSet(), ExtendedBitSet(), emptyInitAction())
+
     private val loadingTimer = TickTimer()
+
+    private var lastRebuildTask: Future<*>? = null
 
     private var lastCameraX0 = Int.MAX_VALUE
     private var lastCameraY0 = Int.MAX_VALUE
@@ -53,6 +58,9 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         lastCameraZ0 = Int.MAX_VALUE
         lastCameraYaw0 = Int.MAX_VALUE
         lastCameraPitch0 = Int.MAX_VALUE
+
+        lastRebuildTask?.cancel(true)
+        lastRebuildTask = null
     }
 
     private fun DoubleBufferedCollection<ExtendedBitSet>.clearFastAll() {
@@ -72,6 +80,11 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     ) {
         this as AccessorWorldRenderer
 
+        if (client.options.viewDistance != viewDistance) {
+            reload()
+            return
+        }
+
         client.profiler.push("pre")
         val chunkBuilder = chunkBuilder
         chunkBuilder as AccessorChunkBuilder
@@ -79,10 +92,6 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
 
         val chunkStorage = chunks as RegionBuiltChunkStorage
         val player = client.player ?: return
-
-        if (client.options.viewDistance != viewDistance) {
-            reload()
-        }
 
         runBlocking {
             var cameraJob: Job
@@ -197,7 +206,8 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     client.profiler.pop()
                 }
 
-                if (chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 4
+                if (lastRebuildTask.isDoneOrNull
+                    && chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 4
                     && chunkBuilder.uploadQueue.size < ParallelUtils.CPU_THREADS * 4
                 ) {
                     cullingJob?.let {
@@ -240,7 +250,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         val preLoadNotEmpty = preLoad.isNotEmpty()
 
         if (visibleNotEmpty || preLoadNotEmpty) {
-            FastMcCoreScope.launch {
+            lastRebuildTask = FastMcCoreScope.pool.submit {
                 val chunks = chunks as RegionBuiltChunkStorage
                 val chunkIndices = chunks.chunkIndices
                 val chunkArray = chunks.chunks
@@ -258,7 +268,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                         builtChunk.cancelRebuild()
                         chunkBuilder.send(task)
 
-                        if (--count <= 0) return@launch
+                        if (--count <= 0) return@submit
                     }
                 }
 
@@ -274,7 +284,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     builtChunk.cancelRebuild()
                     chunkBuilder.send(task)
 
-                    if (--count <= 0) return@launch
+                    if (--count <= 0) return@submit
                 }
             }
         }
@@ -468,7 +478,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     builtChunk as IPatchedBuiltChunk
                     val longOrigin = builtChunk.origin.asLong()
                     val data = builtChunk.chunkVertexDataArray[layerIndex]
-                    if (data != null && data.builtOrigin == longOrigin) {
+                    if (data != null && data.vboInfo.vertexCount != 0 && data.builtOrigin == longOrigin) {
                         if (visibleChunkBitSet.containsInt(chunkIndex)) {
                             if (!rendering) {
                                 rendering = true
