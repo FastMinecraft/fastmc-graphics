@@ -126,11 +126,11 @@ class RegionBuiltChunkStorage(
 
                     val startX = max(blockX shr 4, startChunkX)
                     val startZ = max(blockZ shr 4, startChunkZ)
-                    val endX = min((blockX shr 4) + 15, endChunkX)
-                    val endZ = min((blockZ shr 4) + 15, endChunkZ)
+                    val endX = min((blockX shr 4) + 16, endChunkX)
+                    val endZ = min((blockZ shr 4) + 16, endChunkZ)
 
-                    for (x in startX..endX) {
-                        for (z in startZ..endZ) {
+                    for (x in startX until endX) {
+                        for (z in startZ until endZ) {
                             for (y in 0 until 16) {
                                 val builtChunk = getRenderedChunk0(x, y, z)
                                 builtChunk as IPatchedBuiltChunk
