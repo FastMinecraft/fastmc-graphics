@@ -126,11 +126,11 @@ class RenderRegion(val index: Int) {
 
     companion object {
         @JvmField
-        val VERTEX_ATTRIBUTE = buildAttribute(24) {
-            float(0, 3, GLDataType.GL_FLOAT, false)
-            float(1, 4, GLDataType.GL_UNSIGNED_BYTE, true)
-            float(2, 2, GLDataType.GL_UNSIGNED_SHORT, true)
-            float(3, 2, GLDataType.GL_UNSIGNED_BYTE, true)
+        val VERTEX_ATTRIBUTE = buildAttribute(16) {
+            float(0, 3, GLDataType.GL_UNSIGNED_SHORT, false) // Pos
+            float(1, 2, GLDataType.GL_UNSIGNED_BYTE, true) // Light map uv
+            float(2, 2, GLDataType.GL_UNSIGNED_SHORT, true) // Block texture uv
+            float(3, 4, GLDataType.GL_UNSIGNED_BYTE, true) // Color multiplier
         }
 
         @JvmStatic

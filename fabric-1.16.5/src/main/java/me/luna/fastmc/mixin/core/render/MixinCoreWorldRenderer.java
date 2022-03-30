@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
+import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
+import me.luna.fastmc.shared.terrain.TerrainShader;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -41,6 +43,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
 import java.util.SortedSet;
+
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindVertexArray;
 
 @Mixin(value = WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreWorldRenderer {
@@ -151,7 +155,12 @@ public abstract class MixinCoreWorldRenderer {
         double renderPosY = vec3d.getY();
         double renderPosZ = vec3d.getZ();
         Matrix4f modelView = matrices.peek().getModel();
-        FastMcMod.INSTANCE.getWorldRenderer().setupCamera(AdaptersKt.toJoml(projection), AdaptersKt.toJoml(modelView));
+        AbstractWorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
+        org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
+        worldRenderer.setupCamera(projection1, modelView1);
+        TerrainShader.INSTANCE.updateProjectionMatrix(projection1);
+        TerrainShader.INSTANCE.updateModelViewMatrix(modelView1);
 
         profiler.swap("culling");
         boolean bl = this.capturedFrustum != null;
@@ -185,10 +194,15 @@ public abstract class MixinCoreWorldRenderer {
         BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, Math.max(g - 16.0F, 32.0F), bl2);
         profiler.swap("terrainSetup");
         this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
+
         profiler.swap("terrain");
+        TerrainShader.INSTANCE.bind();
         this.renderLayer(RenderLayer.getSolid(), matrices, renderPosX, renderPosY, renderPosZ);
         this.renderLayer(RenderLayer.getCutoutMipped(), matrices, renderPosX, renderPosY, renderPosZ);
         this.renderLayer(RenderLayer.getCutout(), matrices, renderPosX, renderPosY, renderPosZ);
+        glBindVertexArray(0);
+        TerrainShader.INSTANCE.unbind();
+
         if (this.world.getSkyProperties().isDarkened()) {
             DiffuseLighting.enableForLevel(matrices.peek().getModel());
         } else {
@@ -300,27 +314,36 @@ public abstract class MixinCoreWorldRenderer {
         this.bufferBuilders.getEffectVertexConsumers().draw();
 
         if (this.translucentFramebuffer != null) {
+            profiler.swap("terrain");
             immediate.draw(RenderLayer.getLines());
             immediate.draw();
+
             this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.translucentFramebuffer.copyDepthFrom(this.client.getFramebuffer());
-            profiler.swap("translucent");
+
+            TerrainShader.INSTANCE.bind();
             this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
-            profiler.swap("string");
             this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
+            glBindVertexArray(0);
+            TerrainShader.INSTANCE.unbind();
+
+            profiler.swap("particles");
             this.particlesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.particlesFramebuffer.copyDepthFrom(this.client.getFramebuffer());
             RenderPhase.PARTICLES_TARGET.startDrawing();
-            profiler.swap("particles");
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
             RenderPhase.PARTICLES_TARGET.endDrawing();
         } else {
-            profiler.swap("translucent");
-            this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
+            profiler.swap("terrain");
             immediate.draw(RenderLayer.getLines());
             immediate.draw();
-            profiler.swap("string");
+
+            TerrainShader.INSTANCE.bind();
+            this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
             this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
+            glBindVertexArray(0);
+            TerrainShader.INSTANCE.unbind();
+
             profiler.swap("particles");
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
         }

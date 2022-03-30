@@ -7,25 +7,41 @@ import java.nio.ByteOrder
 
 object VertexDataTransformer : IVertexDataTransformer {
     override val vertexSize: Int
-        get() = 28
+        get() = 16
 
-    override fun transform(offsetX: Float, offsetY: Float, offsetZ: Float, vertexCount: Int, input: ByteBuffer, output: ByteBuffer) {
+    @Suppress("FloatingPointLiteralPrecision")
+    override fun transform(
+        offsetX: Float,
+        offsetY: Float,
+        offsetZ: Float,
+        vertexCount: Int,
+        input: ByteBuffer,
+        output: ByteBuffer
+    ) {
         input.order(ByteOrder.nativeOrder())
         for (i in 0 until vertexCount) {
-            output.putFloat(input.float + offsetX)
-            output.putFloat(input.float + offsetY)
-            output.putFloat(input.float + offsetZ)
+            output.putShort(((input.float + offsetX + 16) * 227.5555572509765625f).toInt().toShort())
+            output.putShort(((input.float + offsetY + 16) * 227.5555572509765625f).toInt().toShort())
+            output.putShort(((input.float + offsetZ + 16) * 227.5555572509765625f).toInt().toShort())
 
-            output.put(input.get())
-            output.put(input.get())
-            output.put(input.get())
-            output.put(input.get())
+            val r = input.get()
+            val g = input.get()
+            val b = input.get()
+            val a = input.get()
 
-            output.putFloat(input.float)
-            output.putFloat(input.float)
+            val u = input.float
+            val v = input.float
 
-            output.putShort(input.short)
-            output.putShort(input.short)
+            output.put(input.short.toByte())
+            output.put(input.short.toByte())
+
+            output.putShort((u * 65535.0f).toInt().toShort())
+            output.putShort((v * 65535.0f).toInt().toShort())
+
+            output.put(r)
+            output.put(g)
+            output.put(b)
+            output.put(a)
 
             input.skip(4)
         }

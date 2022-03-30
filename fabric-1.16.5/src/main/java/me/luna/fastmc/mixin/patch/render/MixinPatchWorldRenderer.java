@@ -1,19 +1,17 @@
 package me.luna.fastmc.mixin.patch.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.PatchedWorldRenderer;
+import me.luna.fastmc.shared.terrain.TerrainShader;
 import me.luna.fastmc.shared.util.FastMcExtendScope;
-import me.luna.fastmc.shared.util.MatrixUtils;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.terrain.ChunkVertexData;
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage;
 import me.luna.fastmc.terrain.RenderRegion;
-import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.*;
@@ -23,7 +21,6 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -31,10 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
 
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.GL_ARRAY_BUFFER;
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindBuffer;
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL13.*;
+import static org.lwjgl.opengl.GL11.GL_QUADS;
 import static org.lwjgl.opengl.GL14.glMultiDrawArrays;
 
 @Mixin(WorldRenderer.class)
@@ -98,8 +92,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     protected abstract void resetTransparencyShader();
 
     private final PatchedWorldRenderer patch = new PatchedWorldRenderer((WorldRenderer) (Object) this);
-    private final Matrix4f original = new Matrix4f();
-    private final Matrix4f translated = new Matrix4f();
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
@@ -201,21 +193,17 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @SuppressWarnings("deprecation")
     @Overwrite
     private void renderLayer(RenderLayer layer, MatrixStack matrixStack, double renderPosX, double renderPosY, double renderPosZ) {
+        this.client.getProfiler().push(layer.name);
+
         layer.startDrawing();
         int layerIndex = ((IPatchedRenderLayer) layer).getIndex();
         RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
 
-        this.client.getProfiler().push(layer.name);
-
-        AdaptersKt.toJoml(matrixStack.peek().getModel(), original);
-        RenderSystem.pushMatrix();
-
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glEnableClientState(GL_COLOR_ARRAY);
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        glClientActiveTexture(GL_TEXTURE2);
-        glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-        glClientActiveTexture(GL_TEXTURE0);
+        if (layer == RenderLayer.getCutout() || layer == RenderLayer.getCutoutMipped()) {
+            TerrainShader.INSTANCE.setAlphaTest(0.5f);
+        } else {
+            TerrainShader.INSTANCE.setAlphaTest(0.0f);
+        }
 
         for (int i = 0; i < regionArray.length; i++) {
             RenderRegion region = regionArray[i];
@@ -224,39 +212,19 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             if (regionLayer == null) continue;
 
             BlockPos regionOrigin = region.getOrigin();
-            original.translate(
+            TerrainShader.INSTANCE.setOffset(
                 (float) (regionOrigin.getX() - renderPosX),
                 (float) (regionOrigin.getY() - renderPosY),
-                (float) (regionOrigin.getZ() - renderPosZ),
-                translated
+                (float) (regionOrigin.getZ() - renderPosZ)
             );
-            MatrixUtils.INSTANCE.putMatrix(translated);
-            glLoadMatrixf(MatrixUtils.INSTANCE.getMatrixBuffer());
 
-            regionLayer.vboInfo.vbo.bind();
-            glVertexPointer(3, GL_FLOAT, 28, 0);
-            glColorPointer(4, GL_UNSIGNED_BYTE, 28, 12);
-            glTexCoordPointer(2, GL_FLOAT, 28, 16);
-            glClientActiveTexture(GL_TEXTURE2);
-            glTexCoordPointer(2, GL_SHORT, 28, 24);
-            glClientActiveTexture(GL_TEXTURE0);
-
+            regionLayer.vao.bind();
             glMultiDrawArrays(GL_QUADS, regionLayer.firstBuffer.get(), regionLayer.countBuffer.get());
         }
 
-        glDisableClientState(GL_VERTEX_ARRAY);
-        glDisableClientState(GL_COLOR_ARRAY);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        glClientActiveTexture(GL_TEXTURE2);
-        glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-        glClientActiveTexture(GL_TEXTURE0);
-
-        RenderSystem.popMatrix();
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        RenderSystem.clearCurrentColor();
-        this.client.getProfiler().pop();
         layer.endDrawing();
+
+        this.client.getProfiler().pop();
     }
 
     /**
