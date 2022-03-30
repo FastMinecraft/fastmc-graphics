@@ -24,9 +24,12 @@ import net.minecraft.client.render.chunk.ChunkBuilder
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.MathHelper
+import net.minecraft.world.World
+import net.minecraft.world.chunk.ChunkStatus
 import java.util.concurrent.Future
 import kotlin.coroutines.CoroutineContext
 
+@Suppress("NOTHING_TO_INLINE")
 class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     val renderTileEntityList = DoubleBufferedCollection<FastObjectArrayList<BlockEntity>>(
         FastObjectArrayList(),
@@ -198,6 +201,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                         running,
                         updateChunksJob,
                         frustum,
+                        cameraChunkOrigin,
                         client.chunkCullingEnabled
                             && !spectator
                             && !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)
@@ -296,6 +300,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         running: BooleanArray,
         updateChunksJob: Job,
         frustum: Frustum,
+        cameraChunkOrigin: BlockPos,
         caveCulling: Boolean,
     ): Job {
         this as AccessorWorldRenderer
@@ -316,7 +321,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     region.visible = false
                 }
                 val caveCullingBitSet = chunks.caveCullingBitSet
-                cullingIteration(this, caveCulling, frustum, caveCullingBitSet, channel)
+                cullingIteration(this, caveCulling, frustum, cameraChunkOrigin, caveCullingBitSet, channel)
             }
 
             channel.close()
@@ -387,12 +392,14 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         scope: CoroutineScope,
         caveCulling: Boolean,
         frustum: Frustum,
+        cameraChunkOrigin: BlockPos,
         caveCullingBitSet: ExtendedBitSet,
         channel: Channel<CullingInfo>
     ) {
         this as AccessorWorldRenderer
 
         val chunkArray = chunks.chunks
+        val world = world
 
         if (caveCulling) {
             ParallelUtils.splitListIndex(
@@ -410,7 +417,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                             if (!caveCullingBitSet.containsFast(index)) continue
                             cullingInfo.preLoad.addFast(index)
 
-                            if (!builtChunk.shouldBuild()) continue
+                            if (!builtChunk.shouldBuild(world, cameraChunkOrigin)) continue
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
 
                             cullingInfo.visible.addFast(index)
@@ -448,6 +455,24 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                 }
             )
         }
+    }
+
+    private inline fun ChunkBuilder.BuiltChunk.shouldBuild(
+        world: World,
+        cameraChunkOrigin: BlockPos,
+    ): Boolean {
+        val x = origin.x - cameraChunkOrigin.x
+        val y = origin.y - cameraChunkOrigin.y
+        val z = origin.z - cameraChunkOrigin.z
+        if (x * x + y * y + z * z <= 576) return true
+
+        val chunkX = origin.x shr 4
+        val chunkZ = origin.z shr 4
+
+        return world.getChunk(chunkX, chunkZ + 1, ChunkStatus.FULL, false) != null
+            && world.getChunk(chunkX - 1, chunkZ, ChunkStatus.FULL, false) != null
+            && world.getChunk(chunkX, chunkZ - 1, ChunkStatus.FULL, false) != null
+            && world.getChunk(chunkX + 1, chunkZ, ChunkStatus.FULL, false) != null
     }
 
     private fun updateRegionVbo(

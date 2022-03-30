@@ -1,7 +1,7 @@
 package me.luna.fastmc.mixin
 
-import me.luna.fastmc.shared.util.CachedByteBuffer
+import me.luna.fastmc.terrain.ChunkBuilderContext
 
 interface IPatchedBlockBufferBuilderStorage {
-    val cachedByteBuffer: CachedByteBuffer
+    val context: ChunkBuilderContext
 }

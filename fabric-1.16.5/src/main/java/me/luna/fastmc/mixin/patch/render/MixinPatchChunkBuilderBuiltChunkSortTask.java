@@ -21,6 +21,8 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.lwjgl.opengl.GL11.GL_QUADS;
+
 @Mixin(ChunkBuilder.BuiltChunk.SortTask.class)
 public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatchedTask {
     /**
@@ -43,17 +45,18 @@ public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatch
                 ChunkBuilder chunkBuilder = getChunkBuilder();
 
                 Vec3d vec3d = chunkBuilder.getCameraPosition();
-                float f = (float) vec3d.x;
-                float g = (float) vec3d.y;
-                float h = (float) vec3d.z;
                 BufferBuilder.State state = accessorChunkData.getBufferState();
 
                 RenderLayer layer = RenderLayer.getTranslucent();
                 if (state != null && !builtChunk.getData().isEmpty(layer)) {
                     BufferBuilder bufferBuilder = buffers.get(layer);
-                    bufferBuilder.begin(7, VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL);
+                    bufferBuilder.begin(GL_QUADS, VertexFormats.POSITION_COLOR_TEXTURE_LIGHT_NORMAL);
                     bufferBuilder.restoreState(state);
-                    bufferBuilder.sortQuads(f - (float) builtChunk.getOrigin().getX(), g - (float) builtChunk.getOrigin().getY(), h - (float) builtChunk.getOrigin().getZ());
+                    bufferBuilder.sortQuads(
+                        (float) (vec3d.x - builtChunk.getOrigin().getX()),
+                        (float) (vec3d.y - builtChunk.getOrigin().getY()),
+                        (float) (vec3d.z - builtChunk.getOrigin().getZ())
+                    );
                     accessorChunkData.setBufferState(bufferBuilder.popState());
                     bufferBuilder.end();
 
@@ -74,7 +77,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkSortTask implements IPatch
                         int minCapacity = VertexDataTransformer.INSTANCE.transformedSize(vertexCount);
                         int newCapacity = (minCapacity + 2097151) >> 20 << 20;
 
-                        ByteBuffer swapBuffer = ((IPatchedBlockBufferBuilderStorage) buffers).getCachedByteBuffer().getWithCapacity(minCapacity, newCapacity);
+                        ByteBuffer swapBuffer = ((IPatchedBlockBufferBuilderStorage) buffers).getContext().cachedByteBuffer.getWithCapacity(minCapacity, newCapacity);
                         ByteBuffer buffer = bufferData.getSecond();
 
                         VertexDataTransformer.INSTANCE.transform(offsetX, offsetY, offsetZ, vertexCount, buffer, swapBuffer);

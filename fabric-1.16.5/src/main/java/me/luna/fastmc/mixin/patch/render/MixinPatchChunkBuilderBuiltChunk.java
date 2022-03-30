@@ -6,33 +6,26 @@ import me.luna.fastmc.terrain.RenderRegion;
 import net.minecraft.client.gl.VertexBuffer;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.chunk.ChunkBuilder;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.NotNull;
-import org.spongepowered.asm.mixin.*;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(ChunkBuilder.BuiltChunk.class)
 public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltChunk {
-    @Mutable
-    @Shadow
-    @Final
-    private Map<RenderLayer, VertexBuffer> buffers;
-
     @Shadow
     protected abstract void clear();
 
     @Shadow
     @Final
     public AtomicReference<ChunkBuilder.ChunkData> data;
-    @Shadow
-    @Final
-    private BlockPos.Mutable[] neighborPositions;
 
     private static final int LAYER_SIZE = RenderLayer.getBlockLayers().size();
 
@@ -91,11 +84,5 @@ public abstract class MixinPatchChunkBuilderBuiltChunk implements IPatchedBuiltC
     @Override
     public void setRegion(@NotNull RenderRegion region) {
         this.region = region;
-    }
-
-    @NotNull
-    @Override
-    public BlockPos getNeighborPosition(int direction) {
-        return this.neighborPositions[direction];
     }
 }

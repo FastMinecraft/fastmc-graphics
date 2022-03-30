@@ -14,13 +14,6 @@ inline fun allocateShort(capacity: Int): ShortBuffer = allocateByte(capacity * 2
 
 inline fun allocateByte(capacity: Int): ByteBuffer = ByteBuffer.allocateDirect(capacity).order(ByteOrder.nativeOrder())
 
-inline fun IntArrayList.toIntBuffer(): IntBuffer {
-    val buffer = allocateInt(this.size)
-    buffer.put(this.elements(), 0, this.size)
-    buffer.flip()
-    return buffer
-}
-
 inline fun Buffer.skip(count: Int) {
     this.position(position() + count)
 }
@@ -29,7 +22,7 @@ class CachedByteBuffer(initialCapacity: Int) {
     private var buffer = allocateByte(initialCapacity)
 
     fun getWithCapacity(minCapacity: Int, newCapacity: Int): ByteBuffer {
-        if (buffer.capacity() > minCapacity) {
+        if (buffer.capacity() < minCapacity) {
             buffer = allocateByte(newCapacity)
         }
 
@@ -46,7 +39,7 @@ class CachedIntBuffer(initialCapacity: Int) {
     private var buffer = allocateInt(initialCapacity)
 
     fun getWithCapacity(minCapacity: Int, newCapacity: Int): IntBuffer {
-        if (buffer.capacity() > minCapacity) {
+        if (buffer.capacity() < minCapacity) {
             buffer = allocateInt(newCapacity)
         }
 

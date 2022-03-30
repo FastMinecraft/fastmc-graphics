@@ -15,6 +15,12 @@ public interface AccessorChunkData {
     Set<RenderLayer> getInitializedLayers();
 
     @Accessor
+    boolean isEmpty();
+
+    @Accessor
+    void setEmpty(boolean empty);
+
+    @Accessor
     BufferBuilder.State getBufferState();
 
     @Accessor
@@ -25,4 +31,7 @@ public interface AccessorChunkData {
 
     @Accessor
     ChunkOcclusionData getOcclusionGraph();
+
+    @Accessor
+    void setOcclusionGraph(ChunkOcclusionData occlusionGraph);
 }
