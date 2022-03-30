@@ -205,28 +205,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         int layerIndex = ((IPatchedRenderLayer) layer).getIndex();
         RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
 
-        if (layer == RenderLayer.getTranslucent()) {
-            this.client.getProfiler().push("translucentSort");
-            double xDiff = renderPosX - this.lastTranslucentSortX;
-            double yDiff = renderPosY - this.lastTranslucentSortY;
-            double zDiff = renderPosZ - this.lastTranslucentSortZ;
-            if (xDiff * xDiff + yDiff * yDiff + zDiff * zDiff > 1.0D) {
-                this.lastTranslucentSortX = renderPosX;
-                this.lastTranslucentSortY = renderPosY;
-                this.lastTranslucentSortZ = renderPosZ;
-                int count = 0;
-
-                for (WorldRenderer.ChunkInfo chunkInfo : this.visibleChunks) {
-                    if (count >= 16) break;
-                    if (chunkInfo.chunk.scheduleSort(layer, this.chunkBuilder)) {
-                        ++count;
-                    }
-                }
-            }
-
-            this.client.getProfiler().pop();
-        }
-
         this.client.getProfiler().push(layer.name);
 
         AdaptersKt.toJoml(matrixStack.peek().getModel(), original);

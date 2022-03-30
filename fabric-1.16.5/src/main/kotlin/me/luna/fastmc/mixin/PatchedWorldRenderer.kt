@@ -27,6 +27,7 @@ import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.ChunkSectionPos
 import net.minecraft.util.math.MathHelper
+import net.minecraft.util.math.Vec3d
 import net.minecraft.world.LightType
 import net.minecraft.world.World
 import net.minecraft.world.chunk.ChunkStatus
@@ -218,7 +219,6 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     client.profiler.swap("camera")
                     cameraJob.join()
 
-                    client.profiler.push("iteration")
                     cullingJob = setupTerrainCulling(
                         this@runBlocking,
                         this@runBlocking.coroutineContext,
@@ -230,8 +230,6 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                             && !spectator
                             && !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)
                     )
-
-                    client.profiler.pop()
                 }
 
                 if (lastRebuildTask.isDoneOrNull
@@ -240,17 +238,11 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                 ) {
                     cullingJob?.let {
                         client.profiler.swap("culling")
-                        client.profiler.push("iteration")
                         it.join()
-                        client.profiler.pop()
-                    } ?: run {
-                        client.profiler.swap("camera")
-                        cameraJob.join()
                     }
 
-                    client.profiler.swap("updateChunks")
-                    running[0] = false
-                    updateChunksJob.join()
+                    client.profiler.swap("translucentSort")
+                    sortTranslucent(camera.pos)
 
                     client.profiler.swap("scheduleRebuild")
                     scheduleRebuild(lightUpdateDeferred)
@@ -258,10 +250,12 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
 
                 cullingJob?.let {
                     client.profiler.swap("culling")
-                    client.profiler.push("iteration")
                     it.join()
-                    client.profiler.pop()
                 }
+
+                client.profiler.swap("updateChunks")
+                running[0] = false
+                updateChunksJob.join()
 
                 client.profiler.swap("post")
             }
@@ -270,7 +264,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         }
     }
 
-    fun WorldRenderer.runLightUpdates(): LongArrayList? {
+    private fun WorldRenderer.runLightUpdates(): LongArrayList? {
         return if (lightUpdate.isNotEmpty()) {
             val list = LongArrayList()
 
@@ -371,6 +365,31 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     chunkBuilder.send(task)
 
                     if (--count <= 0) return@submit
+                }
+            }
+        }
+    }
+
+    private fun WorldRenderer.sortTranslucent(cameraPos: Vec3d) {
+        this as AccessorWorldRenderer
+
+        if (cameraPos.squaredDistanceTo(lastTranslucentSortX, lastTranslucentSortY, lastTranslucentSortZ) > 1.0) {
+            lastTranslucentSortX = cameraPos.x
+            lastTranslucentSortY = cameraPos.y
+            lastTranslucentSortZ = cameraPos.z
+            val chunkStorage = chunks as RegionBuiltChunkStorage
+            val chunkBuilder = this.chunkBuilder
+            val visibleChunkBitSet = visibleChunkBitSet.get()
+            val chunkIndices = chunkStorage.chunkIndices
+            val layer = RenderLayer.getTranslucent()
+            var count = 0
+
+            for (i in chunkIndices.size - 1 downTo 0) {
+                val chunkIndex = chunkIndices[i]
+                if (!visibleChunkBitSet.containsFast(chunkIndex)) continue
+                if (count >= 16) break
+                if (chunkStorage.chunks[chunkIndex].scheduleSort(layer, chunkBuilder)) {
+                    ++count
                 }
             }
         }

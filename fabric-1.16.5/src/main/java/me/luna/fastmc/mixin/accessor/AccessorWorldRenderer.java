@@ -71,4 +71,22 @@ public interface AccessorWorldRenderer {
 
     @Accessor
     ClientWorld getWorld();
+
+    @Accessor
+    double getLastTranslucentSortX();
+
+    @Accessor
+    void setLastTranslucentSortX(double lastTranslucentSortX);
+
+    @Accessor
+    double getLastTranslucentSortY();
+
+    @Accessor
+    void setLastTranslucentSortY(double lastTranslucentSortY);
+
+    @Accessor
+    double getLastTranslucentSortZ();
+
+    @Accessor
+    void setLastTranslucentSortZ(double lastTranslucentSortZ);
 }
