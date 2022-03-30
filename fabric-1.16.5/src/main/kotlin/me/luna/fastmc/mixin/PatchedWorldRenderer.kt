@@ -1,9 +1,10 @@
 package me.luna.fastmc.mixin
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import it.unimi.dsi.fastutil.longs.Long2LongLinkedOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongArrayList
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
 import me.luna.fastmc.shared.util.*
@@ -14,6 +15,7 @@ import me.luna.fastmc.terrain.ChunkVertexData
 import me.luna.fastmc.terrain.CullingInfo
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage
 import me.luna.fastmc.terrain.RenderRegion
+import me.luna.fastmc.util.OffThreadLightingProvider
 import me.luna.fastmc.util.isDoneOrNull
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.client.render.Camera
@@ -23,10 +25,13 @@ import net.minecraft.client.render.WorldRenderer
 import net.minecraft.client.render.chunk.ChunkBuilder
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
+import net.minecraft.util.math.ChunkSectionPos
 import net.minecraft.util.math.MathHelper
+import net.minecraft.world.LightType
 import net.minecraft.world.World
 import net.minecraft.world.chunk.ChunkStatus
 import java.util.concurrent.Future
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 @Suppress("NOTHING_TO_INLINE")
@@ -40,6 +45,10 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     val visibleChunkBitSet = DoubleBufferedCollection(ExtendedBitSet(), ExtendedBitSet(), emptyInitAction())
 
     private val loadingTimer = TickTimer()
+    private val lightUpdate = Long2LongLinkedOpenHashMap()
+    private val pendingSkyLightUpdate = LongArrayList()
+    private val pendingBlockLightUpdate = LongArrayList()
+    private val updating = AtomicBoolean(true)
 
     private var lastRebuildTask: Future<*>? = null
 
@@ -71,6 +80,15 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         getSwap().clearFast()
     }
 
+    fun scheduleLightUpdate(type: LightType, pos: ChunkSectionPos) {
+        val longPos = BlockPos.asLong(pos.sectionX, pos.sectionY, pos.sectionZ)
+        val list = when (type) {
+            LightType.SKY -> pendingSkyLightUpdate
+            LightType.BLOCK -> pendingBlockLightUpdate
+        }
+        list.add(longPos)
+    }
+
     fun setupTerrain0(camera: Camera, frustum: Frustum, hasForcedFrustum: Boolean, spectator: Boolean) {
         thisRef.setupTerrain0(camera, frustum, hasForcedFrustum, spectator)
     }
@@ -99,7 +117,26 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         runBlocking {
             var cameraJob: Job
             val lightUpdateDeferred = async(FastMcCoreScope.context, CoroutineStart.LAZY) {
-                (FastMcMod.worldRenderer as me.luna.fastmc.renderer.WorldRenderer).runLightUpdates()
+                if (updating.getAndSet(false)) {
+                    val time = System.currentTimeMillis() + 15000L
+
+                    for (i in pendingSkyLightUpdate.indices) {
+                        lightUpdate.put(pendingSkyLightUpdate.getLong(i), time)
+                    }
+                    pendingSkyLightUpdate.clear()
+
+                    for (i in pendingBlockLightUpdate.indices) {
+                        lightUpdate.put(pendingBlockLightUpdate.getLong(i), time)
+                    }
+                    pendingBlockLightUpdate.clear()
+
+                    val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
+                    provider.scheduleUpdate {
+                        provider.doLightUpdates()
+                        updating.set(true)
+                    }
+                }
+                runLightUpdates()
             }
             var cullingJob: Job? = null
 
@@ -181,19 +218,6 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     client.profiler.swap("camera")
                     cameraJob.join()
 
-                    client.profiler.swap("lightUpdates")
-                    lightUpdateDeferred.await()?.let { list ->
-                        for (i in list.indices) {
-                            val longPos = list.getLong(i)
-                            val builtChunk = chunkStorage.getRenderedChunk(
-                                BlockPos.unpackLongX(longPos),
-                                BlockPos.unpackLongY(longPos),
-                                BlockPos.unpackLongZ(longPos)
-                            ) ?: continue
-                            builtChunk.scheduleRebuild(false)
-                        }
-                    }
-
                     client.profiler.push("iteration")
                     cullingJob = setupTerrainCulling(
                         this@runBlocking,
@@ -229,7 +253,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     updateChunksJob.join()
 
                     client.profiler.swap("scheduleRebuild")
-                    scheduleRebuild()
+                    scheduleRebuild(lightUpdateDeferred)
                 }
 
                 cullingJob?.let {
@@ -246,14 +270,72 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         }
     }
 
-    private fun WorldRenderer.scheduleRebuild() {
+    fun WorldRenderer.runLightUpdates(): LongArrayList? {
+        return if (lightUpdate.isNotEmpty()) {
+            val list = LongArrayList()
+
+            val chunks = (this as AccessorWorldRenderer).chunks as RegionBuiltChunkStorage
+            val iterator = lightUpdate.long2LongEntrySet().iterator()
+            val current = System.currentTimeMillis()
+
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                if (current >= entry.longValue) {
+                    iterator.remove()
+                    continue
+                }
+
+                val longPos = entry.longKey
+                val x = BlockPos.unpackLongX(longPos)// shr 4
+                val y = BlockPos.unpackLongY(longPos)// shr 4
+                val z = BlockPos.unpackLongZ(longPos)// shr 4
+
+                val builtChunk = chunks.getRenderedChunk(x, y, z)
+                if (builtChunk == null || builtChunk.origin.x shr 4 != x || builtChunk.origin.y shr 4 != y || builtChunk.origin.z shr 4 != z) {
+                    iterator.remove()
+                } else if (!builtChunk.getData().isEmpty) {
+                    for (ix in -1..1) {
+                        for (iy in -1..1) {
+                            for (iz in -1..1) {
+                                list.add(BlockPos.asLong(x + ix, y + iy, z + iz))
+                            }
+                        }
+                    }
+                    iterator.remove()
+                }
+            }
+
+            list
+        } else {
+            null
+        }
+    }
+
+    private suspend fun WorldRenderer.scheduleRebuild(lightUpdateDeferred: Deferred<LongArrayList?>) {
         this as AccessorWorldRenderer
+
+        val chunkStorage = chunks as RegionBuiltChunkStorage
         val visible = visibleChunkBitSet.get()
         val preLoad = preLoadChunkBitSet.get()
         val visibleNotEmpty = visible.isNotEmpty()
         val preLoadNotEmpty = preLoad.isNotEmpty()
 
-        if (visibleNotEmpty || preLoadNotEmpty) {
+        val lightUpdates = lightUpdateDeferred.await()
+        var lightUpdateNotEmpty = false
+        lightUpdates?.let { list ->
+            for (i in list.indices) {
+                val longPos = list.getLong(i)
+                val builtChunk = chunkStorage.getRenderedChunk(
+                    BlockPos.unpackLongX(longPos),
+                    BlockPos.unpackLongY(longPos),
+                    BlockPos.unpackLongZ(longPos)
+                ) ?: continue
+                builtChunk.scheduleRebuild(false)
+                lightUpdateNotEmpty = true
+            }
+        }
+
+        if (visibleNotEmpty || preLoadNotEmpty || lightUpdateNotEmpty) {
             lastRebuildTask = FastMcCoreScope.pool.submit {
                 val chunks = chunks as RegionBuiltChunkStorage
                 val chunkIndices = chunks.chunkIndices
@@ -421,7 +503,9 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
 
                             cullingInfo.visible.addFast(index)
-                            builtChunk.region.visible = true
+                            if (!builtChunk.getData().isEmpty) {
+                                builtChunk.region.visible = true
+                            }
                         }
 
                         channel.trySend(cullingInfo)
@@ -447,7 +531,9 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                             if (!frustum.isVisible(builtChunk.boundingBox)) continue
 
                             cullingInfo.visible.addFast(index)
-                            builtChunk.region.visible = true
+                            if (!builtChunk.getData().isEmpty) {
+                                builtChunk.region.visible = true
+                            }
                         }
 
                         channel.trySend(cullingInfo)
@@ -498,29 +584,30 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                 for (chunkIndex in chunkIndices) {
                     if (!region.chunks.containsInt(chunkIndex)) continue
                     val builtChunk = chunkArray[chunkIndex]
-                    if (builtChunk.getData().isEmpty) continue
 
                     builtChunk as IPatchedBuiltChunk
-                    val longOrigin = builtChunk.origin.asLong()
                     val data = builtChunk.chunkVertexDataArray[layerIndex]
-                    if (data != null && data.vboInfo.vertexCount != 0 && data.builtOrigin == longOrigin) {
-                        if (visibleChunkBitSet.containsInt(chunkIndex)) {
-                            if (!rendering) {
-                                rendering = true
-                                first = pointer
+                    if (data != null) {
+                        val longOrigin = builtChunk.origin.asLong()
+                        if (data.vboInfo.vertexCount != 0 && data.builtOrigin == longOrigin) {
+                            if (visibleChunkBitSet.containsInt(chunkIndex)) {
+                                if (!rendering) {
+                                    rendering = true
+                                    first = pointer
+                                }
+                                count += data.vboInfo.vertexCount
+                            } else {
+                                if (rendering) {
+                                    rendering = false
+                                    firstList.add(first)
+                                    countList.add(count)
+                                    count = 0
+                                }
                             }
-                            count += data.vboInfo.vertexCount
-                        } else {
-                            if (rendering) {
-                                rendering = false
-                                firstList.add(first)
-                                countList.add(count)
-                                count = 0
-                            }
-                        }
 
-                        list.add(data)
-                        pointer += data.vboInfo.vertexCount
+                            list.add(data)
+                            pointer += data.vboInfo.vertexCount
+                        }
                     }
                 }
 

@@ -1,8 +1,8 @@
 package me.luna.fastmc.mixin.patch.world;
 
-import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.renderer.WorldRenderer;
+import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.util.OffThreadLightingProvider;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientChunkManager;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.ChunkSectionPos;
@@ -32,6 +32,6 @@ public class MixinPatchClientChunkManager {
      */
     @Overwrite
     public void onLightUpdate(LightType type, ChunkSectionPos pos) {
-        ((WorldRenderer) FastMcMod.INSTANCE.getWorldRenderer()).scheduleLightUpdate(type, pos);
+        ((IPatchedWorldRenderer) MinecraftClient.getInstance().worldRenderer).getPatch().scheduleLightUpdate(type, pos);
     }
 }
