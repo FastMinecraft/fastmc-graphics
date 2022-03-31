@@ -3,6 +3,7 @@
 uniform mat4 projection;
 uniform mat4 modelView;
 uniform vec3 offset;
+uniform vec2 range;
 
 layout(location = 0) in vec3 vertPosittion;
 layout(location = 1) in vec2 vertLightMapUV;
@@ -12,6 +13,7 @@ layout(location = 3) in vec4 vertColor;
 out vec4 color;
 out vec2 uv;
 out vec2 lightMapUV;
+out float fogAmount;
 
 void main() {
     vec3 coord = (vertPosittion * 0.00439453125 - 16.0) + offset;
@@ -19,4 +21,6 @@ void main() {
     color = vertColor;
     uv = vertUV;
     lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;
+
+    fogAmount = clamp((range.x - length(coord)) / range.y, 0.0, 1.0);
 }

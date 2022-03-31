@@ -349,7 +349,7 @@ class FontRenderer(
     }
 
     class Shader : DrawShader(
-        "fontRenderer",
+        "FontRenderer",
         "/assets/shaders/FontRenderer.vsh",
         "/assets/shaders/FontRenderer.fsh"
     ) {

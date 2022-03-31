@@ -9,7 +9,8 @@
     "AccessorChunkData",
     "AccessorChunkOcclusionData",
     "AccessorVertexBuffer",
-    "AccessorWorldRenderer"
+    "AccessorWorldRenderer",
+    "AccessorBackgroundRenderer"
   ],
   "injectors": {
     "defaultRequire": 1

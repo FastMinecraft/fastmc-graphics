@@ -6,7 +6,7 @@ import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.PatchedWorldRenderer;
-import me.luna.fastmc.shared.terrain.TerrainShader;
+import me.luna.fastmc.shared.terrain.TerrainShaders;
 import me.luna.fastmc.shared.util.FastMcExtendScope;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.terrain.ChunkVertexData;
@@ -190,7 +190,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      * @author Luna
      * @reason Batch optimization
      */
-    @SuppressWarnings("deprecation")
     @Overwrite
     private void renderLayer(RenderLayer layer, MatrixStack matrixStack, double renderPosX, double renderPosY, double renderPosZ) {
         this.client.getProfiler().push(layer.name);
@@ -198,11 +197,12 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
         layer.startDrawing();
         int layerIndex = ((IPatchedRenderLayer) layer).getIndex();
         RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
+        TerrainShaders.Shader terrainShader = TerrainShaders.INSTANCE.getShader();
 
         if (layer == RenderLayer.getCutout() || layer == RenderLayer.getCutoutMipped()) {
-            TerrainShader.INSTANCE.setAlphaTest(0.5f);
+            terrainShader.setAlphaTest(0.5f);
         } else {
-            TerrainShader.INSTANCE.setAlphaTest(0.0f);
+            terrainShader.setAlphaTest(0.0f);
         }
 
         for (int i = 0; i < regionArray.length; i++) {
@@ -212,7 +212,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             if (regionLayer == null) continue;
 
             BlockPos regionOrigin = region.getOrigin();
-            TerrainShader.INSTANCE.setOffset(
+            terrainShader.setOffset(
                 (float) (regionOrigin.getX() - renderPosX),
                 (float) (regionOrigin.getY() - renderPosY),
                 (float) (regionOrigin.getZ() - renderPosZ)

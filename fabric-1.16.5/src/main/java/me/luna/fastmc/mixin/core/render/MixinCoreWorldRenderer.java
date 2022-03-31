@@ -4,8 +4,9 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
+import me.luna.fastmc.mixin.accessor.AccessorBackgroundRenderer;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
-import me.luna.fastmc.shared.terrain.TerrainShader;
+import me.luna.fastmc.shared.terrain.TerrainShaders;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -24,6 +25,9 @@ import net.minecraft.client.util.math.Vector3d;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.fluid.FluidState;
+import net.minecraft.tag.FluidTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -31,6 +35,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
+import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -159,8 +164,6 @@ public abstract class MixinCoreWorldRenderer {
         org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
         org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
         worldRenderer.setupCamera(projection1, modelView1);
-        TerrainShader.INSTANCE.updateProjectionMatrix(projection1);
-        TerrainShader.INSTANCE.updateModelViewMatrix(modelView1);
 
         profiler.swap("culling");
         boolean bl = this.capturedFrustum != null;
@@ -182,26 +185,32 @@ public abstract class MixinCoreWorldRenderer {
         profiler.swap("clear");
         BackgroundRenderer.render(camera, tickDelta, this.client.world, this.client.options.viewDistance, gameRenderer.getSkyDarkness(tickDelta));
         RenderSystem.clear(16640, MinecraftClient.IS_SYSTEM_MAC);
-        float g = gameRenderer.getViewDistance();
-        boolean bl2 = this.client.world.getSkyProperties().useThickFog(MathHelper.floor(renderPosX), MathHelper.floor(renderPosY)) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
+        float viewDistance = gameRenderer.getViewDistance();
+        boolean thickFog = this.client.world.getSkyProperties().useThickFog(MathHelper.floor(renderPosX), MathHelper.floor(renderPosY)) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
         if (this.client.options.viewDistance >= 4) {
-            BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, g, bl2);
+            BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, viewDistance, thickFog);
             profiler.swap("sky");
             this.renderSky(matrices, tickDelta);
         }
 
         profiler.swap("fog");
-        BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, Math.max(g - 16.0F, 32.0F), bl2);
+        float fogDistance = Math.max(viewDistance - 16.0F, 32.0F);
+        BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, fogDistance, thickFog);
+        applyFogShader(camera, fogDistance, thickFog);
         profiler.swap("terrainSetup");
+
         this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
 
         profiler.swap("terrain");
-        TerrainShader.INSTANCE.bind();
+        TerrainShaders.Shader terrainShader = TerrainShaders.INSTANCE.getShader();
+        terrainShader.updateProjectionMatrix(projection1);
+        terrainShader.updateModelViewMatrix(modelView1);
+        terrainShader.bind();
         this.renderLayer(RenderLayer.getSolid(), matrices, renderPosX, renderPosY, renderPosZ);
         this.renderLayer(RenderLayer.getCutoutMipped(), matrices, renderPosX, renderPosY, renderPosZ);
         this.renderLayer(RenderLayer.getCutout(), matrices, renderPosX, renderPosY, renderPosZ);
         glBindVertexArray(0);
-        TerrainShader.INSTANCE.unbind();
+        terrainShader.unbind();
 
         if (this.world.getSkyProperties().isDarkened()) {
             DiffuseLighting.enableForLevel(matrices.peek().getModel());
@@ -249,7 +258,7 @@ public abstract class MixinCoreWorldRenderer {
         profiler.push("vanilla");
         renderTileEntityVanilla(matrices, tickDelta, renderPosX, renderPosY, renderPosZ, immediate);
         profiler.swap("fastMinecraft");
-        renderTileEntityFastMc(matrices, tickDelta, projection);
+        renderTileEntityFastMc(tickDelta);
         profiler.pop();
 
         // Entity outline
@@ -321,11 +330,11 @@ public abstract class MixinCoreWorldRenderer {
             this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.translucentFramebuffer.copyDepthFrom(this.client.getFramebuffer());
 
-            TerrainShader.INSTANCE.bind();
+            terrainShader.bind();
             this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
             this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
             glBindVertexArray(0);
-            TerrainShader.INSTANCE.unbind();
+            terrainShader.unbind();
 
             profiler.swap("particles");
             this.particlesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
@@ -338,11 +347,11 @@ public abstract class MixinCoreWorldRenderer {
             immediate.draw(RenderLayer.getLines());
             immediate.draw();
 
-            TerrainShader.INSTANCE.bind();
+            terrainShader.bind();
             this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
             this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
             glBindVertexArray(0);
-            TerrainShader.INSTANCE.unbind();
+            terrainShader.unbind();
 
             profiler.swap("particles");
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
@@ -432,8 +441,7 @@ public abstract class MixinCoreWorldRenderer {
         return entityRendered;
     }
 
-    private void renderTileEntityFastMc(MatrixStack matrices, float tickDelta, Matrix4f matrix4f) {
-        MatrixStack.Entry entry = matrices.peek();
+    private void renderTileEntityFastMc(float tickDelta) {
         FastMcMod.INSTANCE.getWorldRenderer().preRender(tickDelta);
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().render();
         FastMcMod.INSTANCE.getWorldRenderer().postRender();
@@ -485,5 +493,54 @@ public abstract class MixinCoreWorldRenderer {
         immediate.draw(TexturedRenderLayers.getSign());
         immediate.draw(TexturedRenderLayers.getChest());
         this.bufferBuilders.getOutlineVertexConsumers().draw();
+    }
+
+    private void applyFogShader(Camera camera, float viewDistance, boolean thickFog) {
+        float red = AccessorBackgroundRenderer.getRed();
+        float green = AccessorBackgroundRenderer.getGreen();
+        float blue = AccessorBackgroundRenderer.getBlue();
+
+        FluidState fluidState = camera.getSubmergedFluidState();
+        Entity entity = camera.getFocusedEntity();
+
+        if (fluidState.isIn(FluidTags.WATER)) {
+            float density = 0.05F;
+            if (entity instanceof ClientPlayerEntity) {
+                ClientPlayerEntity clientPlayerEntity = (ClientPlayerEntity) entity;
+                float underwaterVisibility = clientPlayerEntity.getUnderwaterVisibility();
+                density -= underwaterVisibility * underwaterVisibility * 0.03F;
+                Biome biome = clientPlayerEntity.world.getBiome(clientPlayerEntity.getBlockPos());
+                if (biome.getCategory() == Biome.Category.SWAMP) {
+                    density += 0.005F;
+                }
+            }
+
+            TerrainShaders.INSTANCE.exp2(density, red, green, blue);
+        } else {
+            float start;
+            float end;
+            if (fluidState.isIn(FluidTags.LAVA)) {
+                if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
+                    start = 0.0F;
+                    end = 3.0F;
+                } else {
+                    start = 0.25F;
+                    end = 1.0F;
+                }
+            } else if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.BLINDNESS)) {
+                int duration = ((LivingEntity) entity).getStatusEffect(StatusEffects.BLINDNESS).getDuration();
+                float amount = MathHelper.lerp(Math.min(1.0F, (float) duration / 20.0F), viewDistance, 5.0F);
+                start = amount * 0.25F;
+                end = amount;
+            } else if (thickFog) {
+                start = viewDistance * 0.05F;
+                end = Math.min(viewDistance, 192.0F) * 0.5F;
+            } else {
+                start = viewDistance * 0.75F;
+                end = viewDistance;
+            }
+
+            TerrainShaders.INSTANCE.linear(start, end, red, green, blue);
+        }
     }
 }

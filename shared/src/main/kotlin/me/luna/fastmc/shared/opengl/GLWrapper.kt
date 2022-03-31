@@ -50,6 +50,7 @@ interface IGLWrapper {
     // GL20
     fun glProgramUniform1i(program: Int, location: Int, v0: Int)
     fun glProgramUniform1f(program: Int, location: Int, v0: Float)
+    fun glProgramUniform2f(program: Int, location: Int, v0: Float, v1: Float)
     fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float)
     fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
     fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer)
@@ -242,6 +243,9 @@ inline fun glProgramUniform1i(program: Int, location: Int, v0: Int) =
 
 inline fun glProgramUniform1f(program: Int, location: Int, v0: Float) =
     glWrapper.glProgramUniform1f(program, location, v0)
+
+inline fun glProgramUniform2f(program: Int, location: Int, v0: Float, v1: Float) =
+    glWrapper.glProgramUniform2f(program, location, v0, v1)
 
 inline fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float) =
     glWrapper.glProgramUniform3f(program, location, v0, v1, v2)

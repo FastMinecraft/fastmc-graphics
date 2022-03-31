@@ -62,6 +62,9 @@ class GLWrapper : IGLWrapper {
     override fun glProgramUniform1f(program: Int, location: Int, v0: Float) =
         GL41.glProgramUniform1f(program, location, v0)
 
+    override fun glProgramUniform2f(program: Int, location: Int, v0: Float, v1: Float) =
+        GL41.glProgramUniform2f(program, location, v0, v1)
+
     override fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float) =
         GL41.glProgramUniform3f(program, location, v0, v1, v2)
 
