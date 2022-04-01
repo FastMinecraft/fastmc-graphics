@@ -91,6 +91,8 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     @Shadow
     protected abstract void resetTransparencyShader();
 
+    @Shadow protected abstract void checkEmpty(MatrixStack matrices);
+
     private final PatchedWorldRenderer patch = new PatchedWorldRenderer((WorldRenderer) (Object) this);
 
     @Inject(method = "<init>", at = @At("RETURN"))
@@ -155,6 +157,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             this.lastTranslucentSortZ = Double.MAX_VALUE;
 
             patch.clear();
+            patch.resize(this.chunks.chunks.length);
         }
     }
 
@@ -183,7 +186,7 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
      */
     @Overwrite
     public boolean isTerrainRenderComplete() {
-        return this.chunkBuilder.isEmpty();
+        return this.chunkBuilder.isEmpty() && patch.getUpdatingChunkBitSet().get().isEmpty();
     }
 
     /**

@@ -12,4 +12,7 @@ class Config {
 
     val maxFrameTime: Boolean
         get() = true
+
+    val chunkUpdate: Boolean
+        get() = true
 }

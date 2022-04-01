@@ -8,6 +8,7 @@ import me.luna.fastmc.shared.util.collection.ExtendedBitSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.util.math.BlockPos
+import java.nio.IntBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -37,12 +38,14 @@ class RenderRegion(val index: Int) {
             it.vboInfo.vertexCount
         }
         val vertexSize = VertexDataTransformer.transformedSize(vertexCount)
-
         val newVboSize = ((vertexSize + 1048575) shr 20 shl 20) + 2097152
         val maxVboSize = newVboSize + 4194304
         val layer = regionLayerArray[index]
         val vao: VertexArrayObject
         val vbo: ImmutableVertexBufferObject
+
+        val firstBuffer = layer?.firstBuffer.putListOrNew(firstArray)
+        val countBuffer = layer?.countBuffer.putListOrNew(countArray)
 
         withContext(mainThreadContext) {
             if (layer == null) {
@@ -73,11 +76,10 @@ class RenderRegion(val index: Int) {
                 offset += data.vboInfo.vertexSize
             }
         }
-
         regionLayerArray[index] = RegionLayer(
             vao,
-            layer?.firstBuffer.putList(firstArray),
-            layer?.countBuffer.putList(countArray),
+            firstBuffer,
+            countBuffer,
             VboInfo(vbo, vertexCount, vertexSize),
             dataList
         )
@@ -92,10 +94,28 @@ class RenderRegion(val index: Int) {
         }
     }
 
-    private fun CachedIntBuffer?.putList(list: IntArrayList): CachedIntBuffer {
-        val newCapacity = (list.size + 2047) shr 10 shl 10
-        val cachedIntBuffer = this ?: CachedIntBuffer(newCapacity)
-        val buffer = cachedIntBuffer.getWithCapacity(list.size, newCapacity)
+    private fun CachedIntBuffer.putList(list: IntArrayList): CachedIntBuffer {
+        val newCapacity = (list.size + 8191) shr 12 shl 12
+        val buffer = this.getWithCapacity(list.size, newCapacity)
+        buffer.clear()
+        buffer.put(list.elements(), 0, list.size)
+        buffer.flip()
+        return this
+    }
+
+    private fun CachedIntBuffer?.putListOrNew(list: IntArrayList): CachedIntBuffer {
+        val newCapacity = (list.size + 8191) shr 12 shl 12
+        val cachedIntBuffer: CachedIntBuffer
+        val buffer: IntBuffer
+
+        if (this == null) {
+            cachedIntBuffer = CachedIntBuffer(newCapacity)
+            buffer = cachedIntBuffer.get()
+        } else {
+            cachedIntBuffer = this
+            buffer = this.getWithCapacity(list.size, newCapacity)
+        }
+
         buffer.clear()
         buffer.put(list.elements(), 0, list.size)
         buffer.flip()

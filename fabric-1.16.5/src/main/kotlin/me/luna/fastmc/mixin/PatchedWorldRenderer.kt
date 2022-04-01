@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import me.luna.fastmc.mixin.accessor.AccessorChunkBuilder
 import me.luna.fastmc.mixin.accessor.AccessorWorldRenderer
+import me.luna.fastmc.shared.FpsDisplay
 import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.DoubleBufferedCollection.Companion.emptyInitAction
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet
@@ -16,13 +17,13 @@ import me.luna.fastmc.terrain.CullingInfo
 import me.luna.fastmc.terrain.RegionBuiltChunkStorage
 import me.luna.fastmc.terrain.RenderRegion
 import me.luna.fastmc.util.OffThreadLightingProvider
-import me.luna.fastmc.util.isDoneOrNull
 import net.minecraft.block.entity.BlockEntity
 import net.minecraft.client.render.Camera
 import net.minecraft.client.render.Frustum
 import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.WorldRenderer
 import net.minecraft.client.render.chunk.ChunkBuilder
+import net.minecraft.client.render.chunk.ChunkBuilder.BuiltChunk
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.ChunkSectionPos
@@ -31,7 +32,6 @@ import net.minecraft.util.math.Vec3d
 import net.minecraft.world.LightType
 import net.minecraft.world.World
 import net.minecraft.world.chunk.ChunkStatus
-import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
@@ -44,6 +44,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     )
     val preLoadChunkBitSet = DoubleBufferedCollection(ExtendedBitSet(), ExtendedBitSet(), emptyInitAction())
     val visibleChunkBitSet = DoubleBufferedCollection(ExtendedBitSet(), ExtendedBitSet(), emptyInitAction())
+    val updatingChunkBitSet = DoubleBufferedCollection(ExtendedBitSet(), ExtendedBitSet())
 
     private val loadingTimer = TickTimer()
     private val lightUpdate = Long2LongLinkedOpenHashMap()
@@ -51,7 +52,7 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     private val pendingBlockLightUpdate = LongArrayList()
     private val updating = AtomicBoolean(true)
 
-    private var lastRebuildTask: Future<*>? = null
+    private var lastRebuildTask: Job? = null
 
     private var lastCameraX0 = Int.MAX_VALUE
     private var lastCameraY0 = Int.MAX_VALUE
@@ -59,24 +60,45 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
     private var lastCameraYaw0 = Int.MAX_VALUE
     private var lastCameraPitch0 = Int.MAX_VALUE
 
+    private val uploadTimeoutTimer = TickTimer()
+    private var uploadCounter = 0
+
     fun clear() {
         renderTileEntityList.get().clearAndTrim()
         renderTileEntityList.getSwap().clearAndTrim()
 
         preLoadChunkBitSet.clearFastAll()
         visibleChunkBitSet.clearFastAll()
+        updatingChunkBitSet.clearFastAll()
 
         lastCameraX0 = Int.MAX_VALUE
         lastCameraY0 = Int.MAX_VALUE
         lastCameraZ0 = Int.MAX_VALUE
         lastCameraYaw0 = Int.MAX_VALUE
         lastCameraPitch0 = Int.MAX_VALUE
+        uploadCounter = 0
 
-        lastRebuildTask?.cancel(true)
+        lastRebuildTask?.cancel()
         lastRebuildTask = null
+
+        lightUpdate.clear()
+        pendingSkyLightUpdate.clear()
+        pendingBlockLightUpdate.clear()
+        updating.set(false)
     }
 
-    private fun DoubleBufferedCollection<ExtendedBitSet>.clearFastAll() {
+    fun resize(capacity: Int) {
+        preLoadChunkBitSet.ensureCapacityAll(capacity)
+        visibleChunkBitSet.ensureCapacityAll(capacity)
+        updatingChunkBitSet.ensureCapacityAll(capacity)
+    }
+
+    private inline fun DoubleBufferedCollection<ExtendedBitSet>.ensureCapacityAll(capacity: Int) {
+        get().ensureCapacity(capacity)
+        getSwap().ensureCapacity(capacity)
+    }
+
+    private inline fun DoubleBufferedCollection<ExtendedBitSet>.clearFastAll() {
         get().clear()
         getSwap().clearFast()
     }
@@ -116,37 +138,25 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         val player = client.player ?: return
 
         runBlocking {
-            var cameraJob: Job
-            val lightUpdateDeferred = async(FastMcCoreScope.context, CoroutineStart.LAZY) {
-                if (updating.getAndSet(false)) {
-                    val time = System.currentTimeMillis() + 15000L
-
-                    for (i in pendingSkyLightUpdate.indices) {
-                        lightUpdate.put(pendingSkyLightUpdate.getLong(i), time)
-                    }
-                    pendingSkyLightUpdate.clear()
-
-                    for (i in pendingBlockLightUpdate.indices) {
-                        lightUpdate.put(pendingBlockLightUpdate.getLong(i), time)
-                    }
-                    pendingBlockLightUpdate.clear()
-
-                    val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
-                    provider.scheduleUpdate {
-                        provider.doLightUpdates()
-                        updating.set(true)
-                    }
-                }
-                runLightUpdates()
-            }
-            var cullingJob: Job? = null
-
             withContext(FastMcCoreScope.context) {
+                var cullingJob: Job? = null
+
                 client.profiler.swap("updateChunks")
                 val running = booleanArrayOf(true)
                 val updateChunksJob = launch(this@runBlocking.coroutineContext) {
                     chunkBuilder.cameraPosition = camera.pos
-                    needsTerrainUpdate = chunkBuilder.upload(running) || needsTerrainUpdate
+                    val uploadCount = chunkBuilder.upload(running)
+                    FpsDisplay.onChunkUpdate(uploadCount)
+
+                    uploadCounter += uploadCount
+                    if (uploadCounter >= ParallelUtils.CPU_THREADS * 32
+                        || uploadCounter != 0 && (uploadTimeoutTimer.tick(250L)
+                        || visibleChunkBitSet.get().size < ParallelUtils.CPU_THREADS * 4)) {
+                        uploadCounter = 0
+                        needsTerrainUpdate = true
+                        uploadTimeoutTimer.reset()
+                        loadingTimer.reset(-999L)
+                    }
                 }
 
                 world.profiler.swap("camera")
@@ -156,101 +166,98 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
                     cameraBlockPos.y shr 4 shl 4,
                     cameraBlockPos.z shr 4 shl 4
                 )
-                cameraJob = launch(FastMcCoreScope.context) {
-                    val cameraUpdateDeltaX = player.x - lastCameraChunkUpdateX
-                    val cameraUpdateDeltaY = player.y - lastCameraChunkUpdateY
-                    val cameraUpdateDeltaZ = player.z - lastCameraChunkUpdateZ
-                    if (cameraChunkX != player.chunkX || cameraChunkY != player.chunkY || cameraChunkZ != player.chunkZ
-                        || cameraUpdateDeltaX * cameraUpdateDeltaX + cameraUpdateDeltaY * cameraUpdateDeltaY + cameraUpdateDeltaZ * cameraUpdateDeltaZ > 16.0
-                    ) {
-                        lastCameraChunkUpdateX = player.x
-                        lastCameraChunkUpdateY = player.y
-                        lastCameraChunkUpdateZ = player.z
-                        cameraChunkX = player.chunkX
-                        cameraChunkY = player.chunkY
-                        cameraChunkZ = player.chunkZ
-                        chunkStorage.updateCameraPosition(cameraChunkOrigin, player.x, player.z)
+
+                val updateCamera = cameraChunkX != player.chunkX
+                    || cameraChunkY != player.chunkY
+                    || cameraChunkZ != player.chunkZ
+                    || distanceSq(
+                    player.x, player.y, player.z,
+                    lastCameraChunkUpdateX, lastCameraChunkUpdateY, lastCameraChunkUpdateZ
+                ) > 16.0
+
+                if (updateCamera) {
+                    lastCameraChunkUpdateX = player.x
+                    lastCameraChunkUpdateY = player.y
+                    lastCameraChunkUpdateZ = player.z
+                    cameraChunkX = player.chunkX
+                    cameraChunkY = player.chunkY
+                    cameraChunkZ = player.chunkZ
+                    chunkStorage.updateCameraPosition(cameraChunkOrigin, player.x, player.z)
+                } else {
+                    client.profiler.swap("culling")
+                    var update = false
+
+                    needsTerrainUpdate = chunkStorage.checkCaveCullingUpdate() || needsTerrainUpdate
+                    needsTerrainUpdate = chunkStorage.checkChunkIndicesUpdate() || needsTerrainUpdate
+
+                    if (!hasForcedFrustum) {
+                        val cameraPosX0 = cameraBlockPos.x shr 1
+                        val cameraPosY0 = cameraBlockPos.y shr 1
+                        val cameraPosZ0 = cameraBlockPos.z shr 1
+                        val cameraYaw0 = MathHelper.floor(camera.yaw)
+                        val cameraPitch0 = camera.pitch.fastFloor()
+
+                        if (cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0 || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0) {
+                            lastCameraX0 = cameraPosX0
+                            lastCameraY0 = cameraPosY0
+                            lastCameraZ0 = cameraPosZ0
+                            lastCameraYaw0 = cameraYaw0
+                            lastCameraPitch0 = cameraPitch0
+                            loadingTimer.reset()
+                            update = true
+                        } else if (needsTerrainUpdate && loadingTimer.tick(250L)) {
+                            lastCameraX0 = cameraPosX0
+                            lastCameraY0 = cameraPosY0
+                            lastCameraZ0 = cameraPosZ0
+                            lastCameraYaw0 = cameraYaw0
+                            lastCameraPitch0 = cameraPitch0
+                            update = true
+                        }
                     }
-                    lightUpdateDeferred.start()
-                }
 
-                client.profiler.swap("culling")
-                var update = false
+                    if (update) {
+                        cullingJob = setupTerrainCulling(
+                            this@runBlocking,
+                            this@runBlocking.coroutineContext,
+                            running,
+                            updateChunksJob,
+                            frustum,
+                            cameraChunkOrigin,
+                            client.chunkCullingEnabled
+                                && !spectator
+                                && !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)
+                        )
 
-                needsTerrainUpdate = chunkStorage.updateCulling(cameraChunkOrigin) || needsTerrainUpdate
-                needsTerrainUpdate = chunkStorage.checkChunkIndicesUpdate() || needsTerrainUpdate
+                        needsTerrainUpdate = false
 
-                if (!hasForcedFrustum) {
-                    val cameraPosX0 = cameraBlockPos.x shr 1
-                    val cameraPosY0 = cameraBlockPos.y shr 1
-                    val cameraPosZ0 = cameraBlockPos.z shr 1
-                    val cameraYaw0 = MathHelper.floor(camera.yaw)
-                    val cameraPitch0 = camera.pitch.fastFloor()
+                        Entity.setRenderDistanceMultiplier(
+                            MathHelper.clamp(
+                                client.options.viewDistance / 8.0,
+                                1.0,
+                                2.5
+                            ) * client.options.entityDistanceScaling
+                        )
 
-                    if (cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0 || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0) {
-                        lastCameraX0 = cameraPosX0
-                        lastCameraY0 = cameraPosY0
-                        lastCameraZ0 = cameraPosZ0
-                        lastCameraYaw0 = cameraYaw0
-                        lastCameraPitch0 = cameraPitch0
-                        loadingTimer.reset()
-                        update = true
-                    } else if (needsTerrainUpdate && loadingTimer.tick(250L)) {
-                        lastCameraX0 = cameraPosX0
-                        lastCameraY0 = cameraPosY0
-                        lastCameraZ0 = cameraPosZ0
-                        lastCameraYaw0 = cameraYaw0
-                        lastCameraPitch0 = cameraPitch0
-                        update = true
+                        chunkStorage.updateCaveCulling(cameraChunkOrigin)
                     }
-                }
 
-                if (update) {
-                    needsTerrainUpdate = false
+                    client.profiler.swap("lightUpdate")
+                    if (lastRebuildTask.isCompletedOrNull && chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 8) {
+                        runLightUpdate()
 
-                    Entity.setRenderDistanceMultiplier(
-                        MathHelper.clamp(
-                            client.options.viewDistance / 8.0,
-                            1.0,
-                            2.5
-                        ) * client.options.entityDistanceScaling
-                    )
+                        client.profiler.swap("translucentSort")
+                        sortTranslucent(camera.pos)
 
-                    client.profiler.swap("camera")
-                    cameraJob.join()
+                        client.profiler.swap("scheduleRebuild")
+                        scheduleRebuild()
+                    } else {
+                        runLightUpdate()
+                    }
 
-                    cullingJob = setupTerrainCulling(
-                        this@runBlocking,
-                        this@runBlocking.coroutineContext,
-                        running,
-                        updateChunksJob,
-                        frustum,
-                        cameraChunkOrigin,
-                        client.chunkCullingEnabled
-                            && !spectator
-                            && !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)
-                    )
-                }
-
-                if (lastRebuildTask.isDoneOrNull
-                    && chunkBuilder.queuedTaskCount < ParallelUtils.CPU_THREADS * 4
-                    && chunkBuilder.uploadQueue.size < ParallelUtils.CPU_THREADS * 4
-                ) {
                     cullingJob?.let {
                         client.profiler.swap("culling")
                         it.join()
                     }
-
-                    client.profiler.swap("translucentSort")
-                    sortTranslucent(camera.pos)
-
-                    client.profiler.swap("scheduleRebuild")
-                    scheduleRebuild(lightUpdateDeferred)
-                }
-
-                cullingJob?.let {
-                    client.profiler.swap("culling")
-                    it.join()
                 }
 
                 client.profiler.swap("updateChunks")
@@ -264,110 +271,105 @@ class PatchedWorldRenderer(private val thisRef: WorldRenderer) {
         }
     }
 
-    private fun WorldRenderer.runLightUpdates(): LongArrayList? {
-        return if (lightUpdate.isNotEmpty()) {
-            val list = LongArrayList()
+    private fun AccessorWorldRenderer.runLightUpdate() {
+        if (updating.getAndSet(false)) {
+            val time = System.currentTimeMillis() + 30000L
 
-            val chunks = (this as AccessorWorldRenderer).chunks as RegionBuiltChunkStorage
-            val iterator = lightUpdate.long2LongEntrySet().iterator()
-            val current = System.currentTimeMillis()
-
-            while (iterator.hasNext()) {
-                val entry = iterator.next()
-                if (current >= entry.longValue) {
-                    iterator.remove()
-                    continue
-                }
-
-                val longPos = entry.longKey
-                val x = BlockPos.unpackLongX(longPos)// shr 4
-                val y = BlockPos.unpackLongY(longPos)// shr 4
-                val z = BlockPos.unpackLongZ(longPos)// shr 4
-
-                val builtChunk = chunks.getRenderedChunk(x, y, z)
-                if (builtChunk == null || builtChunk.origin.x shr 4 != x || builtChunk.origin.y shr 4 != y || builtChunk.origin.z shr 4 != z) {
-                    iterator.remove()
-                } else if (!builtChunk.getData().isEmpty) {
-                    for (ix in -1..1) {
-                        for (iy in -1..1) {
-                            for (iz in -1..1) {
-                                list.add(BlockPos.asLong(x + ix, y + iy, z + iz))
-                            }
-                        }
-                    }
-                    iterator.remove()
-                }
+            for (i in pendingSkyLightUpdate.indices) {
+                lightUpdate.put(pendingSkyLightUpdate.getLong(i), time)
             }
+            pendingSkyLightUpdate.clear()
 
-            list
-        } else {
-            null
+            for (i in pendingBlockLightUpdate.indices) {
+                lightUpdate.put(pendingBlockLightUpdate.getLong(i), time)
+            }
+            pendingBlockLightUpdate.clear()
+
+            val provider = world.chunkManager.lightingProvider as OffThreadLightingProvider
+            provider.scheduleUpdate {
+                provider.doLightUpdates()
+                updating.set(true)
+            }
         }
     }
 
-    private suspend fun WorldRenderer.scheduleRebuild(lightUpdateDeferred: Deferred<LongArrayList?>) {
+    @Suppress("DuplicatedCode")
+    private fun WorldRenderer.scheduleRebuild() {
         this as AccessorWorldRenderer
 
-        val chunkStorage = chunks as RegionBuiltChunkStorage
         val visible = visibleChunkBitSet.get()
         val preLoad = preLoadChunkBitSet.get()
-        val visibleNotEmpty = visible.isNotEmpty()
-        val preLoadNotEmpty = preLoad.isNotEmpty()
+        val updating = updatingChunkBitSet.swapAndGet()
 
-        val lightUpdates = lightUpdateDeferred.await()
-        var lightUpdateNotEmpty = false
-        lightUpdates?.let { list ->
-            for (i in list.indices) {
-                val longPos = list.getLong(i)
-                val builtChunk = chunkStorage.getRenderedChunk(
-                    BlockPos.unpackLongX(longPos),
-                    BlockPos.unpackLongY(longPos),
-                    BlockPos.unpackLongZ(longPos)
-                ) ?: continue
-                builtChunk.scheduleRebuild(false)
-                lightUpdateNotEmpty = true
-            }
-        }
+        lastRebuildTask = FastMcCoreScope.launch {
+            val chunkStorage = chunks as RegionBuiltChunkStorage
+            val chunkBuilder = chunkBuilder
 
-        if (visibleNotEmpty || preLoadNotEmpty || lightUpdateNotEmpty) {
-            lastRebuildTask = FastMcCoreScope.pool.submit {
-                val chunks = chunks as RegionBuiltChunkStorage
-                val chunkIndices = chunks.chunkIndices
-                val chunkArray = chunks.chunks
-                var count = ParallelUtils.CPU_THREADS * 2
+            if (lightUpdate.isNotEmpty()) {
+                val iterator = lightUpdate.long2LongEntrySet().iterator()
+                val current = System.currentTimeMillis()
 
-                if (visibleNotEmpty) {
-                    visible.ensureArrayLength(chunkArray.size)
-                    for (i in chunkIndices.size - 1 downTo 0) {
-                        val chunkIndex = chunkIndices[i]
-                        if (!visible.containsFast(chunkIndex)) continue
+                while (iterator.hasNext()) {
+                    val entry = iterator.next()
+                    if (current >= entry.longValue) {
+                        iterator.remove()
+                        continue
+                    }
 
-                        val builtChunk = chunkArray[chunkIndex]
-                        if (!builtChunk.needsRebuild()) continue
-                        val task = builtChunk.createRebuildTask()
-                        builtChunk.cancelRebuild()
-                        chunkBuilder.send(task)
+                    val longPos = entry.longKey
+                    val x = BlockPos.unpackLongX(longPos)
+                    val y = BlockPos.unpackLongY(longPos)
+                    val z = BlockPos.unpackLongZ(longPos)
+                    val builtChunk = chunkStorage.getRenderedChunk(x, y, z)
 
-                        if (--count <= 0) return@submit
+                    if (builtChunk == null || builtChunk.origin.x shr 4 != x || builtChunk.origin.y shr 4 != y || builtChunk.origin.z shr 4 != z) {
+                        iterator.remove()
+                    } else if (!builtChunk.getData().isEmpty) {
+                        updating.addFast((builtChunk as IPatchedBuiltChunk).index)
+                        chunkBuilder.scheduleRebuild(builtChunk)
+                        iterator.remove()
                     }
                 }
+            }
 
-                count /= 2
-                preLoad.ensureArrayLength(chunkArray.size)
-                for (i in chunkIndices.size - 1 downTo 0) {
-                    val chunkIndex = chunkIndices[i]
-                    if (!preLoad.containsFast(chunkIndex)) continue
+            val chunkIndices = chunkStorage.chunkIndices
+            val chunkArray = chunkStorage.chunks
 
-                    val builtChunk = chunkArray[chunkIndex]
-                    if (!builtChunk.needsRebuild()) continue
-                    val task = builtChunk.createRebuildTask()
-                    builtChunk.cancelRebuild()
-                    chunkBuilder.send(task)
+            var count = ParallelUtils.CPU_THREADS * 2
+            for (i in chunkIndices.size - 1 downTo 0) {
+                val chunkIndex = chunkIndices[i]
+                if (!visible.containsFast(chunkIndex)) continue
 
-                    if (--count <= 0) return@submit
+                val builtChunk = chunkArray[chunkIndex]
+                if (!builtChunk.needsRebuild()) continue
+                if (updating.addFastCheck((builtChunk as IPatchedBuiltChunk).index)) {
+                    chunkBuilder.scheduleRebuild(builtChunk)
                 }
+
+                if (--count == 0) return@launch
+            }
+
+            count /= 2
+            if (count == 0) return@launch
+            for (i in chunkIndices.size - 1 downTo 0) {
+                val chunkIndex = chunkIndices[i]
+                if (!preLoad.containsFast(chunkIndex)) continue
+
+                val builtChunk = chunkArray[chunkIndex]
+                if (!builtChunk.needsRebuild()) continue
+                if (!updating.containsFast((builtChunk as IPatchedBuiltChunk).index)) {
+                    chunkBuilder.scheduleRebuild(builtChunk)
+                }
+
+                if (--count == 0) return@launch
             }
         }
+    }
+
+    private fun ChunkBuilder.scheduleRebuild(builtChunk: BuiltChunk) {
+        val task = builtChunk.createRebuildTask()
+        builtChunk.cancelRebuild()
+        send(task)
     }
 
     private fun WorldRenderer.sortTranslucent(cameraPos: Vec3d) {

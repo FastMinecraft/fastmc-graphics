@@ -1,5 +1,6 @@
 package me.luna.fastmc.terrain
 
+import it.unimi.dsi.fastutil.ints.IntArrays
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import me.luna.fastmc.mixin.IPatchedBuiltChunk
@@ -15,8 +16,8 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
 import net.minecraft.util.math.MathHelper
 import net.minecraft.world.World
-import java.util.*
 import java.util.concurrent.Future
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
 
@@ -32,12 +33,12 @@ class RegionBuiltChunkStorage(
 
     private val sortingUpdateCounter = UpdateCounter()
     private var lastSortingJob: Future<*>? = null
-    private var lastSortedChunkArray: Array<ChunkBuilder.BuiltChunk> = chunks.copyOf()
-    var chunkIndices = IntArray(chunks.size); private set
+    private val distanceArray = IntArray(chunks.size)
+    var chunkIndices = IntArray(chunks.size) { it }; private set
 
     private val caveCullingUpdateCounter = UpdateCounter()
     private var lastCaveCullingJob: Future<*>? = null
-    private var caveCullingDirty = true
+    private val caveCullingDirty = AtomicBoolean(true)
     var caveCullingBitSet = ExtendedBitSet(chunks.size); private set
 
     val sizeX0: Int
@@ -134,23 +135,24 @@ class RegionBuiltChunkStorage(
 
     private fun updateChunkIndices(cameraChunkOrigin: BlockPos) {
         lastSortingJob = FastMcExtendScope.pool.submit {
-            val chunkArray = lastSortedChunkArray.copyOf()
-            val comparator = Comparator.comparingInt<ChunkBuilder.BuiltChunk> {
-                val chunkOrigin = it.origin
-                -distanceSq(
+            val chunkArray = chunks
+            val newChunkIndices = chunkIndices.copyOf()
+            val distanceArray = distanceArray
+
+            for (i in newChunkIndices.indices) {
+                val chunkIndex = newChunkIndices[i]
+                val chunkOrigin = chunkArray[chunkIndex].origin
+                distanceArray[chunkIndex] = -distanceSq(
                     cameraChunkOrigin.x, cameraChunkOrigin.y, cameraChunkOrigin.z,
                     chunkOrigin.x, chunkOrigin.y, chunkOrigin.z
                 )
             }
-            Arrays.sort(chunkArray, comparator)
 
-            val indexArray = IntArray(chunkArray.size)
-            for (i in indexArray.indices) {
-                indexArray[i] = (chunkArray[i] as IPatchedBuiltChunk).index
+            IntArrays.mergeSort(newChunkIndices) { a, b ->
+                distanceArray[a].compareTo(distanceArray[b])
             }
 
-            lastSortedChunkArray = chunkArray
-            chunkIndices = indexArray
+            chunkIndices = newChunkIndices
             sortingUpdateCounter.update()
         }
     }
@@ -159,16 +161,19 @@ class RegionBuiltChunkStorage(
         return sortingUpdateCounter.check()
     }
 
-    fun markCaveCullingDirty() {
-        caveCullingDirty = true
+    fun checkCaveCullingUpdate(): Boolean {
+        return caveCullingUpdateCounter.check()
     }
 
-    fun updateCulling(cameraChunkOrigin: BlockPos): Boolean {
-        if (caveCullingDirty && lastCaveCullingJob.isDoneOrNull) {
-            caveCullingDirty = false
+    fun markCaveCullingDirty() {
+        caveCullingDirty.set(true)
+    }
+
+    fun updateCaveCulling(cameraChunkOrigin: BlockPos) {
+        if (lastCaveCullingJob.isDoneOrNull && caveCullingDirty.getAndSet(false)) {
             lastCaveCullingJob = FastMcExtendScope.pool.submit {
                 val builtChunk = getRenderedChunkByBlock(cameraChunkOrigin)
-                    ?: lastSortedChunkArray[lastSortedChunkArray.size - 1]
+                    ?: chunks[chunkIndices[chunkIndices.size - 1]]
                 val newCullingBitSet = ExtendedBitSet(chunks.size)
                 newCullingBitSet.addFast((builtChunk as IPatchedBuiltChunk).index)
 
@@ -184,8 +189,6 @@ class RegionBuiltChunkStorage(
                 caveCullingBitSet = newCullingBitSet
             }
         }
-
-        return caveCullingUpdateCounter.check()
     }
 
     private fun recursiveUpdateCulling(
@@ -254,18 +257,18 @@ class RegionBuiltChunkStorage(
 
     override fun scheduleRebuild(x: Int, y: Int, z: Int, important: Boolean) {
         chunks[chunkPos2Index(
-            Math.floorMod(x, sizeX),
-            Math.floorMod(y, sizeY),
-            Math.floorMod(z, sizeZ)
+            Math.floorMod(x, sizeX0),
+            Math.floorMod(y, sizeY0),
+            Math.floorMod(z, sizeZ0)
         )].scheduleRebuild(important)
     }
 
     fun getRenderedChunk(chunkX: Int, chunkY: Int, chunkZ: Int): BuiltChunk? {
-        return if (chunkY in 0 until sizeY) {
+        return if (chunkY in 0 until sizeY0) {
             chunks[chunkPos2Index(
-                MathHelper.floorMod(chunkX, sizeX),
+                MathHelper.floorMod(chunkX, sizeX0),
                 chunkY,
-                MathHelper.floorMod(chunkZ, sizeZ)
+                MathHelper.floorMod(chunkZ, sizeZ0)
             )]
         } else {
             null
@@ -274,9 +277,9 @@ class RegionBuiltChunkStorage(
 
     fun getRenderedChunk0(chunkX: Int, chunkY: Int, chunkZ: Int): BuiltChunk {
         return chunks[chunkPos2Index(
-            MathHelper.floorMod(chunkX, sizeX),
+            MathHelper.floorMod(chunkX, sizeX0),
             chunkY,
-            MathHelper.floorMod(chunkZ, sizeZ)
+            MathHelper.floorMod(chunkZ, sizeZ0)
         )]
     }
 

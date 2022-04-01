@@ -9,10 +9,16 @@ object FpsDisplay {
     private var lastRender = System.nanoTime()
     private val shortFps = ArrayList<Pair<Long, Int>>()
     private val longFps = ArrayList<Pair<Long, Int>>()
+    private val chunkUpdate = ArrayList<Pair<Long, Int>>()
+    var fpsValue = 0; private set
 
     private var renderString: CharSequence = ""
     private val projection = Matrix4f()
     private val modelView = Matrix4f()
+
+    fun onChunkUpdate(count: Int) {
+        chunkUpdate.add(System.nanoTime() + 1_000_000_000 to count)
+    }
 
     fun onPostRenderTick() {
         val current = System.nanoTime()
@@ -28,16 +34,20 @@ object FpsDisplay {
         shortFps.removeIf {
             it.first <= current
         }
+        longFps.removeIf {
+            it.first <= current
+        }
+        chunkUpdate.removeIf {
+            it.first <= current
+        }
 
         val millisSum = shortFps.sumOf {
             it.second.toDouble() / 1_000_000.0
         }
         val renderTime = millisSum / shortFps.size
         val fps = (1000.0 / renderTime).toInt()
+        fpsValue = fps
 
-        longFps.removeIf {
-            it.first <= current
-        }
         longFps.add(current + 5_000_000_000 to fps)
 
         val stringBuilder = StringBuilder()
@@ -65,6 +75,15 @@ object FpsDisplay {
 
             stringBuilder.append("  MAX ")
             stringBuilder.append("%.1f ms".format(max.toDouble() / 1_000_000.0))
+        }
+
+        if (FastMcMod.config.chunkUpdate) {
+            val updates = chunkUpdate.sumOf {
+                it.second
+            }
+
+            stringBuilder.append("  C ")
+            stringBuilder.append(updates)
         }
 
         renderString = stringBuilder

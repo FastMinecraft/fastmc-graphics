@@ -62,12 +62,13 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
         if (cancelled0.get()) {
             return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
         } else {
-            ChunkBuilder.BuiltChunk builtChunk = getBuiltChunk();
-            IPatchedBuiltChunk patchedBuiltChunk = (IPatchedBuiltChunk) builtChunk;
-
             if (cancelled0.get()) {
                 return CompletableFuture.completedFuture(ChunkBuilder.Result.CANCELLED);
             } else {
+                ChunkBuilder.BuiltChunk builtChunk = getBuiltChunk();
+                IPatchedBuiltChunk patchedBuiltChunk = (IPatchedBuiltChunk) builtChunk;
+                BlockPos chunkOrigin = builtChunk.getOrigin().toImmutable();
+
                 IPatchedBlockBufferBuilderStorage patchedBuffers = (IPatchedBlockBufferBuilderStorage) buffers;
                 ChunkBuilder chunkBuilder = getChunkBuilder();
                 Vec3d vec3d = chunkBuilder.getCameraPosition();
@@ -75,6 +76,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                 ChunkBuilder.ChunkData newData = new ChunkBuilder.ChunkData();
                 Set<BlockEntity> set = this.render(
                     patchedBuffers.getContext(),
+                    chunkOrigin,
                     buffers,
                     newData,
                     vec3d.x,
@@ -90,8 +92,6 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                     List<RenderLayer> layers = RenderLayer.getBlockLayers();
                     Set<RenderLayer> initializedLayers = ((AccessorChunkData) newData).getInitializedLayers();
 
-                    BlockPos chunkOrigin = builtChunk.getOrigin();
-                    long builtOrigin = chunkOrigin.asLong();
                     ByteBuffer[] bufferArray = new ByteBuffer[layers.size()];
                     int[] vertexCountArray = new int[layers.size()];
 
@@ -135,7 +135,6 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                         List<BlockEntity> removing = Collections.emptyList();
 
                         if (!oldEmpty || !newEmpty) {
-
                             if (oldEmpty) {
                                 adding = newList;
                             } else if (newEmpty) {
@@ -167,6 +166,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                             .equals(((AccessorChunkOcclusionData) ((AccessorChunkData) newData).getOcclusionGraph()).getVisibility());
                         List<BlockEntity> finalAdding = adding;
                         List<BlockEntity> finalRemoving = removing;
+                        long builtOrigin = chunkOrigin.asLong();
 
                         return scheduleUpload(() -> {
                             ChunkVertexData[] chunkVertexDataArray = patchedBuiltChunk.getChunkVertexDataArray();
@@ -207,11 +207,10 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
         }
     }
 
-    private Set<BlockEntity> render(ChunkBuilderContext context, BlockBufferBuilderStorage buffers, ChunkBuilder.ChunkData data, double cameraX, double cameraY, double cameraZ) {
+    private Set<BlockEntity> render(ChunkBuilderContext context, BlockPos chunkOrigin, BlockBufferBuilderStorage buffers, ChunkBuilder.ChunkData data, double cameraX, double cameraY, double cameraZ) {
         AccessorChunkData accessorData = (AccessorChunkData) data;
         IPatchedChunkData patchedData = (IPatchedChunkData) data;
 
-        ChunkBuilder.BuiltChunk builtChunk = getBuiltChunk();
         ChunkOcclusionDataBuilder chunkOcclusionDataBuilder = new ChunkOcclusionDataBuilder();
         Set<BlockEntity> set = Sets.newHashSet();
         ChunkRendererRegion chunkRendererRegion = this.region;
@@ -223,7 +222,7 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
                 matrixStack.pop();
             }
 
-            context.brightnessCache.enable();
+            context.init();
 
             Set<RenderLayer> initializedLayers = accessorData.getInitializedLayers();
             Set<RenderLayer> nonEmptyLayers = accessorData.getNonEmptyLayers();
@@ -232,10 +231,9 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
             BlockRenderManager blockRenderManager = MinecraftClient.getInstance().getBlockRenderManager();
             IPatchedBlockRenderManager patchedBlockRenderManager = (IPatchedBlockRenderManager) blockRenderManager;
 
-            BlockPos origin = builtChunk.getOrigin();
-            int startX = origin.getX();
-            int startY = origin.getY();
-            int startZ = origin.getZ();
+            int startX = chunkOrigin.getX();
+            int startY = chunkOrigin.getY();
+            int startZ = chunkOrigin.getZ();
             int endX = startX + 16;
             int endY = startY + 16;
             int endZ = startZ + 16;
@@ -309,8 +307,6 @@ public abstract class MixinPatchChunkBuilderBuiltChunkRebuildTask implements IPa
             for (RenderLayer layer : initializedLayers) {
                 buffers.get(layer).end();
             }
-
-            context.brightnessCache.disable();
         }
 
         accessorData.setOcclusionGraph(chunkOcclusionDataBuilder.build());

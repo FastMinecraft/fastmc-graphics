@@ -10,5 +10,5 @@ interface IPatchedBuiltChunk {
     var index: Int
     val chunkVertexDataArray: Array<ChunkVertexData?>
     var region: RenderRegion
-
+    val hasTask: Boolean
 }

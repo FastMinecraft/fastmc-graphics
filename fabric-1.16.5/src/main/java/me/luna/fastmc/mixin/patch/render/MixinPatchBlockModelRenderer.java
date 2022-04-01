@@ -6,7 +6,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.color.block.BlockColors;
 import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.render.block.BlockModelRenderer;
 import net.minecraft.client.render.model.BakedModel;
 import net.minecraft.client.render.model.BakedQuad;
@@ -37,14 +36,14 @@ public abstract class MixinPatchBlockModelRenderer implements IPatchedBlockModel
     protected abstract void getQuadDimensions(BlockRenderView world, BlockState state, BlockPos pos, int[] vertexData, Direction face, float[] box, BitSet flags);
 
     @Override
-    public boolean render0(@NotNull ChunkBuilderContext context, @NotNull BlockRenderView world, @NotNull BakedModel model, BlockState state, @NotNull BlockPos pos, MatrixStack matrix, @NotNull VertexConsumer vertexConsumer, boolean cull, @NotNull Random random, long seed, int overlay) {
+    public boolean render0(@NotNull ChunkBuilderContext context, @NotNull BlockRenderView world, @NotNull BakedModel model, BlockState state, @NotNull BlockPos pos, MatrixStack matrixStack, @NotNull VertexConsumer vertexConsumer, boolean cull, @NotNull Random random, long seed, int overlay) {
         boolean aoEnabled = MinecraftClient.isAmbientOcclusionEnabled() && state.getLuminance() == 0 && model.useAmbientOcclusion();
         Vec3d vec3d = state.getModelOffset(world, pos);
-        matrix.translate(vec3d.x, vec3d.y, vec3d.z);
+        matrixStack.translate(vec3d.x, vec3d.y, vec3d.z);
 
         try {
-            return aoEnabled ? this.renderSmooth0(context, world, model, state, pos, matrix, vertexConsumer, cull, random, seed, overlay) :
-                this.renderFlat0(context, world, model, state, pos, matrix, vertexConsumer, cull, random, seed, overlay);
+            return aoEnabled ? this.renderSmooth0(context, world, model, state, pos, matrixStack, vertexConsumer, cull, random, seed, overlay) :
+                this.renderFlat0(context, world, model, state, pos, matrixStack, vertexConsumer, cull, random, seed, overlay);
         } catch (Throwable var17) {
             CrashReport crashReport = CrashReport.create(var17, "Tesselating block model");
             CrashReportSection crashReportSection = crashReport.addElement("Block model being tesselated");
@@ -54,9 +53,11 @@ public abstract class MixinPatchBlockModelRenderer implements IPatchedBlockModel
         }
     }
 
-    private boolean renderFlat0(ChunkBuilderContext context, BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack buffer, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
+    private boolean renderFlat0(ChunkBuilderContext context, BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrixStack, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
         boolean rendered = false;
         BitSet flags = context.flags;
+        BlockPos.Mutable offsetPos = context.mutableBlockPosPool.get();
+        MatrixStack.Entry matrixEntry = matrixStack.peek();
 
         Direction[] directions = Direction.values();
         for (int i = 0; i < directions.length; ++i) {
@@ -65,8 +66,26 @@ public abstract class MixinPatchBlockModelRenderer implements IPatchedBlockModel
             random.setSeed(seed);
             List<BakedQuad> list = model.getQuads(state, direction, random);
             if (!list.isEmpty() && (!cull || context.shouldDrawSide(state, world, pos, direction))) {
-                int j = WorldRenderer.getLightmapCoordinates(world, state, pos.offset(direction));
-                this.renderQuadsFlat0(context, world, state, pos, j, overlay, false, buffer, vertexConsumer, list, flags);
+                int light = context.getLight(state, world, offsetPos.set(pos, direction));
+                for (int i1 = 0; i1 < list.size(); i1++) {
+                    BakedQuad bakedQuad = list.get(i1);
+
+                    float brightness = world.getBrightness(bakedQuad.getFace(), bakedQuad.hasShade());
+                    float[] brightnessArray = context.brightnessArray;
+                    int[] lightArray = context.lightArray;
+
+                    brightnessArray[0] = brightness;
+                    brightnessArray[1] = brightness;
+                    brightnessArray[2] = brightness;
+                    brightnessArray[3] = brightness;
+
+                    lightArray[0] = light;
+                    lightArray[1] = light;
+                    lightArray[2] = light;
+                    lightArray[3] = light;
+
+                    this.renderQuad0(world, state, pos, vertexConsumer, matrixEntry, bakedQuad, brightnessArray, lightArray, overlay);
+                }
                 rendered = true;
             }
         }
@@ -74,17 +93,40 @@ public abstract class MixinPatchBlockModelRenderer implements IPatchedBlockModel
         random.setSeed(seed);
         List<BakedQuad> list = model.getQuads(state, null, random);
         if (!list.isEmpty()) {
-            this.renderQuadsFlat0(context, world, state, pos, -1, overlay, true, buffer, vertexConsumer, list, flags);
+            for (int i = 0; i < list.size(); i++) {
+                BakedQuad bakedQuad = list.get(i);
+                this.getQuadDimensions(world, state, pos, bakedQuad.getVertexData(), bakedQuad.getFace(), null, flags);
+                BlockPos blockPos = flags.get(0) ? offsetPos.set(pos, bakedQuad.getFace()) : pos;
+                int light = context.getLight(state, world, blockPos);
+
+                float brightness = world.getBrightness(bakedQuad.getFace(), bakedQuad.hasShade());
+                float[] brightnessArray = context.brightnessArray;
+                int[] lightArray = context.lightArray;
+
+                brightnessArray[0] = brightness;
+                brightnessArray[1] = brightness;
+                brightnessArray[2] = brightness;
+                brightnessArray[3] = brightness;
+
+                lightArray[0] = light;
+                lightArray[1] = light;
+                lightArray[2] = light;
+                lightArray[3] = light;
+
+                this.renderQuad0(world, state, pos, vertexConsumer, matrixEntry, bakedQuad, brightnessArray, lightArray, overlay);
+            }
             rendered = true;
         }
 
+        context.mutableBlockPosPool.put(offsetPos);
         return rendered;
     }
 
-    private boolean renderSmooth0(ChunkBuilderContext context, BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack buffer, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
+    private boolean renderSmooth0(ChunkBuilderContext context, BlockRenderView world, BakedModel model, BlockState state, BlockPos pos, MatrixStack matrixStack, VertexConsumer vertexConsumer, boolean cull, Random random, long seed, int overlay) {
         boolean rendered = false;
         BitSet flags = context.flags;
         float[] box = context.boxDimensionArray;
+        MatrixStack.Entry matrixEntry = matrixStack.peek();
 
         Direction[] directions = Direction.values();
         for (int i = 0; i < directions.length; ++i) {
@@ -93,7 +135,7 @@ public abstract class MixinPatchBlockModelRenderer implements IPatchedBlockModel
             random.setSeed(seed);
             List<BakedQuad> list = model.getQuads(state, direction, random);
             if (!list.isEmpty() && (!cull || context.shouldDrawSide(state, world, pos, direction))) {
-                this.renderQuadsSmooth0(context, world, state, pos, buffer, vertexConsumer, list, box, flags, overlay);
+                this.renderQuadsSmooth0(context, world, state, pos, matrixEntry, vertexConsumer, list, box, flags, overlay);
                 rendered = true;
             }
         }
@@ -101,60 +143,30 @@ public abstract class MixinPatchBlockModelRenderer implements IPatchedBlockModel
         random.setSeed(seed);
         List<BakedQuad> list = model.getQuads(state, null, random);
         if (!list.isEmpty()) {
-            this.renderQuadsSmooth0(context, world, state, pos, buffer, vertexConsumer, list, box, flags, overlay);
+            this.renderQuadsSmooth0(context, world, state, pos, matrixEntry, vertexConsumer, list, box, flags, overlay);
             rendered = true;
         }
 
         return rendered;
     }
 
-    private void renderQuadsSmooth0(ChunkBuilderContext context, BlockRenderView world, BlockState state, BlockPos pos, MatrixStack matrix, VertexConsumer vertexConsumer, List<BakedQuad> quads, float[] box, BitSet flags, int overlay) {
+    private void renderQuadsSmooth0(ChunkBuilderContext context, BlockRenderView world, BlockState state, BlockPos pos, MatrixStack.Entry matrixEntry, VertexConsumer vertexConsumer, List<BakedQuad> quads, float[] box, BitSet flags, int overlay) {
         for (int i = 0; i < quads.size(); i++) {
             BakedQuad bakedQuad = quads.get(i);
             this.getQuadDimensions(world, state, pos, bakedQuad.getVertexData(), bakedQuad.getFace(), box, flags);
             context.calculateAO(world, state, pos, bakedQuad.getFace(), box, flags, bakedQuad.hasShade());
-
-            float[] brightnessArray = context.brightnessArray;
-            int[] lightArray = context.lightArray;
 
             this.renderQuad0(
                 world,
                 state,
                 pos,
                 vertexConsumer,
-                matrix.peek(),
+                matrixEntry,
                 bakedQuad,
-                brightnessArray,
-                lightArray,
+                context.brightnessArray,
+                context.lightArray,
                 overlay
             );
-        }
-    }
-
-    private void renderQuadsFlat0(ChunkBuilderContext context, BlockRenderView world, BlockState state, BlockPos pos, int light, int overlay, boolean useWorldLight, MatrixStack matrices, VertexConsumer vertexConsumer, List<BakedQuad> quads, BitSet flags) {
-        for (int i = 0; i < quads.size(); i++) {
-            BakedQuad bakedQuad = quads.get(i);
-            if (useWorldLight) {
-                this.getQuadDimensions(world, state, pos, bakedQuad.getVertexData(), bakedQuad.getFace(), null, flags);
-                BlockPos blockPos = flags.get(0) ? pos.offset(bakedQuad.getFace()) : pos;
-                light = WorldRenderer.getLightmapCoordinates(world, state, blockPos);
-            }
-
-            float brightness = world.getBrightness(bakedQuad.getFace(), bakedQuad.hasShade());
-            float[] brightnessArray = context.brightnessArray;
-            int[] lightArray = context.lightArray;
-
-            brightnessArray[0] = brightness;
-            brightnessArray[1] = brightness;
-            brightnessArray[2] = brightness;
-            brightnessArray[3] = brightness;
-
-            lightArray[0] = light;
-            lightArray[1] = light;
-            lightArray[2] = light;
-            lightArray[3] = light;
-
-            this.renderQuad0(world, state, pos, vertexConsumer, matrices.peek(), bakedQuad, brightnessArray, lightArray, overlay);
         }
     }
 
