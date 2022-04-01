@@ -87,6 +87,7 @@ interface IGLWrapper {
     fun glCopyNamedBufferSubData(readBuffer: Int, writeBuffer: Int, readOffset: Long, writeOffset: Long, size: Long)
 
     fun glCreateTextures(target: Int): Int
+    fun glBindTextureUnit(unit: Int, texture: Int)
     fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int)
     fun glTextureSubImage2D(
         texture: Int,
@@ -319,6 +320,8 @@ inline fun glCopyNamedBufferSubData(
 ) = glWrapper.glCopyNamedBufferSubData(readBuffer, writeBuffer, readOffset, writeOffset, size)
 
 inline fun glCreateTextures(target: Int): Int = glWrapper.glCreateTextures(target)
+
+inline fun glBindTextureUnit(unit: Int, texture: Int) = glWrapper.glBindTextureUnit(unit, texture)
 
 inline fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int) =
     glWrapper.glTextureStorage2D(texture, levels, internalformat, width, height)

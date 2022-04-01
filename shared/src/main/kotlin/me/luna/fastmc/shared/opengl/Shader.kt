@@ -20,7 +20,7 @@ open class Shader(final override val resourceName: String, vertShaderPath: Strin
         if (linked == 0) {
             FastMcMod.logger.error(glGetProgramInfoLog(id, 1024))
             glDeleteProgram(id)
-            throw IllegalStateException("Shader failed to link")
+            throw IllegalStateException("TerrainShader failed to link")
         }
         this.id = id
 

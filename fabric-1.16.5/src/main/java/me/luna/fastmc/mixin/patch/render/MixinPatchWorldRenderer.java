@@ -6,7 +6,7 @@ import me.luna.fastmc.mixin.IPatchedBuiltChunk;
 import me.luna.fastmc.mixin.IPatchedRenderLayer;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.PatchedWorldRenderer;
-import me.luna.fastmc.shared.terrain.TerrainShaders;
+import me.luna.fastmc.shared.terrain.TerrainRenderer;
 import me.luna.fastmc.shared.util.FastMcExtendScope;
 import me.luna.fastmc.shared.util.collection.ExtendedBitSet;
 import me.luna.fastmc.terrain.ChunkVertexData;
@@ -197,16 +197,10 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
     private void renderLayer(RenderLayer layer, MatrixStack matrixStack, double renderPosX, double renderPosY, double renderPosZ) {
         this.client.getProfiler().push(layer.name);
 
-        layer.startDrawing();
         int layerIndex = ((IPatchedRenderLayer) layer).getIndex();
         RenderRegion[] regionArray = ((RegionBuiltChunkStorage) this.chunks).getRegionArray();
-        TerrainShaders.Shader terrainShader = TerrainShaders.INSTANCE.getShader();
 
-        if (layer == RenderLayer.getCutout() || layer == RenderLayer.getCutoutMipped()) {
-            terrainShader.setAlphaTest(0.5f);
-        } else {
-            terrainShader.setAlphaTest(0.0f);
-        }
+        TerrainRenderer.TerrainShader terrainShader = TerrainRenderer.INSTANCE.getShader();
 
         for (int i = 0; i < regionArray.length; i++) {
             RenderRegion region = regionArray[i];
@@ -224,8 +218,6 @@ public abstract class MixinPatchWorldRenderer implements IPatchedWorldRenderer {
             regionLayer.vao.bind();
             glMultiDrawArrays(GL_QUADS, regionLayer.firstBuffer.get(), regionLayer.countBuffer.get());
         }
-
-        layer.endDrawing();
 
         this.client.getProfiler().pop();
     }

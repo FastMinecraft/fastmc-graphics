@@ -10,7 +10,7 @@ layout(location = 1) in vec2 vertLightMapUV;
 layout(location = 2) in vec2 vertUV;
 layout(location = 3) in vec4 vertColor;
 
-out vec4 color;
+out vec3 color;
 out vec2 uv;
 out vec2 lightMapUV;
 out float fogAmount;
@@ -18,7 +18,7 @@ out float fogAmount;
 void main() {
     vec3 coord = (vertPosittion * 0.00439453125 - 16.0) + offset;
     gl_Position = projection * modelView * vec4(coord, 1.0);
-    color = vertColor;
+    color = vertColor.rgb;
     uv = vertUV;
     lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;
 

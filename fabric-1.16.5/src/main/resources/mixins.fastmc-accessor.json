@@ -4,13 +4,14 @@
   "compatibilityLevel": "JAVA_8",
   "package": "me.luna.fastmc.mixin.accessor",
   "client": [
+    "AccessorBackgroundRenderer",
     "AccessorBuiltChunk",
     "AccessorChunkBuilder",
     "AccessorChunkData",
     "AccessorChunkOcclusionData",
     "AccessorVertexBuffer",
     "AccessorWorldRenderer",
-    "AccessorBackgroundRenderer"
+    "AccessorLightmapTextureManager"
   ],
   "injectors": {
     "defaultRequire": 1

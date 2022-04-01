@@ -130,6 +130,8 @@ class GLWrapper : IGLWrapper {
 
     override fun glCreateTextures(target: Int): Int = GL45.glCreateTextures(target)
 
+    override fun glBindTextureUnit(unit: Int, texture: Int) = GL45.glBindTextureUnit(unit, texture)
+
     override fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int) =
         GL45.glTextureStorage2D(texture, levels, internalformat, width, height)
 

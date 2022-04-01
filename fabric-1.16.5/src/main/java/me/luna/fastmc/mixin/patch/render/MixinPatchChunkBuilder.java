@@ -51,7 +51,7 @@ public class MixinPatchChunkBuilder implements IPatchedChunkBuilder {
     @Override
     public int upload(boolean @NotNull [] running) {
         int count = 0;
-        int max = (ParallelUtils.CPU_THREADS * 500) / (FpsDisplay.INSTANCE.getFpsValue());
+        int max = (ParallelUtils.CPU_THREADS * 500) / Math.max(FpsDisplay.INSTANCE.getFpsValue(), 60);
         int min = Math.max(max / 4, 2);
         Runnable runnable;
 

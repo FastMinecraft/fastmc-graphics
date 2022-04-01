@@ -1,12 +1,14 @@
 package me.luna.fastmc.mixin.core.render;
 
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.accessor.AccessorBackgroundRenderer;
+import me.luna.fastmc.mixin.accessor.AccessorLightmapTextureManager;
 import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
-import me.luna.fastmc.shared.terrain.TerrainShaders;
+import me.luna.fastmc.shared.terrain.TerrainRenderer;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -19,7 +21,10 @@ import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.model.ModelLoader;
+import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.texture.ResourceTexture;
 import net.minecraft.client.texture.SpriteAtlasTexture;
+import net.minecraft.client.texture.TextureManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.client.util.math.Vector3d;
 import net.minecraft.client.world.ClientWorld;
@@ -28,6 +33,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.tag.FluidTags;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -49,7 +55,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindTextureUnit;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindVertexArray;
+import static org.lwjgl.opengl.GL11.GL_LEQUAL;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
+import static org.lwjgl.opengl.GL13.GL_TEXTURE2;
 
 @Mixin(value = WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreWorldRenderer {
@@ -139,6 +149,13 @@ public abstract class MixinCoreWorldRenderer {
     @Shadow
     protected abstract void renderEntity(Entity entity, double cameraX, double cameraY, double cameraZ, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers);
 
+    @Shadow
+    @Final
+    private TextureManager textureManager;
+
+    @Shadow
+    public abstract void reload();
+
     @Inject(method = "setWorld", at = @At("HEAD"))
     public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
         FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().clear();
@@ -202,15 +219,9 @@ public abstract class MixinCoreWorldRenderer {
         this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
 
         profiler.swap("terrain");
-        TerrainShaders.Shader terrainShader = TerrainShaders.INSTANCE.getShader();
-        terrainShader.updateProjectionMatrix(projection1);
-        terrainShader.updateModelViewMatrix(modelView1);
-        terrainShader.bind();
-        this.renderLayer(RenderLayer.getSolid(), matrices, renderPosX, renderPosY, renderPosZ);
-        this.renderLayer(RenderLayer.getCutoutMipped(), matrices, renderPosX, renderPosY, renderPosZ);
-        this.renderLayer(RenderLayer.getCutout(), matrices, renderPosX, renderPosY, renderPosZ);
-        glBindVertexArray(0);
-        terrainShader.unbind();
+        TerrainRenderer.INSTANCE.updateMatrix(projection1, modelView1);
+
+        renderTerrainPass1(matrices, renderPosX, renderPosY, renderPosZ);
 
         if (this.world.getSkyProperties().isDarkened()) {
             DiffuseLighting.enableForLevel(matrices.peek().getModel());
@@ -322,19 +333,15 @@ public abstract class MixinCoreWorldRenderer {
         immediate.draw(RenderLayer.getWaterMask());
         this.bufferBuilders.getEffectVertexConsumers().draw();
 
+        profiler.swap("terrain");
         if (this.translucentFramebuffer != null) {
-            profiler.swap("terrain");
             immediate.draw(RenderLayer.getLines());
             immediate.draw();
 
             this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.translucentFramebuffer.copyDepthFrom(this.client.getFramebuffer());
 
-            terrainShader.bind();
-            this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
-            this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
-            glBindVertexArray(0);
-            terrainShader.unbind();
+            renderTerrainPass2(matrices, renderPosX, renderPosY, renderPosZ);
 
             profiler.swap("particles");
             this.particlesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
@@ -343,15 +350,10 @@ public abstract class MixinCoreWorldRenderer {
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
             RenderPhase.PARTICLES_TARGET.endDrawing();
         } else {
-            profiler.swap("terrain");
             immediate.draw(RenderLayer.getLines());
             immediate.draw();
 
-            terrainShader.bind();
-            this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
-            this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
-            glBindVertexArray(0);
-            terrainShader.unbind();
+            renderTerrainPass2(matrices, renderPosX, renderPosY, renderPosZ);
 
             profiler.swap("particles");
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
@@ -394,6 +396,98 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.disableBlend();
         RenderSystem.popMatrix();
         BackgroundRenderer.method_23792();
+    }
+
+    @SuppressWarnings("deprecation")
+    private void renderTerrainPass1(MatrixStack matrices, double renderPosX, double renderPosY, double renderPosZ) {
+        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+        blockTexture.bindTexture();
+        glBindTextureUnit(2, getLightMapTexture().getGlId());
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL_LEQUAL);
+        RenderSystem.disableAlphaTest();
+
+        MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+
+        TerrainRenderer.TerrainShader terrainShader = TerrainRenderer.INSTANCE.getShader();
+        terrainShader.bind();
+
+        blockTexture.setFilter(false, true);
+        this.renderLayer(RenderLayer.getSolid(), matrices, renderPosX, renderPosY, renderPosZ);
+
+        TerrainRenderer.INSTANCE.alphaTest(true);
+        terrainShader = TerrainRenderer.INSTANCE.getShader();
+        terrainShader.bind();
+
+        this.renderLayer(RenderLayer.getCutoutMipped(), matrices, renderPosX, renderPosY, renderPosZ);
+
+        blockTexture.setFilter(false, false);
+        this.renderLayer(RenderLayer.getCutout(), matrices, renderPosX, renderPosY, renderPosZ);
+        blockTexture.setFilter(false, true);
+
+        TerrainRenderer.INSTANCE.alphaTest(false);
+
+        glBindVertexArray(0);
+        terrainShader.unbind();
+
+        glBindTextureUnit(2, 0);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void renderTerrainPass2(MatrixStack matrices, double renderPosX, double renderPosY, double renderPosZ) {
+        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+        blockTexture.bindTexture();
+        glBindTextureUnit(2, getLightMapTexture().getGlId());
+        RenderSystem.disableCull();
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthFunc(GL_LEQUAL);
+        RenderSystem.disableAlphaTest();
+
+        Framebuffer translucent = this.translucentFramebuffer;
+        Framebuffer weather = this.weatherFramebuffer;
+
+        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && translucent != null && weather != null;
+        if (usingFbo) {
+            translucent.beginWrite(false);
+        } else {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+
+        TerrainRenderer.TerrainShader terrainShader = TerrainRenderer.INSTANCE.getShader();
+        terrainShader.bind();
+
+        blockTexture.setFilter(false, true);
+        this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
+
+        if (usingFbo) {
+            weather.beginWrite(false);
+        }
+        this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
+
+        glBindVertexArray(0);
+        terrainShader.unbind();
+
+        glBindTextureUnit(2, 0);
+    }
+
+    private AbstractTexture getLightMapTexture() {
+        Identifier id = ((AccessorLightmapTextureManager) MinecraftClient.getInstance().gameRenderer.getLightmapTextureManager()).getTextureIdentifier();
+        return getTexture(id);
+    }
+
+    private AbstractTexture getTexture(Identifier id) {
+        AbstractTexture texture = textureManager.getTexture(id);
+        if (texture == null) {
+            texture = new ResourceTexture(id);
+            textureManager.registerTexture(id, texture);
+        }
+
+        return texture;
     }
 
     @SuppressWarnings("deprecation")
@@ -515,7 +609,7 @@ public abstract class MixinCoreWorldRenderer {
                 }
             }
 
-            TerrainShaders.INSTANCE.exp2(density, red, green, blue);
+            TerrainRenderer.INSTANCE.exp2(density, red, green, blue);
         } else {
             float start;
             float end;
@@ -540,7 +634,7 @@ public abstract class MixinCoreWorldRenderer {
                 end = viewDistance;
             }
 
-            TerrainShaders.INSTANCE.linear(start, end, red, green, blue);
+            TerrainRenderer.INSTANCE.linear(start, end, red, green, blue);
         }
     }
 }
