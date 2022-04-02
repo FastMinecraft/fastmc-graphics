@@ -22,10 +22,11 @@
     "render.MixinPatchMatrixStack",
     "render.MixinPatchParticle",
     "render.MixinPatchParticleManager",
-    "render.MixinPatchVoronoiBiomeAccessType",
     "render.MixinPatchWorldRenderer",
     "render.MixinRenderLayer",
-    "world.MixinPatchClientChunkManager"
+    "world.MixinPatchBiome",
+    "world.MixinPatchClientChunkManager",
+    "world.MixinPatchVoronoiBiomeAccessType"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -1,4 +1,4 @@
-package me.luna.fastmc.mixin.patch.render;
+package me.luna.fastmc.mixin.patch.world;
 
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.BiomeAccess;
@@ -35,15 +35,27 @@ public abstract class MixinPatchVoronoiBiomeAccessType {
             int yBit = (i & 2) >> 1 & 1;
             int zBit = i & 1;
 
-            double distance = calcSquaredDistance0(
-                seed,
-                x2 + xBit,
-                y2 + yBit,
-                z2 + zBit,
-                x3 - (double) xBit,
-                y3 - (double) yBit,
-                z3 - (double) zBit
-            );
+            long l = SeedMixer.mixSeed(seed, x2 + xBit);
+            l = SeedMixer.mixSeed(l, y2 + yBit);
+            l = SeedMixer.mixSeed(l, z2 + zBit);
+            l = SeedMixer.mixSeed(l, x2 + xBit);
+            l = SeedMixer.mixSeed(l, y2 + yBit);
+            l = SeedMixer.mixSeed(l, z2 + zBit);
+
+            long temp = l >> 24;
+            double x21 = x3 - (double) xBit + ((double) (int) (temp & 1023) / 1024.0D - 0.5D) * 0.9D;
+
+            l = SeedMixer.mixSeed(l, seed);
+
+            temp = l >> 24;
+            double y21 = y3 - (double) yBit + ((double) (int) (temp & 1023) / 1024.0D - 0.5D) * 0.9D;
+
+            l = SeedMixer.mixSeed(l, seed);
+
+            temp = l >> 24;
+            double z21 = z3 - (double) zBit + ((double) (int) (temp & 1023) / 1024.0D - 0.5D) * 0.9D;
+
+            double distance = z21 * z21 + y21 * y21 + x21 * x21;
 
             if (distance < minDistance) {
                 minIndex = i;
@@ -57,27 +69,4 @@ public abstract class MixinPatchVoronoiBiomeAccessType {
         return storage.getBiomeForNoiseGen(x4, y4, z4);
     }
 
-    private static double calcSquaredDistance0(long seed, int x, int y, int z, double xFraction, double yFraction, double zFraction) {
-        long l = SeedMixer.mixSeed(seed, x);
-        l = SeedMixer.mixSeed(l, y);
-        l = SeedMixer.mixSeed(l, z);
-        l = SeedMixer.mixSeed(l, x);
-        l = SeedMixer.mixSeed(l, y);
-        l = SeedMixer.mixSeed(l, z);
-
-        long temp = l >> 24;
-        double x2 = xFraction + ((double) (int) (temp & 1023) / 1024.0D - 0.5D) * 0.9D;
-
-        l = SeedMixer.mixSeed(l, seed);
-
-        temp = l >> 24;
-        double y2 = yFraction + ((double) (int) (temp & 1023) / 1024.0D - 0.5D) * 0.9D;
-
-        l = SeedMixer.mixSeed(l, seed);
-
-        temp = l >> 24;
-        double z2 = zFraction + ((double) (int) (temp & 1023) / 1024.0D - 0.5D) * 0.9D;
-
-        return z2 * z2 + y2 * y2 + x2 * x2;
-    }
 }

@@ -55,3 +55,6 @@ accessible field net/minecraft/util/math/Matrix4f a30 F
 accessible field net/minecraft/util/math/Matrix4f a31 F
 accessible field net/minecraft/util/math/Matrix4f a32 F
 accessible field net/minecraft/util/math/Matrix4f a33 F
+
+accessible field net/minecraft/world/biome/Biome$Weather downfall F
+accessible field net/minecraft/world/biome/Biome$Weather temperature F
