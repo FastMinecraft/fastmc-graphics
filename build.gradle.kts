@@ -6,9 +6,7 @@ plugins {
 allprojects {
     group = "me.luna"
     version = "0.0.1"
-}
 
-subprojects {
     apply {
         plugin("java")
         plugin("kotlin")
@@ -51,7 +49,9 @@ subprojects {
 
         implementation(library)
     }
+}
 
+subprojects {
     tasks {
         jar {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
