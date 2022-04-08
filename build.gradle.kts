@@ -6,7 +6,9 @@ plugins {
 allprojects {
     group = "me.luna"
     version = "0.0.1"
+}
 
+subprojects {
     apply {
         plugin("java")
         plugin("kotlin")
@@ -42,7 +44,7 @@ allprojects {
         }
 
         compileOnly("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
-        compileOnly("org.jetbrains:annotations:22.0.0")
+        compileOnly("org.jetbrains:annotations:23.0.0")
 
         compileOnly("it.unimi.dsi:fastutil:7.1.0")
         library("org.joml:joml:$jomlVersion")
@@ -75,10 +77,6 @@ allprojects {
             }
         }
     }
-}
-
-dependencies {
-    implementation(kotlin("stdlib"))
 }
 
 tasks {
