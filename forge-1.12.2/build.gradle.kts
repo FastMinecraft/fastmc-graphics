@@ -110,6 +110,14 @@ tasks {
         archiveClassifier.set("release")
     }
 
+    clean {
+        val set = mutableSetOf<Any>()
+        buildDir.listFiles()?.filterNotTo(set) {
+            it.name == "fg_cache"
+        }
+        delete = set
+    }
+
     register<Task>("genRuns") {
         group = "ide"
         doLast {
