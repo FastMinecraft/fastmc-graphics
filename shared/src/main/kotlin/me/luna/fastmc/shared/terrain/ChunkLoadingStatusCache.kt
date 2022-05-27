@@ -40,5 +40,5 @@ abstract class ChunkLoadingStatusCache(
         }
     }
 
-    abstract fun isChunkLoaded0(chunkX: Int, chunkZ: Int): Boolean
+    protected abstract fun isChunkLoaded0(chunkX: Int, chunkZ: Int): Boolean
 }

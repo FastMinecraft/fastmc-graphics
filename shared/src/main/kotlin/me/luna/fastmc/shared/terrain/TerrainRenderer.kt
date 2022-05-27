@@ -443,10 +443,10 @@ abstract class TerrainRenderer(
     }
 
     private inline fun RenderChunk.checkAdjChunkLoaded(statusCache: ChunkLoadingStatusCache): Boolean {
-        return statusCache.isChunkLoaded0(chunkX, chunkZ + 1)
-            && statusCache.isChunkLoaded0(chunkX - 1, chunkZ)
-            && statusCache.isChunkLoaded0(chunkX, chunkZ - 1)
-            && statusCache.isChunkLoaded0(chunkX + 1, chunkZ)
+        return statusCache.isChunkLoaded(chunkX, chunkZ + 1)
+            && statusCache.isChunkLoaded(chunkX - 1, chunkZ)
+            && statusCache.isChunkLoaded(chunkX, chunkZ - 1)
+            && statusCache.isChunkLoaded(chunkX + 1, chunkZ)
     }
 
     private suspend fun updateRegionCulling(resort: Boolean, refresh: Boolean) {
