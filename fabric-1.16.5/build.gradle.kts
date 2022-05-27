@@ -63,6 +63,7 @@ tasks {
         group = "ide"
         doLast {
             File(rootDir, ".idea/runConfigurations/${project.name}_runClient.xml").writer().use {
+                val threads = Runtime.getRuntime().availableProcessors()
                 it.write(
                     """
                         <component name="ProjectRunConfigurationManager">
@@ -73,11 +74,7 @@ tasks {
                             <option name="MAIN_CLASS_NAME" value="net.fabricmc.devlaunchinjector.Main" />
                             <module name="${rootProject.name}.${project.name}.main" />
                             <option name="PROGRAM_PARAMETERS" value="--width 1280 --height 720" />
-                            <option name="VM_PARAMETERS" value="-Xms2G -Xmx2G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=1 -XX:G1MaxNewSizePercent=25 -XX:G1HeapRegionSize=1M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=30 -XX:G1MixedGCCountTarget=8 -XX:InitiatingHeapOccupancyPercent=30 -XX:G1MixedGCLiveThresholdPercent=80 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:MaxTenuringThreshold=1 -XX:MinHeapFreeRatio=1 -XX:MaxHeapFreeRatio=25 -XX:ParallelGCThreads=${
-                        Runtime.getRuntime().availableProcessors()
-                    } -XX:ConcGCThreads=${
-                        Runtime.getRuntime().availableProcessors() / 4
-                    } -XX:FlightRecorderOptions=stackdepth=2048 -Dfabric.dli.config=${'$'}PROJECT_DIR$/${project.name}/.gradle/loom-cache/launch.cfg -Dfabric.dli.env=client -Dfabric.dli.main=net.fabricmc.loader.launch.knot.KnotClient" />
+                            <option name="VM_PARAMETERS" value="-Xms2G -Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+AlwaysPreTouch -XX:+DisableExplicitGC -XX:+ParallelRefProcEnabled -XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=5 -XX:G1NewSizePercent=2 -XX:G1MaxNewSizePercent=10 -XX:G1HeapRegionSize=1M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=8 -XX:InitiatingHeapOccupancyPercent=60 -XX:G1MixedGCLiveThresholdPercent=75 -XX:G1RSetUpdatingPauseTimePercent=10 -XX:G1OldCSetRegionThresholdPercent=5 -XX:SurvivorRatio=5 -XX:ParallelGCThreads=${threads} -XX:ConcGCThreads=${threads / 4} -XX:FlightRecorderOptions=stackdepth=512 -Dfabric.dli.config=${'$'}PROJECT_DIR$/${project.name}/.gradle/loom-cache/launch.cfg -Dfabric.dli.env=client -Dfabric.dli.main=net.fabricmc.loader.launch.knot.KnotClient" />
                             <option name="WORKING_DIRECTORY" value="${'$'}PROJECT_DIR$/${project.name}/run/" />
                             <method v="2">
                               <option name="Make" enabled="true" />

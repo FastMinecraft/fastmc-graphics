@@ -114,6 +114,7 @@ tasks {
         group = "ide"
         doLast {
             File(rootDir, ".idea/runConfigurations/${project.name}_runClient.xml").writer().use {
+                val threads = Runtime.getRuntime().availableProcessors()
                 it.write(
                     """
                         <component name="ProjectRunConfigurationManager">
@@ -139,12 +140,8 @@ tasks {
                             </envs>
                             <option name="MAIN_CLASS_NAME" value="net.minecraftforge.legacydev.MainClient" />
                             <module name="${rootProject.name}.${project.name}.main" />
-                            <option name="PROGRAM_PARAMETERS" value="--width 1280 --height 720" />
-                            <option name="VM_PARAMETERS" value="-Xms2G -Xmx2G -XX:+UseG1GC -XX:+ParallelRefProcEnabled -XX:+UnlockExperimentalVMOptions -XX:+AlwaysPreTouch -XX:+UseLargePages -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=50 -XX:G1NewSizePercent=1 -XX:G1MaxNewSizePercent=25 -XX:G1HeapRegionSize=1M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=30 -XX:G1MixedGCCountTarget=8 -XX:InitiatingHeapOccupancyPercent=30 -XX:G1MixedGCLiveThresholdPercent=80 -XX:G1RSetUpdatingPauseTimePercent=5 -XX:SurvivorRatio=32 -XX:MaxTenuringThreshold=1 -XX:MinHeapFreeRatio=1 -XX:MaxHeapFreeRatio=25 -XX:ParallelGCThreads=${
-                        Runtime.getRuntime().availableProcessors()
-                    } -XX:ConcGCThreads=${
-                        Runtime.getRuntime().availableProcessors() / 4
-                    } -XX:FlightRecorderOptions=stackdepth=2048 -Dforge.logging.console.level=info -Dforge.logging.markers=SCAN,REGISTRIES,REGISTRYDUMP -Dmixin.env.disableRefMap=true -Dfml.coreMods.load=me.luna.fastmc.FastMcDevFixCoremod" />
+                            <option name="PROGRAM_PARAMETERS" value="--width 1280 --height 720 --username TEST" />
+                            <option name="VM_PARAMETERS" value="-Xms2G -Xmx2G -XX:+UnlockExperimentalVMOptions -XX:+AlwaysPreTouch -XX:+DisableExplicitGC -XX:+ParallelRefProcEnabled -XX:+UseG1GC -XX:+UseStringDeduplication -XX:MaxGCPauseMillis=5 -XX:G1NewSizePercent=2 -XX:G1MaxNewSizePercent=10 -XX:G1HeapRegionSize=1M -XX:G1ReservePercent=20 -XX:G1HeapWastePercent=5 -XX:G1MixedGCCountTarget=8 -XX:InitiatingHeapOccupancyPercent=60 -XX:G1MixedGCLiveThresholdPercent=75 -XX:G1RSetUpdatingPauseTimePercent=10 -XX:G1OldCSetRegionThresholdPercent=5 -XX:SurvivorRatio=5 -XX:ParallelGCThreads=${threads} -XX:ConcGCThreads=${threads / 4} -XX:FlightRecorderOptions=stackdepth=512 -Dforge.logging.console.level=info -Dmixin.env.disableRefMap=true -Dfml.coreMods.load=me.luna.fastmc.FastMcDevFixCoremod" />
                             <option name="WORKING_DIRECTORY" value="${'$'}PROJECT_DIR$/${project.name}/run" />
                             <method v="2">
                               <option name="Gradle.BeforeRunTask" enabled="true" tasks="${project.name}:prepareRunClient" externalProjectPath="${'$'}PROJECT_DIR$" />
