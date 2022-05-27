@@ -1,98 +1,652 @@
 package me.luna.fastmc.shared.terrain
 
+import it.unimi.dsi.fastutil.objects.ObjectArrays
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.opengl.*
-import org.joml.Matrix4f
+import me.luna.fastmc.shared.FpsDisplay
+import me.luna.fastmc.shared.opengl.GLDataType
+import me.luna.fastmc.shared.opengl.GL_QUADS
+import me.luna.fastmc.shared.opengl.buildAttribute
+import me.luna.fastmc.shared.opengl.glMultiDrawArrays
+import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.renderer.*
+import me.luna.fastmc.shared.util.*
+import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import java.util.concurrent.Future
 
-object TerrainRenderer {
-    sealed class TerrainShader(type: String, alphaTest: Boolean) : DrawShader(
-        "Terrain$type",
-        "/assets/shaders/terrain/Terrain$type.vsh",
-        "/assets/shaders/terrain/Terrain${if (alphaTest) "AlphaTest" else ""}.fsh"
-    ) {
-        init {
-            glProgramUniform1i(id, glGetUniformLocation(id, "blockTexture"), 0)
-            glProgramUniform1i(id, glGetUniformLocation(id, "lightMapTexture"), FastMcMod.glWrapper.lightMapUnit)
+@Suppress("NOTHING_TO_INLINE")
+abstract class TerrainRenderer(
+    renderer: WorldRenderer,
+    val layerCount: Int,
+    val chunkSectionYSize: Int
+) : IRenderer by renderer {
+    val renderRegionChunkCount = 16 * chunkSectionYSize * 16
+
+    private var chunkStorageNullable: RenderChunkStorage? = null
+    val chunkStorage get() = chunkStorageNullable!!
+
+    fun updateChunkStorage(viewDistance: Int) {
+        chunkStorageNullable?.destroy()
+        chunkStorageNullable = RenderChunkStorage(this, viewDistance)
+    }
+
+    val fogManager = TerrainFogManager(renderer)
+
+    abstract val chunkBuilder: ChunkBuilder
+    abstract val contextProvider: ContextProvider
+
+    val renderTileEntityList = DoubleBufferedCollection<FastObjectArrayList<ITileEntityInfo<*>>>(
+        FastObjectArrayList(),
+        FastObjectArrayList(),
+        DoubleBufferedCollection.emptyInitAction()
+    )
+    val globalTileEntityList = DoubleBufferedCollection<FastObjectArrayList<ITileEntityInfo<*>>>(
+        FastObjectArrayList(),
+        FastObjectArrayList(),
+        DoubleBufferedCollection.emptyInitAction()
+    )
+
+    private var lastSortScheduleTask: Future<*>? = null
+    private var lastRebuildScheduleTask: Future<*>? = null
+
+    private var chunkCullingResults = emptyArray<Array<FastObjectArrayList<RenderChunk>>>()
+    private var tileEntityResults = emptyArray<TileEntityResult>()
+
+    protected var lastViewDistance = Int.MIN_VALUE
+
+    private var lastCameraX0 = Int.MAX_VALUE
+    private var lastCameraY0 = Int.MAX_VALUE
+    private var lastCameraZ0 = Int.MAX_VALUE
+    private var lastCameraYaw0 = Int.MAX_VALUE
+    private var lastCameraPitch0 = Int.MAX_VALUE
+
+    private var lastSortX = Double.MAX_VALUE
+    private var lastSortY = Double.MAX_VALUE
+    private var lastSortZ = Double.MAX_VALUE
+    private var lastSortChunkX = Int.MAX_VALUE
+    private var lastSortChunkY = Int.MAX_VALUE
+    private var lastSortChunkZ = Int.MAX_VALUE
+
+    private val forceUpdateTimer = TickTimer()
+    private var lastMatrixHash = 0L
+
+    private var lastDebugUpdateTask: Future<*>? = null
+    var debugInfoString = ""; private set
+
+    abstract val viewDistance: Int
+    abstract val isDebugEnabled: Boolean
+    abstract val caveCulling: Boolean
+
+    abstract fun newChunkLoadingStatusCache(): ChunkLoadingStatusCache
+    abstract fun update()
+
+    protected fun update0() {
+        if (isDebugEnabled) {
+            updateDebugInfo()
         }
 
-        private val offsetUniform = glGetUniformLocation(id, "offset")
-        private val forColorUniform = glGetUniformLocation(id, "fogColor")
+        val chunkStorage = chunkStorage
+        val chunkBuilder = chunkBuilder
 
-        fun setOffset(x: Float, y: Float, z: Float) {
-            glProgramUniform3f(id, offsetUniform, x, y, z)
-        }
+        runBlocking {
+            withContext(FastMcCoreScope.context) {
+                FastMcMod.profiler.swap("checkUpdate")
+                val cameraPosX0 = cameraBlockX shr 1
+                val cameraPosY0 = cameraBlockY shr 1
+                val cameraPosZ0 = cameraBlockZ shr 1
+                val cameraYaw0 = cameraYaw.floorToInt()
+                val cameraPitch0 = cameraPitch.fastFloor()
 
-        fun setFogColor(red: Float, green: Float, blue: Float) {
-            glProgramUniform3f(id, forColorUniform, red, green, blue)
-        }
-    }
+                val caveCullingUpdate = chunkStorage.checkCaveCullingUpdate()
+                val indicesUpdate = chunkStorage.checkChunkIndicesUpdate()
+                val viewUpdate =
+                    cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0
+                        || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
+                val frustumUpdate = lastMatrixHash != matrixHash
+                val forceUpdate = forceUpdateTimer.tickAndReset(1000L) || !chunkStorage.cameraChunk.isBuilt
 
-    private class LinearShader(alphaTest: Boolean) : TerrainShader("Linear", alphaTest) {
-        val rangeUniform = glGetUniformLocation(id, "range")
-    }
+                val updateChunk = caveCullingUpdate || viewUpdate || frustumUpdate || forceUpdate
+                var updateRegion = indicesUpdate || viewUpdate || frustumUpdate || forceUpdate
 
-    private class ExpShader(alphaTest: Boolean) : TerrainShader("Exp", alphaTest) {
-        val densityUniform = glGetUniformLocation(id, "density")
-    }
+                FastMcMod.profiler.swap("uploadChunk")
+                val uploadChunkJob = launch(this@runBlocking.coroutineContext) {
+                    chunkBuilder.update()
 
-    private class Exp2Shader(alphaTest: Boolean) : TerrainShader("Exp2", alphaTest) {
-        val densityUniform = glGetUniformLocation(id, "density")
-    }
+                    FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
 
-    private sealed class ShaderGroup<T : TerrainShader>(val normal: T, val alphaTest: T) {
-        var active = normal
+                    if (chunkBuilder.visibleUploadCount != 0) {
+                        chunkStorage.markCaveCullingDirty()
+                        updateRegion = true
+                    }
+                }
 
-        fun alphaTest(state: Boolean) {
-            active = if (state) {
-                alphaTest
-            } else {
-                normal
+                FastMcMod.profiler.swap("camera")
+                chunkStorage.update(forceUpdate)
+
+                FastMcMod.profiler.swap("chunkCulling")
+                val chunkCullingJob = if (updateChunk) {
+                    launch {
+                        updateChunkCulling()
+                    }
+                } else {
+                    null
+                }
+
+                FastMcMod.profiler.swap("regionCulling")
+                val regionCullingJob = launch {
+                    uploadChunkJob.join()
+                    chunkCullingJob?.join()
+                    if (updateRegion) {
+                        updateRegionCulling(indicesUpdate && !updateChunk, indicesUpdate || viewUpdate || forceUpdate)
+                    }
+                }
+
+                FastMcMod.profiler.swap("translucentSort")
+                sortTranslucent()
+
+                FastMcMod.profiler.swap("uploadChunk")
+                uploadChunkJob.join()
+                FastMcMod.profiler.swap("chunkCulling")
+                chunkCullingJob?.join()
+                FastMcMod.profiler.swap("regionCulling")
+                regionCullingJob.join()
+
+                FastMcMod.profiler.swap("scheduleRebuild")
+                scheduleRebuild()
+
+                FastMcMod.profiler.swap("post")
+                if (updateRegion || updateChunk) {
+                    lastMatrixHash = matrixHash
+                    lastCameraX0 = cameraPosX0
+                    lastCameraY0 = cameraPosY0
+                    lastCameraZ0 = cameraPosZ0
+                    lastCameraYaw0 = cameraYaw0
+                    lastCameraPitch0 = cameraPitch0
+                }
             }
         }
     }
 
-    private object Linear : ShaderGroup<LinearShader>(LinearShader(false), LinearShader(true))
-    private object Exp : ShaderGroup<ExpShader>(ExpShader(false), ExpShader(true))
-    private object Exp2 : ShaderGroup<Exp2Shader>(Exp2Shader(false), Exp2Shader(true))
+    fun clear() {
+        lastSortScheduleTask?.cancel(true)
+        lastRebuildScheduleTask?.cancel(true)
+        lastSortScheduleTask = null
+        lastRebuildScheduleTask = null
 
-    private var shaderGroup: ShaderGroup<out TerrainShader> = Linear
-    val shader: TerrainShader get() = shaderGroup.active
+        renderTileEntityList.get().clearAndTrim()
+        renderTileEntityList.getSwap().clearAndTrim()
 
-    fun updateMatrix(projection: Matrix4f, modelView: Matrix4f) {
-        shaderGroup.update {
-            updateProjectionMatrix(projection)
-            updateModelViewMatrix(modelView)
+        globalTileEntityList.get().clearAndTrim()
+        globalTileEntityList.getSwap().clearAndTrim()
+
+        chunkCullingResults = emptyArray()
+        tileEntityResults = emptyArray()
+
+        lastCameraX0 = Int.MAX_VALUE
+        lastCameraY0 = Int.MAX_VALUE
+        lastCameraZ0 = Int.MAX_VALUE
+        lastCameraYaw0 = Int.MAX_VALUE
+        lastCameraPitch0 = Int.MAX_VALUE
+
+        lastSortX = Double.MAX_VALUE
+        lastSortY = Double.MAX_VALUE
+        lastSortZ = Double.MAX_VALUE
+        lastSortChunkX = Int.MAX_VALUE
+        lastSortChunkY = Int.MAX_VALUE
+        lastSortChunkZ = Int.MAX_VALUE
+
+        forceUpdateTimer.reset(-999L)
+        lastMatrixHash = 0
+
+        debugInfoString = ""
+
+        chunkBuilder.clear()
+    }
+
+    fun reload() {
+        chunkCullingResults = Array(chunkStorage.totalRegion) {
+            Array(ParallelUtils.CPU_THREADS * 2) {
+                FastObjectArrayList.wrap(arrayOfNulls(renderRegionChunkCount), 0)
+            }
+        }
+        tileEntityResults = Array(ParallelUtils.CPU_THREADS * 2) {
+            TileEntityResult()
+        }
+        lastViewDistance = viewDistance
+    }
+
+    private fun scheduleRebuild() {
+        if (lastRebuildScheduleTask.isDoneOrNull) {
+            lastRebuildScheduleTask = FastMcExtendScope.pool.submit(scheduleRebuildRunnable)
         }
     }
 
-    fun alphaTest(state: Boolean) {
-        shaderGroup.alphaTest(state)
-    }
+    private val scheduleRebuildRunnable = Runnable {
+        chunkBuilder.scheduleTasks {
+            val chunkIndices = chunkStorage.sortedChunkIndices
+            val chunkArray = chunkStorage.renderChunkArray
 
-    fun linear(start: Float, end: Float, red: Float, green: Float, blue: Float) {
-        shaderGroup = Linear.update {
-            glProgramUniform2f(id, rangeUniform, end, end - start)
-            setFogColor(red, green, blue)
+            for (i in chunkIndices.size - 1 downTo 0) {
+                val renderChunk = chunkArray[chunkIndices[i]]
+                if (renderChunk.isVisible && renderChunk.isDirty) {
+                    scheduleRebuild(renderChunk)
+                }
+            }
         }
     }
 
-    fun exp(density: Float, red: Float, green: Float, blue: Float) {
-        shaderGroup = Exp.update {
-            glProgramUniform1f(id, densityUniform, density)
-            setFogColor(red, green, blue)
+    private fun sortTranslucent() {
+        if (!lastSortScheduleTask.isDoneOrNull) return
+
+        val roundedChunkX = (cameraBlockX + 8) shr 4
+        val roundedChunkY = (cameraBlockY + 8) shr 4
+        val roundedChunkZ = (cameraBlockZ + 8) shr 4
+        var count = 0
+
+        if (lastSortChunkX != roundedChunkX || lastSortChunkY != roundedChunkY || lastSortChunkZ != roundedChunkZ) {
+            count = 64
+        } else if (distanceSq(
+                cameraX, cameraY, cameraZ,
+                lastSortX, lastSortY, lastSortZ
+            ) > 1.0
+        ) {
+            count = 16
+        }
+
+        if (count != 0) {
+            lastSortChunkX = roundedChunkX
+            lastSortChunkY = roundedChunkY
+            lastSortChunkZ = roundedChunkZ
+
+            lastSortX = cameraX
+            lastSortY = cameraY
+            lastSortZ = cameraZ
+
+            val chunkStorage = chunkStorage
+            val chunkBuilder = chunkBuilder
+            val chunkArray = chunkStorage.renderChunkArray
+            val chunkIndices = chunkStorage.sortedChunkIndices
+
+            lastSortScheduleTask = FastMcExtendScope.pool.submit {
+                chunkBuilder.scheduleTasks {
+                    for (i in chunkIndices.size - 1 downTo 0) {
+                        if (count == 0) break
+                        val chunkIndex = chunkIndices[i]
+                        val renderChunk = chunkArray[chunkIndex]
+                        if (!renderChunk.isVisible) continue
+                        if (distanceSq(
+                                renderChunk.chunkX, renderChunk.chunkZ,
+                                cameraChunkX, cameraChunkZ
+                            ) > 64
+                        ) break
+                        if (scheduleSort(renderChunk)) {
+                            --count
+                        }
+                    }
+                }
+            }
         }
     }
 
-    fun exp2(density: Float, red: Float, green: Float, blue: Float) {
-        shaderGroup = Exp2.update {
-            glProgramUniform1f(id, densityUniform, density)
-            setFogColor(red, green, blue)
+    private suspend fun updateChunkCulling() {
+        val chunkStorage = chunkStorage
+
+        val renderTileEntityList0 = renderTileEntityList.getSwap()
+        renderTileEntityList0.clear()
+
+        val globalTileEntityList0 = globalTileEntityList.getSwap()
+        globalTileEntityList0.clear()
+
+        val chunkArray = chunkStorage.renderChunkArray
+        val cameraChunk = chunkStorage.cameraChunk
+
+        val results = chunkCullingResults
+        if (results.isEmpty()) return
+
+        val tileEntityResults = tileEntityResults
+        if (tileEntityResults.isEmpty()) return
+
+        val chunkIndices = chunkStorage.sortedChunkIndices
+        var idCounter = ParallelUtils.CPU_THREADS * 2
+
+        val statusCache = newChunkLoadingStatusCache()
+        val caveCulling = caveCulling
+
+        coroutineScope {
+            if (caveCulling) {
+                val caveCullingBitSet = chunkStorage.caveCullingBitSet
+                ParallelUtils.splitListIndex(
+                    total = chunkIndices.size,
+                    parallelism = ParallelUtils.CPU_THREADS * 2,
+                    blockForEach = { start, end ->
+                        val jobID = --idCounter
+                        launch {
+                            val tileEntityResult = tileEntityResults[jobID]
+
+                            for (i in end - 1 downTo start) {
+                                val chunkIndex = chunkIndices[chunkIndices.size - 1 - i]
+                                val renderChunk = chunkArray[chunkIndex]
+
+                                if (renderChunk !== cameraChunk) {
+                                    renderChunk.isVisible = false
+
+                                    if (!renderChunk.renderRegion.frustumCull.isInFrustum()) continue
+                                    if (!renderChunk.checkFogRange()) continue
+                                    if (!renderChunk.checkAnyAdjBuilt()) continue
+                                    if (!caveCullingBitSet.containsFast(chunkIndex)) continue
+                                    if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
+                                    if (!renderChunk.frustumCull.isInFrustum()) continue
+
+                                    renderChunk.isVisible = true
+                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    tileEntityResult.add(renderChunk)
+                                } else {
+                                    if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache))
+                                        continue
+                                    renderChunk.isVisible = true
+                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    tileEntityResult.add(renderChunk)
+                                }
+                            }
+                        }
+                    }
+                )
+            } else {
+                ParallelUtils.splitListIndex(
+                    total = chunkIndices.size,
+                    parallelism = ParallelUtils.CPU_THREADS * 2,
+                    blockForEach = { start, end ->
+                        val jobID = --idCounter
+                        launch {
+                            val tileEntityResult = tileEntityResults[jobID]
+
+                            for (i in end - 1 downTo start) {
+                                val chunkIndex = chunkIndices[chunkIndices.size - 1 - i]
+                                val renderChunk = chunkArray[chunkIndex]
+
+                                if (renderChunk !== cameraChunk) {
+                                    renderChunk.isVisible = false
+
+                                    if (!renderChunk.renderRegion.frustumCull.isInFrustum()) continue
+                                    if (!renderChunk.checkFogRange()) continue
+                                    if (!renderChunk.checkAnyAdjBuilt()) continue
+                                    if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
+                                    if (!renderChunk.frustumCull.isInFrustum()) continue
+
+                                    renderChunk.isVisible = true
+                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    tileEntityResult.add(renderChunk)
+                                } else {
+                                    if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache))
+                                        continue
+                                    renderChunk.isVisible = true
+                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    tileEntityResult.add(renderChunk)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
+        coroutineScope {
+            launch {
+                @Suppress("UNCHECKED_CAST")
+                val tileEntityRenderer =
+                    FastMcMod.worldRenderer.tileEntityRenderer as AbstractTileEntityRenderer<ITileEntityInfo<*>>
+                tileEntityRenderer.clear()
+                for (result in tileEntityResults) {
+                    renderTileEntityList0.addAll(result.tileEntityList)
+                    globalTileEntityList0.addAll(result.globalTileEntityList)
+                    tileEntityRenderer.add(result.instancingTileEntityList)
+                    result.clear()
+                }
+            }
+
+            launch {
+                for (region in chunkStorage.regionArray) {
+                    val array = results[region.index]
+                    val list = region.visibleRenderChunkList
+                    list.clearFast()
+
+                    val listArray = list.elements()
+                    var size = 0
+                    for (sublist in array) {
+                        System.arraycopy(sublist.elements(), 0, listArray, size, sublist.size)
+                        size += sublist.size
+                        sublist.clearFast()
+                    }
+                    list.setSize(size)
+                }
+            }
+        }
+
+        renderTileEntityList.getAndSwap()
+    }
+
+    private inline fun RenderChunk.checkAnyAdjBuilt(): Boolean {
+        return checkAdjacentBuilt(Direction.I_DOWN)
+            || checkAdjacentBuilt(Direction.I_UP)
+            || checkAdjacentBuilt(Direction.I_NORTH)
+            || checkAdjacentBuilt(Direction.I_SOUTH)
+            || checkAdjacentBuilt(Direction.I_WEST)
+            || checkAdjacentBuilt(Direction.I_EAST)
+    }
+
+    private inline fun RenderChunk.checkAdjacentBuilt(index: Int): Boolean {
+        val adjacentChunk = adjacentRenderChunk[index]
+        return adjacentChunk != null && adjacentChunk.isBuilt
+    }
+
+    private inline fun RenderChunk.checkAdjChunkLoaded(statusCache: ChunkLoadingStatusCache): Boolean {
+        return statusCache.isChunkLoaded0(chunkX, chunkZ + 1)
+            && statusCache.isChunkLoaded0(chunkX - 1, chunkZ)
+            && statusCache.isChunkLoaded0(chunkX, chunkZ - 1)
+            && statusCache.isChunkLoaded0(chunkX + 1, chunkZ)
+    }
+
+    private suspend fun updateRegionCulling(resort: Boolean, refresh: Boolean) {
+        coroutineScope {
+            val layerCount = layerCount
+            val chunkStorage = chunkStorage
+            val regionArray = chunkStorage.regionArray
+            val chunkOrder = chunkStorage.chunkOrder
+            val comparator = Comparator<RenderChunk> { o1, o2 ->
+                chunkOrder[o1.index].compareTo(chunkOrder[o2.index])
+            }
+
+            for (regionIndex in regionArray.indices) {
+                val region = regionArray[regionIndex]
+                if (region.frustumCull.isInFrustum()) {
+                    launch {
+                        val list = region.visibleRenderChunkList
+                        val array = list.elements()
+                        val size = list.size
+
+                        if (resort) {
+                            System.arraycopy(array, 0, region.sortSuppArray, 0, size)
+                            ObjectArrays.mergeSort(array, 0, size, comparator, region.sortSuppArray)
+                        }
+
+                        if (refresh) {
+                            for (i in 0 until size) {
+                                array[i].resetUpdate()
+                            }
+                        } else {
+                            var updated = false
+                            var i = 0
+                            while (!updated && i < size) {
+                                updated = array[i++].checkUpdate()
+                            }
+                            while (i < size) {
+                                array[i++].resetUpdate()
+                            }
+                            if (!updated) return@launch
+                        }
+
+                        for (layerIndex in 0 until layerCount) {
+                            val regionLayer = region.getLayer(layerIndex)
+                            val firstBuffer = regionLayer.firstBuffer
+                            val countBuffer = regionLayer.countBuffer
+
+                            firstBuffer.clear()
+                            countBuffer.clear()
+
+                            for (i in 0 until size) {
+                                val renderChunk = array[i]
+                                val layer = renderChunk.layers[layerIndex] ?: continue
+                                firstBuffer.put(layer.vertexOffset)
+                                countBuffer.put(layer.vertexCount)
+                            }
+
+                            firstBuffer.flip()
+                            countBuffer.flip()
+                        }
+                    }
+                }
+            }
         }
     }
 
-    private inline fun <T : TerrainShader> ShaderGroup<T>.update(block: T.() -> Unit): ShaderGroup<T> {
-        block.invoke(this.normal)
-        block.invoke(this.alphaTest)
-        return this
+    private fun updateDebugInfo() {
+        if (lastDebugUpdateTask.isDoneOrNull) {
+            lastDebugUpdateTask = FastMcExtendScope.pool.submit {
+                val chunkBuilder = chunkBuilder
+                val uploadBufferPool = contextProvider.bufferPool
+                val chunkStorage = chunkStorage
+                val chunkArray = chunkStorage.renderChunkArray
+                val regionArray = chunkStorage.regionArray
+
+                var visibleRegionCount = 0
+                var regionCount = 0
+
+                var totalChunkVertexSize = 0L
+                var bufferCapacity = 0L
+
+                var visibleChunkCount = 0
+                var totalChunkCount = 0
+                var visibleChunkVertexSize = 0L
+
+                for (i in regionArray.indices) {
+                    val region = regionArray[i]
+                    val allocated = region.bufferPool.allocated
+                    totalChunkVertexSize += allocated
+                    if (allocated != 0) {
+                        if (region.frustumCull.isInFrustum()) {
+                            visibleRegionCount++
+                        }
+                        regionCount++
+                    }
+                    bufferCapacity += region.bufferPool.capacity
+                }
+
+                for (i in chunkArray.indices) {
+                    val renderChunk = chunkArray[i]
+                    val layers = renderChunk.layers
+                    if (renderChunk.isVisible) {
+                        for (i2 in layers.indices) {
+                            val layer = layers[i2]
+                            if (layer != null) {
+                                visibleChunkVertexSize += layer.region.length
+                            }
+                        }
+                    }
+                    if (!renderChunk.isEmpty) {
+                        if (renderChunk.isVisible) visibleChunkCount++
+                        totalChunkCount++
+                    }
+                }
+
+                debugInfoString = String.format(
+                    "D: %d, Region: %d/%d/%d, Chunk: %d/%d/%d(%.1f/%.1f/%.1f MB), Total: %02d, Upload: %02d, Buffer: %03d/%03d(%.1f/%.1f MB)",
+                    lastViewDistance,
+                    visibleRegionCount,
+                    regionCount,
+                    regionArray.size,
+                    visibleChunkCount,
+                    totalChunkCount,
+                    chunkArray.size,
+                    visibleChunkVertexSize.toDouble() / 1048576.0,
+                    totalChunkVertexSize.toDouble() / 1048576.0,
+                    bufferCapacity.toDouble() / 1048576.0,
+                    chunkBuilder.totalTaskCount,
+                    chunkBuilder.uploadTaskCount,
+                    uploadBufferPool.allocatedRegion,
+                    uploadBufferPool.maxRegions,
+                    uploadBufferPool.allocatedSize.toDouble() / 1048576.0,
+                    uploadBufferPool.capacity.toDouble() / 1048576.0
+                )
+            }
+        }
+    }
+
+    private class TileEntityResult {
+        val tileEntityList = FastObjectArrayList<ITileEntityInfo<*>>()
+        val instancingTileEntityList = FastObjectArrayList<ITileEntityInfo<*>>()
+        val globalTileEntityList = FastObjectArrayList<ITileEntityInfo<*>>()
+
+        @Suppress("UNCHECKED_CAST")
+        fun add(renderChunk: RenderChunk) {
+            if (renderChunk.isVisible) {
+                renderChunk.tileEntityList?.let {
+                    tileEntityList.addAll(it)
+                }
+                renderChunk.instancingTileEntityList?.let {
+                    instancingTileEntityList.addAll(it)
+                }
+            }
+            renderChunk.globalTileEntityList?.let {
+                globalTileEntityList.addAll(it)
+            }
+        }
+
+        fun clear() {
+            tileEntityList.clear()
+            instancingTileEntityList.clear()
+            globalTileEntityList.clear()
+        }
+    }
+
+    fun renderLayer(layerIndex: Int) {
+        val regionArray = chunkStorage.regionArray
+        val shader = fogManager.shader
+
+        for (i in chunkStorage.regionIndices) {
+            val region = regionArray[i]
+            if (!region.frustumCull.isInFrustum()) continue
+            val layer = region.getLayer(layerIndex)
+            if (layer.firstBuffer.remaining() == 0) continue
+
+            shader.setOffset(
+                (region.originX - renderPosX).toFloat(),
+                (region.originY - renderPosY).toFloat(),
+                (region.originZ - renderPosZ).toFloat()
+            )
+
+            region.vao.bind()
+            glMultiDrawArrays(GL_QUADS, layer.firstBuffer, layer.countBuffer)
+        }
+    }
+
+    fun destroy() {
+        chunkBuilder.clear()
+        chunkStorageNullable?.destroy()
+        chunkStorageNullable = null
+        fogManager.destroy()
+    }
+
+    companion object {
+        @JvmField
+        val VERTEX_ATTRIBUTE = buildAttribute(16) {
+            float(0, 3, GLDataType.GL_UNSIGNED_SHORT, false) // Pos
+            float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true) // Block texture uv
+            float(2, 2, GLDataType.GL_UNSIGNED_BYTE, false) // Light map uv
+            float(3, 3, GLDataType.GL_UNSIGNED_BYTE, true) // Color multiplier
+            padding(1)
+        }
     }
 }

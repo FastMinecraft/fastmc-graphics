@@ -5,9 +5,7 @@
   "package": "me.luna.fastmc.mixin.accessor",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
-    "AccessorMinecraft",
-    "AccessorRenderChunk",
-    "AccessorRenderGlobal",
-    "AccessorRenderGlobalContainerLocalRenderInformation"
+    "AccessorBiomeColorHelper",
+    "AccessorMinecraft"
   ]
 }

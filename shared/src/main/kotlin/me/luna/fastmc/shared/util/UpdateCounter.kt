@@ -6,10 +6,13 @@ class UpdateCounter {
     private var lastUpdateCount = Int.MIN_VALUE
 
     fun check(): Boolean {
-        val current = updateCount
         val last = lastUpdateCount
-        lastUpdateCount = current
-        return last != current
+        lastUpdateCount = updateCount
+        return last != updateCount
+    }
+
+    fun reset() {
+        lastUpdateCount = updateCount
     }
 
     fun update() {

@@ -69,8 +69,8 @@ subprojects {
             kotlinOptions {
                 jvmTarget = "1.8"
                 freeCompilerArgs = listOf(
-                    "-Xopt-in=kotlin.RequiresOptIn",
-                    "-Xopt-in=kotlin.contracts.ExperimentalContracts",
+                    "-opt-in=kotlin.RequiresOptIn",
+                    "-opt-in=kotlin.contracts.ExperimentalContracts",
                     "-Xlambdas=indy",
                     "-Xjvm-default=all"
                 )

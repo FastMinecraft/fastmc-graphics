@@ -1,22 +1,21 @@
 package me.luna.fastmc.shared.opengl
 
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
 class VertexArrayObject : IGLObject {
     override val id: Int = glCreateVertexArrays()
 
-    private val iboList = FastObjectArrayList<IndexBufferObject>()
-    private val vboSet = ObjectOpenHashSet<VertexBufferObject>()
+    private var ibo: IndexBufferObject? = null
+    private val vboList = FastObjectArrayList<VertexBufferObject>()
     private var vboBinding = 0
 
     fun attachIbo(ibo: IndexBufferObject) {
         glVertexArrayElementBuffer(id, ibo.id)
-        iboList.add(ibo)
+        this.ibo = ibo
     }
 
     fun attachVbo(vbo: VertexBufferObject) {
-        vboSet.add(vbo)
+        vboList.add(vbo)
         glVertexArrayVertexBuffer(id, vboBinding, vbo.id, 0, vbo.vertexAttribute.stride)
         vbo.vertexAttribute.apply(this, vboBinding++)
     }
@@ -31,14 +30,24 @@ class VertexArrayObject : IGLObject {
 
     override fun destroy() {
         glDeleteVertexArrays(id)
-        iboList.forEach {
+        ibo?.destroy()
+        ibo = null
+        vboList.forEach {
             it.destroy()
         }
-        vboSet.forEach {
-            it.destroy()
+        vboList.clear()
+    }
+
+    fun clear() {
+        if (ibo != null) {
+            glVertexArrayElementBuffer(id, 0)
+            ibo = null
         }
-        iboList.clear()
-        vboSet.clear()
+        for (i in vboList.indices) {
+            glVertexArrayVertexBuffer(id, i, 0, 0, 0)
+        }
+        vboList.clear()
+        vboBinding = 0
     }
 
     fun destroyVao() {

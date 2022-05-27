@@ -1,11 +1,15 @@
 package me.luna.fastmc
 
 import me.luna.fastmc.shared.opengl.IGLWrapper
+import me.luna.fastmc.shared.util.allocateInt
 import net.minecraft.client.renderer.GlStateManager
+import org.lwjgl.PointerWrapperAbstract
 import org.lwjgl.opengl.*
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
+import java.nio.IntBuffer
 
+@Suppress("NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
 class GLWrapper : IGLWrapper {
     override val lightMapUnit: Int
         get() = 1
@@ -17,6 +21,10 @@ class GLWrapper : IGLWrapper {
     override fun glDrawArrays(mode: Int, first: Int, count: Int) = GL11.glDrawArrays(mode, first, count)
     override fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
         GL11.glDrawElements(mode, indices_count, type, indices_buffer_offset)
+
+    // GL14
+    override fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
+        GL14.glMultiDrawArrays(mode, first, count)
 
 
     // GL15
@@ -49,7 +57,6 @@ class GLWrapper : IGLWrapper {
     override fun glBindVertexArray(array: Int) = GL30.glBindVertexArray(array)
     override fun glGenerateMipmap(target: Int) = GL30.glGenerateMipmap(target)
 
-
     // GL31
     override fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
         GL31.glDrawArraysInstanced(mode, first, count, primcount)
@@ -75,8 +82,48 @@ class GLWrapper : IGLWrapper {
         GL41.glProgramUniformMatrix4(program, location, transpose, matrices)
 
 
+    // GL32
+    private val glSyncInstance: GLSync
+    private val pointerField = PointerWrapperAbstract::class.java.getDeclaredField("pointer").apply {
+        isAccessible = true
+    }
+    private val lengthBuffer = allocateInt(1).apply {
+        put(1)
+        flip()
+    }
+    private val valueBuffer = allocateInt(1)
+
+    init {
+        val constructor = GLSync::class.java.declaredConstructors.first()
+        constructor.isAccessible = true
+        glSyncInstance = constructor.newInstance(0) as GLSync
+        constructor.isAccessible = false
+    }
+
+    override fun glFenceSync(condition: Int, flags: Int): Long = GL32.glFenceSync(condition, flags).pointer
+    override fun glDeleteSync(sync: Long) {
+        pointerField.set(glSyncInstance, sync)
+        GL32.glDeleteSync(glSyncInstance)
+    }
+
+    override fun glGetSynciv(sync: Long, pname: Int): Int {
+        pointerField.set(glSyncInstance, sync)
+        GL32.glGetSync(glSyncInstance, pname, lengthBuffer, valueBuffer)
+        return valueBuffer.get(0)
+    }
+
+
     // GL43
+    override fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long) =
+        GL43.glInvalidateBufferSubData(buffer, offset, length)
+
     override fun glInvalidateBufferData(buffer: Int) = GL43.glInvalidateBufferData(buffer)
+    override fun glMultiDrawArraysIndirect(
+        mode: Int,
+        indirect: Long,
+        primcount: Int,
+        stride: Int
+    ) = GL43.glMultiDrawArraysIndirect(mode, indirect, primcount, stride)
 
     // GL45
     override fun glCreateVertexArrays(): Int = GL45.glCreateVertexArrays()
@@ -152,4 +199,26 @@ class GLWrapper : IGLWrapper {
 
     override fun glTextureParameterf(texture: Int, pname: Int, param: Float) =
         GL45.glTextureParameterf(texture, pname, param)
+
+    override fun glMapNamedBuffer(
+        buffer: Int,
+        access: Int,
+        old_buffer: ByteBuffer?
+    ): ByteBuffer? = GL45.glMapNamedBuffer(buffer, access, old_buffer)
+
+    override fun glMapNamedBufferRange(buffer: Int, offset: Long, length: Long, access: Int): ByteBuffer? =
+        GL45.glMapNamedBufferRange(buffer, offset, length, access, null)
+
+    override fun glMapNamedBufferRange(
+        buffer: Int,
+        offset: Long,
+        length: Long,
+        access: Int,
+        old_buffer: ByteBuffer?
+    ): ByteBuffer? = GL45.glMapNamedBufferRange(buffer, offset, length, access, old_buffer)
+
+    override fun glUnmapNamedBuffer(buffer: Int): Boolean = GL45.glUnmapNamedBuffer(buffer)
+
+    override fun glFlushMappedNamedBufferRange(buffer: Int, offset: Long, length: Long) =
+        GL45.glFlushMappedNamedBufferRange(buffer, offset, length)
 }

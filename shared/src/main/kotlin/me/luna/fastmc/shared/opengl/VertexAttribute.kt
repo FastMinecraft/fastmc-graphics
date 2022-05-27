@@ -69,6 +69,11 @@ class VertexAttribute private constructor(val stride: Int, private val divisor: 
             glVertexArrayAttribBinding(vaoID, index, binding)
         }
     }
+
+    companion object {
+        @JvmField
+        val EMPTY = VertexAttribute(1, 0, emptyList())
+    }
 }
 
 

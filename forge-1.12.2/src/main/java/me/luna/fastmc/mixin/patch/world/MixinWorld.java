@@ -3,6 +3,7 @@ package me.luna.fastmc.mixin.patch.world;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import me.luna.fastmc.mixin.IPatchedChunk;
+import me.luna.fastmc.mixin.IPatchedIBlockAccess;
 import me.luna.fastmc.mixin.IPatchedWorld;
 import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import me.luna.fastmc.shared.util.ITypeID;
@@ -45,10 +46,19 @@ import java.util.Collection;
 import java.util.List;
 
 @Mixin(World.class)
-public abstract class MixinWorld implements IPatchedWorld {
-    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(new IntOpenHashSet(), new IntOpenHashSet());
-    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(new IntOpenHashSet(), new IntOpenHashSet());
-    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(new ArrayList<>(), new ArrayList<>());
+public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess {
+    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(
+        new IntOpenHashSet(),
+        new IntOpenHashSet()
+    );
+    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(
+        new IntOpenHashSet(),
+        new IntOpenHashSet()
+    );
+    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(
+        new ArrayList<>(),
+        new ArrayList<>()
+    );
     private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
     @Shadow
     @Final
@@ -113,7 +123,15 @@ public abstract class MixinWorld implements IPatchedWorld {
     int[] lightUpdateBlockList;
 
     @Shadow
-    protected abstract boolean isAreaLoaded(int xStart, int yStart, int zStart, int xEnd, int yEnd, int zEnd, boolean allowEmpty);
+    protected abstract boolean isAreaLoaded(
+        int xStart,
+        int yStart,
+        int zStart,
+        int xEnd,
+        int yEnd,
+        int zEnd,
+        boolean allowEmpty
+    );
 
     @Shadow
     public abstract void notifyLightSet(BlockPos pos);
@@ -148,9 +166,22 @@ public abstract class MixinWorld implements IPatchedWorld {
      */
     @Overwrite
     @Nullable
-    public RayTraceResult rayTraceBlocks(Vec3d vec31, Vec3d vec32, boolean stopOnLiquid, boolean ignoreBlockWithoutBoundingBox, boolean returnLastUncollidableBlock) {
+    public RayTraceResult rayTraceBlocks(
+        Vec3d vec31,
+        Vec3d vec32,
+        boolean stopOnLiquid,
+        boolean ignoreBlockWithoutBoundingBox,
+        boolean returnLastUncollidableBlock
+    ) {
         //noinspection ConstantConditions
-        return RaytraceKt.rayTrace((World) (Object) this, vec31, vec32, stopOnLiquid, ignoreBlockWithoutBoundingBox, returnLastUncollidableBlock);
+        return RaytraceKt.rayTrace(
+            (World) (Object) this,
+            vec31,
+            vec32,
+            stopOnLiquid,
+            ignoreBlockWithoutBoundingBox,
+            returnLastUncollidableBlock
+        );
     }
 
     /**

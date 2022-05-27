@@ -9,18 +9,16 @@ import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
-import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
 import me.luna.fastmc.shared.renderer.IRenderer
+import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ITypeID
-import me.luna.fastmc.shared.util.collection.FastIntMap
 import me.luna.fastmc.tileentity.ChestInfo
 import me.luna.fastmc.util.*
 import net.minecraft.block.enums.ChestType
 import net.minecraft.util.math.Direction
 import kotlin.coroutines.CoroutineContext
 
-class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
+class TileEntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer) :
     AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
 
     init {
@@ -34,38 +32,9 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
         parentScope.launch(FastMcCoreScope.context) {
             mc.world?.let {
-                val tempAdding: ArrayList<TileEntity>
-                val tempRemoving: ArrayList<TileEntity>
-
-                synchronized(lock) {
-                    tempAdding = adding
-                    if (tempAdding.isNotEmpty()) adding = ArrayList()
-
-                    tempRemoving = removing
-                    if (tempRemoving.isNotEmpty()) removing = ArrayList()
-                }
-
-                val removingGroups = FastIntMap<HashSet<TileEntity>>()
-                val addingGroups = FastIntMap<ArrayList<TileEntity>>()
-
-                tempRemoving.forEach {
-                    removingGroups.getOrPut((it as ITypeID).typeID) {
-                        HashSet()
-                    }.add(it)
-                }
-
-                tempAdding.forEach {
-                    addingGroups.getOrPut((it as ITypeID).typeID) {
-                        ArrayList()
-                    }.add(it)
-                }
-
                 coroutineScope {
-                    for ((id, entry) in renderEntryMap) {
+                    for (entry in renderEntryList) {
                         launch(FastMcCoreScope.context) {
-                            removingGroups[id]?.let { removing -> entry.removeAll(removing) }
-                            addingGroups[id]?.let { adding -> entry.addAll(adding) }
-
                             entry.markDirty()
                             entry.update(mainThreadContext, this)
                         }
@@ -81,9 +50,8 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun render() {
-        mc.profiler.startSection("render")
-
         mc.gameRenderer.lightmapTextureManager.enable()
         RenderSystem.disableCull()
         RenderSystem.enableDepthTest()
@@ -92,7 +60,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorld
 
         super.render()
 
-        mc.profiler.endSection()
+        mc.gameRenderer.lightmapTextureManager.disable()
     }
 
     private inner class ChestRenderEntry : AbstractRenderEntry<TileEntityChest, ChestInfo>() {

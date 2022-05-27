@@ -1,9 +1,9 @@
 package me.luna.fastmc.shared.util
 
-import me.luna.fastmc.shared.util.collection.ExtendedBitSet
+import me.luna.fastmc.shared.util.collection.DynamicBitSet
 
 class IDRegistry {
-    private val bitSet = ExtendedBitSet()
+    private val bitSet = DynamicBitSet()
 
     fun register(): Int {
         var id = -1

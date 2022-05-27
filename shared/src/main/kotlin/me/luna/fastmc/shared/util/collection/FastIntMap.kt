@@ -85,7 +85,7 @@ class FastIntMap<V : Any> : AbstractInt2ObjectMap<V>() {
         }
     }
 
-    fun getOrPut(key: Int, defaultValue: () -> V): V {
+    inline fun getOrPut(key: Int, crossinline defaultValue: () -> V): V {
         val value = get(key)
         return if (value == null) {
             val answer = defaultValue()

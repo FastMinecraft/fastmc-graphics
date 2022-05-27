@@ -1,3 +1,8 @@
 package me.luna.fastmc.shared.opengl
 
-class ImmutableVertexBufferObject(vertexAttribute: VertexAttribute, val size: Int) :VertexBufferObject(vertexAttribute)
+class ImmutableVertexBufferObject(vertexAttribute: VertexAttribute, val size: Int, flags: Int) :
+    VertexBufferObject(vertexAttribute) {
+    init {
+        glNamedBufferStorage(id, size.toLong(), flags)
+    }
+}

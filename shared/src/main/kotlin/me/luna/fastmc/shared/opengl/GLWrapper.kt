@@ -5,6 +5,7 @@ package me.luna.fastmc.shared.opengl
 import me.luna.fastmc.FastMcMod.glWrapper
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
+import java.nio.IntBuffer
 
 interface IGLWrapper {
     val lightMapUnit: Int
@@ -14,6 +15,10 @@ interface IGLWrapper {
     fun glBindTexture(texture: Int)
     fun glDrawArrays(mode: Int, first: Int, count: Int)
     fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long)
+
+
+    // GL14
+    fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer)
 
 
     // GL15
@@ -56,8 +61,21 @@ interface IGLWrapper {
     fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer)
 
 
+    // GL32
+    fun glFenceSync(condition: Int, flags: Int): Long
+    fun glDeleteSync(sync: Long)
+    fun glGetSynciv(sync: Long, pname: Int): Int
+
+
     // GL43
+    fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long)
     fun glInvalidateBufferData(buffer: Int)
+    fun glMultiDrawArraysIndirect(
+        mode: Int,
+        indirect: Long,
+        primcount: Int,
+        stride: Int
+    )
 
 
     // GL45
@@ -103,10 +121,41 @@ interface IGLWrapper {
 
     fun glTextureParameteri(texture: Int, pname: Int, param: Int)
     fun glTextureParameterf(texture: Int, pname: Int, param: Float)
+    fun glMapNamedBuffer(
+        buffer: Int,
+        access: Int,
+        old_buffer: ByteBuffer?
+    ): ByteBuffer?
+
+    fun glMapNamedBufferRange(buffer: Int, offset: Long, length: Long, access: Int): ByteBuffer?
+    fun glMapNamedBufferRange(
+        buffer: Int,
+        offset: Long,
+        length: Long,
+        access: Int,
+        old_buffer: ByteBuffer?
+    ): ByteBuffer?
+
+    fun glUnmapNamedBuffer(buffer: Int): Boolean
+
+    fun glFlushMappedNamedBufferRange(
+        buffer: Int,
+        offset: Long,
+        length: Long
+    )
 }
 
 // GL11
+const val GL_POINTS = 0x0
+const val GL_LINES = 0x1
+const val GL_LINE_LOOP = 0x2
+const val GL_LINE_STRIP = 0x3
 const val GL_TRIANGLES = 0x4
+const val GL_TRIANGLE_STRIP = 0x5
+const val GL_TRIANGLE_FAN = 0x6
+const val GL_QUADS = 0x7
+const val GL_QUAD_STRIP = 0x8
+const val GL_POLYGON = 0x9
 
 const val GL_TEXTURE_2D = 0xDE1
 
@@ -135,10 +184,10 @@ const val GL_REPEAT = 0x2901
 
 const val GL_RGBA8 = 0x8058
 
-fun glDeleteTextures(texture: Int) = glWrapper.glDeleteTextures(texture)
-fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
-fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArrays(mode, first, count)
-fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
+inline fun glDeleteTextures(texture: Int) = glWrapper.glDeleteTextures(texture)
+inline fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
+inline fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArrays(mode, first, count)
+inline fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
     glWrapper.glDrawElements(mode, indices_count, type, indices_buffer_offset)
 
 
@@ -162,6 +211,9 @@ const val GL_COMPRESSED_RGBA = 0x84EE
 // GL14
 const val GL_TEXTURE_LOD_BIAS = 0x8501
 
+inline fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
+    glWrapper.glMultiDrawArrays(mode, first, count)
+
 
 // GL15
 const val GL_ELEMENT_ARRAY_BUFFER = 0x8893
@@ -169,6 +221,10 @@ const val GL_ARRAY_BUFFER = 0x8892
 const val GL_STREAM_DRAW = 0x88E0
 const val GL_STATIC_DRAW = 0x88E4
 const val GL_DYNAMIC_DRAW = 0x88E8
+
+const val GL_READ_ONLY = 0x88B8
+const val GL_WRITE_ONLY = 0x88B9
+const val GL_READ_WRITE = 0x88BA
 
 inline fun glDeleteBuffers(buffer: Int) = glWrapper.glDeleteBuffers(buffer)
 inline fun glBindBuffer(target: Int, buffer: Int) = glWrapper.glBindBuffer(target, buffer)
@@ -227,15 +283,28 @@ const val GL_COMPRESSED_RED = 0x8225
 const val GL_COMPRESSED_RED_RGTC1 = 0x8DBB
 
 inline fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
-
 inline fun glDeleteVertexArrays(array: Int) = glWrapper.glDeleteVertexArrays(array)
-
 inline fun glBindVertexArray(array: Int) = glWrapper.glBindVertexArray(array)
 
 
 // GL31
 inline fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
     glWrapper.glDrawArraysInstanced(mode, first, count, primcount)
+
+
+// GL32
+const val GL_SYNC_STATUS = 0x9114
+const val GL_SYNC_GPU_COMMANDS_COMPLETE = 0x9117
+const val GL_UNSIGNALED = 0x9118
+const val GL_SIGNALED = 0x9119
+
+inline fun glFenceSync(condition: Int, flags: Int): Long = glWrapper.glFenceSync(condition, flags)
+inline fun glDeleteSync(sync: Long) = glWrapper.glDeleteSync(sync)
+inline fun glGetSynciv(sync: Long, pname: Int): Int = glWrapper.glGetSynciv(sync, pname)
+
+
+// GL40
+const val GL_DRAW_INDIRECT_BUFFER = 0x8F3F
 
 
 // GL41
@@ -259,7 +328,17 @@ inline fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boo
 
 
 // GL43
+inline fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long) =
+    glWrapper.glInvalidateBufferSubData(buffer, offset, length)
+
 inline fun glInvalidateBufferData(buffer: Int) = glWrapper.glInvalidateBufferData(buffer)
+
+inline fun glMultiDrawArraysIndirect(
+    mode: Int,
+    indirect: Long,
+    primcount: Int,
+    stride: Int
+) = glWrapper.glMultiDrawArraysIndirect(mode, indirect, primcount, stride)
 
 
 // GL44
@@ -343,3 +422,28 @@ inline fun glTextureParameteri(texture: Int, pname: Int, param: Int) =
 
 inline fun glTextureParameterf(texture: Int, pname: Int, param: Float) =
     glWrapper.glTextureParameterf(texture, pname, param)
+
+inline fun glMapNamedBuffer(
+    buffer: Int,
+    access: Int,
+    old_buffer: ByteBuffer?
+): ByteBuffer? = glWrapper.glMapNamedBuffer(buffer, access, old_buffer)
+
+inline fun glMapNamedBufferRange(buffer: Int, offset: Long, length: Long, access: Int): ByteBuffer? =
+    glWrapper.glMapNamedBufferRange(buffer, offset, length, access)
+
+inline fun glMapNamedBufferRange(
+    buffer: Int,
+    offset: Long,
+    length: Long,
+    access: Int,
+    old_buffer: ByteBuffer?
+): ByteBuffer? = glWrapper.glMapNamedBufferRange(buffer, offset, length, access, old_buffer)
+
+inline fun glUnmapNamedBuffer(buffer: Int): Boolean = glWrapper.glUnmapNamedBuffer(buffer)
+
+inline fun glFlushMappedNamedBufferRange(
+    buffer: Int,
+    offset: Long,
+    length: Long
+) = glWrapper.glFlushMappedNamedBufferRange(buffer, offset, length)

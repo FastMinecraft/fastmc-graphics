@@ -3,12 +3,16 @@ package me.luna.fastmc.mixin.core.render;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.fastutil.objects.ObjectLists;
+import it.unimi.dsi.fastutil.objects.ObjectSets;
 import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.mixin.IPatchedWorldRenderer;
 import me.luna.fastmc.mixin.accessor.AccessorBackgroundRenderer;
-import me.luna.fastmc.mixin.accessor.AccessorLightmapTextureManager;
-import me.luna.fastmc.shared.renderer.AbstractWorldRenderer;
+import me.luna.fastmc.shared.renderer.WorldRenderer;
+import me.luna.fastmc.shared.terrain.RenderChunk;
+import me.luna.fastmc.shared.terrain.TerrainFogManager;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
+import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -19,6 +23,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.option.CloudRenderMode;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
+import net.minecraft.client.render.chunk.ChunkBuilder;
 import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.model.ModelLoader;
 import net.minecraft.client.texture.AbstractTexture;
@@ -33,7 +38,6 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.tag.FluidTags;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -44,10 +48,7 @@ import net.minecraft.util.profiler.Profiler;
 import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.spongepowered.asm.mixin.Final;
-import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -55,13 +56,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindTextureUnit;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindVertexArray;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
-import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
-import static org.lwjgl.opengl.GL13.GL_TEXTURE2;
 
-@Mixin(value = WorldRenderer.class, priority = Integer.MAX_VALUE)
+@Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreWorldRenderer {
     @Shadow
     @Final
@@ -73,9 +71,6 @@ public abstract class MixinCoreWorldRenderer {
     private EntityRenderDispatcher entityRenderDispatcher;
     @Shadow
     private @Nullable Frustum capturedFrustum;
-    @Shadow
-    @Final
-    private FpsSmoother chunkUpdateSmoother;
     @Shadow
     private int regularEntityCount;
     @Shadow
@@ -95,11 +90,6 @@ public abstract class MixinCoreWorldRenderer {
     @Shadow
     private boolean shouldCaptureFrustum;
     @Shadow
-    private int frame;
-    @Shadow
-    @Final
-    private Set<BlockEntity> noCullingBlockEntities;
-    @Shadow
     private @Nullable ShaderEffect entityOutlineShader;
     @Shadow
     @Final
@@ -114,16 +104,52 @@ public abstract class MixinCoreWorldRenderer {
     private @Nullable Framebuffer cloudsFramebuffer;
 
     @Shadow
-    protected abstract void setupTerrain(Camera camera, Frustum frustum, boolean hasForcedFrustum, int frame, boolean spectator);
+    @Final
+    private TextureManager textureManager;
 
     @Shadow
-    protected abstract void renderLayer(RenderLayer renderLayer, MatrixStack matrixStack, double d, double e, double f);
+    private boolean cloudsDirty;
+
+    @Shadow
+    private int viewDistance;
+
+    @Shadow
+    private BuiltChunkStorage chunks;
+
+    @Shadow
+    private ChunkBuilder chunkBuilder;
+
+    @Mutable
+    @Shadow
+    @Final
+    private Set<BlockEntity> noCullingBlockEntities;
+
+    @Shadow
+    private Set<ChunkBuilder.BuiltChunk> chunksToRebuild;
+
+    @Mutable
+    @Shadow
+    @Final
+    private ObjectList<net.minecraft.client.render.WorldRenderer.ChunkInfo> visibleChunks;
+
+    @Shadow
+    protected abstract void resetTransparencyShader();
+
+    @Shadow
+    protected abstract void loadTransparencyShader();
 
     @Shadow
     protected abstract boolean canDrawEntityOutlines();
 
     @Shadow
-    protected abstract void captureFrustum(Matrix4f modelMatrix, Matrix4f matrix4f, double x, double y, double z, Frustum frustum);
+    protected abstract void captureFrustum(
+        Matrix4f modelMatrix,
+        Matrix4f matrix4f,
+        double x,
+        double y,
+        double z,
+        Frustum frustum
+    );
 
     @Shadow
     public abstract void renderSky(MatrixStack matrices, float tickDelta);
@@ -132,10 +158,25 @@ public abstract class MixinCoreWorldRenderer {
     protected abstract void checkEmpty(MatrixStack matrices);
 
     @Shadow
-    protected abstract void drawBlockOutline(MatrixStack matrices, VertexConsumer vertexConsumer, Entity entity, double d, double e, double f, BlockPos blockPos, BlockState blockState);
+    protected abstract void drawBlockOutline(
+        MatrixStack matrices,
+        VertexConsumer vertexConsumer,
+        Entity entity,
+        double d,
+        double e,
+        double f,
+        BlockPos blockPos,
+        BlockState blockState
+    );
 
     @Shadow
-    public abstract void renderClouds(MatrixStack matrices, float tickDelta, double cameraX, double cameraY, double cameraZ);
+    public abstract void renderClouds(
+        MatrixStack matrices,
+        float tickDelta,
+        double cameraX,
+        double cameraY,
+        double cameraZ
+    );
 
     @Shadow
     protected abstract void renderWeather(LightmapTextureManager manager, float f, double d, double e, double g);
@@ -147,19 +188,104 @@ public abstract class MixinCoreWorldRenderer {
     protected abstract void renderChunkDebugInfo(Camera camera);
 
     @Shadow
-    protected abstract void renderEntity(Entity entity, double cameraX, double cameraY, double cameraZ, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers);
+    protected abstract void renderEntity(
+        Entity entity,
+        double cameraX,
+        double cameraY,
+        double cameraZ,
+        float tickDelta,
+        MatrixStack matrices,
+        VertexConsumerProvider vertexConsumers
+    );
 
-    @Shadow
-    @Final
-    private TextureManager textureManager;
+    @Inject(method = "<init>", at = @At("RETURN"))
+    private void Inject$init$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
+        this.chunks = null;
+        this.chunkBuilder = null;
+        this.noCullingBlockEntities = ObjectSets.emptySet();
+        this.chunksToRebuild = ObjectSets.emptySet();
+        this.visibleChunks = ObjectLists.emptyList();
+    }
 
-    @Shadow
-    public abstract void reload();
+    @Inject(method = "setWorld", at = @At("RETURN"))
+    public void setWorld$Inject$RETURN(@Nullable ClientWorld world, CallbackInfo ci) {
+        if (world == null) {
+            getTerrainRenderer().clear();
+        }
+    }
 
-    @Inject(method = "setWorld", at = @At("HEAD"))
-    public void setWorld$Inject$HEAD(@Nullable ClientWorld world, CallbackInfo ci) {
-        FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().clear();
-        FastMcMod.INSTANCE.getWorldRenderer().getEntityRenderer().clear();
+    /**
+     * @author Luna
+     * @reason Render override
+     */
+    @Overwrite
+    public void reload() {
+        if (this.world != null) {
+            if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+                this.loadTransparencyShader();
+            } else {
+                this.resetTransparencyShader();
+            }
+
+            RenderLayers.setFancyGraphicsOrBetter(MinecraftClient.isFancyGraphicsOrBetter());
+
+            this.cloudsDirty = true;
+            this.viewDistance = this.client.options.viewDistance;
+            this.world.reloadColor();
+
+            TerrainRenderer terrainRenderer = getTerrainRenderer();
+            terrainRenderer.clear();
+            terrainRenderer.updateChunkStorage(this.client.options.viewDistance);
+            terrainRenderer.reload();
+        }
+    }
+
+    /**
+     * @author Luna
+     * @reason Chunk update optimization
+     */
+    @Overwrite
+    public boolean isTerrainRenderComplete() {
+        return getTerrainRenderer().getChunkBuilder().getTotalTaskCount() == 0;
+    }
+
+    /**
+     * @author Luna
+     * @reason Chunk update optimization
+     */
+    @Overwrite
+    public int getCompletedChunkCount() {
+        int count = 0;
+
+        RenderChunk[] chunkArray = getTerrainRenderer().getChunkStorage().renderChunkArray;
+        for (int i = 0; i < chunkArray.length; i++) {
+            if (chunkArray[i].isBuilt) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /**
+     * @author Luna
+     * @reason Chunk update optimization
+     */
+    @Overwrite
+    private void scheduleChunkRender(int x, int y, int z, boolean important) {
+        RenderChunk renderChunk = getTerrainRenderer().getChunkStorage().getRenderChunkByChunk(x, y, z);
+        if (renderChunk != null) {
+            renderChunk.isDirty = true;
+        }
+    }
+
+    /**
+     * @author Luna
+     * @reason Debug
+     */
+    @Overwrite
+    public String getChunksDebugString() {
+        return getTerrainRenderer().getDebugInfoString();
     }
 
     /**
@@ -168,26 +294,55 @@ public abstract class MixinCoreWorldRenderer {
      */
     @SuppressWarnings({ "ConstantConditions", "deprecation" })
     @Overwrite
-    public void render(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager, Matrix4f projection) {
-        BlockEntityRenderDispatcher.INSTANCE.configure(this.world, this.client.getTextureManager(), this.client.textRenderer, camera, this.client.crosshairTarget);
-        this.entityRenderDispatcher.configure(this.world, camera, this.client.targetedEntity);
+    public void render(
+        MatrixStack matrices,
+        float tickDelta,
+        long limitTime,
+        boolean renderBlockOutline,
+        Camera camera,
+        GameRenderer gameRenderer,
+        LightmapTextureManager lightmapTextureManager,
+        Matrix4f projection
+    ) {
         Profiler profiler = this.world.getProfiler();
-        Vec3d vec3d = camera.getPos();
-        double renderPosX = vec3d.getX();
-        double renderPosY = vec3d.getY();
-        double renderPosZ = vec3d.getZ();
+        profiler.swap("setip");
+
+        BlockEntityRenderDispatcher.INSTANCE.configure(
+            this.world,
+            this.client.getTextureManager(),
+            this.client.textRenderer,
+            camera,
+            this.client.crosshairTarget
+        );
+        this.entityRenderDispatcher.configure(this.world, camera, this.client.targetedEntity);
+        Vec3d cameraPos = camera.getPos();
+        double renderPosX = cameraPos.getX();
+        double renderPosY = cameraPos.getY();
+        double renderPosZ = cameraPos.getZ();
         Matrix4f modelView = matrices.peek().getModel();
-        AbstractWorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        TerrainRenderer terrainRenderer = worldRenderer.getTerrainRenderer();
         org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
         org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
-        worldRenderer.setupCamera(projection1, modelView1);
+        worldRenderer.updateMatrix(projection1, modelView1);
+        worldRenderer.updateCameraPos(renderPosX, renderPosY, renderPosZ);
+        worldRenderer.updateRenderPos(renderPosX, renderPosY, renderPosZ);
+        worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
+        worldRenderer.updateFrustum();
+
+        profiler.swap("updateTerrain");
+        terrainRenderer.update();
 
         profiler.swap("culling");
         boolean bl = this.capturedFrustum != null;
         Frustum frustum;
         if (bl) {
             frustum = this.capturedFrustum;
-            frustum.setPosition(this.capturedFrustumPosition.x, this.capturedFrustumPosition.y, this.capturedFrustumPosition.z);
+            frustum.setPosition(
+                this.capturedFrustumPosition.x,
+                this.capturedFrustumPosition.y,
+                this.capturedFrustumPosition.z
+            );
         } else {
             frustum = new Frustum(modelView, projection);
             frustum.setPosition(renderPosX, renderPosY, renderPosZ);
@@ -195,15 +350,32 @@ public abstract class MixinCoreWorldRenderer {
 
         this.client.getProfiler().swap("captureFrustum");
         if (this.shouldCaptureFrustum) {
-            this.captureFrustum(modelView, projection, vec3d.x, vec3d.y, vec3d.z, bl ? new Frustum(modelView, projection) : frustum);
+            this.captureFrustum(
+                modelView,
+                projection,
+                renderPosX,
+                renderPosY,
+                renderPosZ,
+                bl ? new Frustum(modelView, projection) : frustum
+            );
             this.shouldCaptureFrustum = false;
         }
 
         profiler.swap("clear");
-        BackgroundRenderer.render(camera, tickDelta, this.client.world, this.client.options.viewDistance, gameRenderer.getSkyDarkness(tickDelta));
+        BackgroundRenderer.render(
+            camera,
+            tickDelta,
+            this.client.world,
+            this.client.options.viewDistance,
+            gameRenderer.getSkyDarkness(tickDelta)
+        );
         RenderSystem.clear(16640, MinecraftClient.IS_SYSTEM_MAC);
         float viewDistance = gameRenderer.getViewDistance();
-        boolean thickFog = this.client.world.getSkyProperties().useThickFog(MathHelper.floor(renderPosX), MathHelper.floor(renderPosY)) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
+        boolean thickFog = this.client.world.getSkyProperties().useThickFog(
+            MathHelper.floor(renderPosX),
+            MathHelper.floor(renderPosY)
+        ) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
+
         if (this.client.options.viewDistance >= 4) {
             BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, viewDistance, thickFog);
             profiler.swap("sky");
@@ -214,14 +386,9 @@ public abstract class MixinCoreWorldRenderer {
         float fogDistance = Math.max(viewDistance - 16.0F, 32.0F);
         BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_TERRAIN, fogDistance, thickFog);
         applyFogShader(camera, fogDistance, thickFog);
-        profiler.swap("terrainSetup");
-
-        this.setupTerrain(camera, frustum, bl, this.frame++, this.client.player.isSpectator());
 
         profiler.swap("terrain");
-        TerrainRenderer.INSTANCE.updateMatrix(projection1, modelView1);
-
-        renderTerrainPass1(matrices, renderPosX, renderPosY, renderPosZ);
+        renderTerrainPass1(lightmapTextureManager);
 
         if (this.world.getSkyProperties().isDarkened()) {
             DiffuseLighting.enableForLevel(matrices.peek().getModel());
@@ -293,10 +460,21 @@ public abstract class MixinCoreWorldRenderer {
                 if (sortedSet2 != null && !sortedSet2.isEmpty()) {
                     int z = sortedSet2.last().getStage();
                     matrices.push();
-                    matrices.translate((double) blockPos3.getX() - renderPosX, (double) blockPos3.getY() - renderPosY, (double) blockPos3.getZ() - renderPosZ);
+                    matrices.translate(
+                        (double) blockPos3.getX() - renderPosX,
+                        (double) blockPos3.getY() - renderPosY,
+                        (double) blockPos3.getZ() - renderPosZ
+                    );
                     MatrixStack.Entry entry3 = matrices.peek();
-                    VertexConsumer vertexConsumer2 = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer(ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(z)), entry3.getModel(), entry3.getNormal());
-                    this.client.getBlockRenderManager().renderDamage(this.world.getBlockState(blockPos3), blockPos3, this.world, matrices, vertexConsumer2);
+                    VertexConsumer vertexConsumer2 = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer(
+                        ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(z)), entry3.getModel(), entry3.getNormal());
+                    this.client.getBlockRenderManager().renderDamage(
+                        this.world.getBlockState(blockPos3),
+                        blockPos3,
+                        this.world,
+                        matrices,
+                        vertexConsumer2
+                    );
                     matrices.pop();
                 }
             }
@@ -311,7 +489,16 @@ public abstract class MixinCoreWorldRenderer {
             BlockState blockState = this.world.getBlockState(blockPos4);
             if (!blockState.isAir() && this.world.getWorldBorder().contains(blockPos4)) {
                 VertexConsumer vertexConsumer3 = immediate.getBuffer(RenderLayer.getLines());
-                this.drawBlockOutline(matrices, vertexConsumer3, camera.getFocusedEntity(), renderPosX, renderPosY, renderPosZ, blockPos4, blockState);
+                this.drawBlockOutline(
+                    matrices,
+                    vertexConsumer3,
+                    camera.getFocusedEntity(),
+                    renderPosX,
+                    renderPosY,
+                    renderPosZ,
+                    blockPos4,
+                    blockState
+                );
             }
         }
 
@@ -335,13 +522,10 @@ public abstract class MixinCoreWorldRenderer {
 
         profiler.swap("terrain");
         if (this.translucentFramebuffer != null) {
-            immediate.draw(RenderLayer.getLines());
-            immediate.draw();
-
             this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
             this.translucentFramebuffer.copyDepthFrom(this.client.getFramebuffer());
 
-            renderTerrainPass2(matrices, renderPosX, renderPosY, renderPosZ);
+            renderTerrainPass2(lightmapTextureManager);
 
             profiler.swap("particles");
             this.particlesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
@@ -349,15 +533,16 @@ public abstract class MixinCoreWorldRenderer {
             RenderPhase.PARTICLES_TARGET.startDrawing();
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
             RenderPhase.PARTICLES_TARGET.endDrawing();
-        } else {
-            immediate.draw(RenderLayer.getLines());
-            immediate.draw();
 
-            renderTerrainPass2(matrices, renderPosX, renderPosY, renderPosZ);
+        } else {
+            renderTerrainPass2(lightmapTextureManager);
 
             profiler.swap("particles");
             this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
+
         }
+        immediate.draw(RenderLayer.getLines());
+        immediate.draw();
 
         RenderSystem.pushMatrix();
         RenderSystem.multMatrix(matrices.peek().getModel());
@@ -399,10 +584,11 @@ public abstract class MixinCoreWorldRenderer {
     }
 
     @SuppressWarnings("deprecation")
-    private void renderTerrainPass1(MatrixStack matrices, double renderPosX, double renderPosY, double renderPosZ) {
-        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+    private void renderTerrainPass1(LightmapTextureManager lightmapTextureManager) {
+        lightmapTextureManager.enable();
+
+        AbstractTexture blockTexture = getTexture();
         blockTexture.bindTexture();
-        glBindTextureUnit(2, getLightMapTexture().getGlId());
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
@@ -412,41 +598,52 @@ public abstract class MixinCoreWorldRenderer {
 
         MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
 
-        TerrainRenderer.TerrainShader terrainShader = TerrainRenderer.INSTANCE.getShader();
-        terrainShader.bind();
+        TerrainRenderer terrainRenderer = getTerrainRenderer();
+        TerrainFogManager fogManager = terrainRenderer.getFogManager();
+
+        TerrainFogManager.Shader shader = fogManager.getShader();
+        shader.bind();
 
         blockTexture.setFilter(false, true);
-        this.renderLayer(RenderLayer.getSolid(), matrices, renderPosX, renderPosY, renderPosZ);
+        this.client.getProfiler().push("solid");
+        terrainRenderer.renderLayer(0);
 
-        TerrainRenderer.INSTANCE.alphaTest(true);
-        terrainShader = TerrainRenderer.INSTANCE.getShader();
-        terrainShader.bind();
+        fogManager.alphaTest(true);
+        shader = fogManager.getShader();
+        shader.bind();
 
-        this.renderLayer(RenderLayer.getCutoutMipped(), matrices, renderPosX, renderPosY, renderPosZ);
+        this.client.getProfiler().swap("cutoutMipped");
+        terrainRenderer.renderLayer(1);
 
         blockTexture.setFilter(false, false);
-        this.renderLayer(RenderLayer.getCutout(), matrices, renderPosX, renderPosY, renderPosZ);
+        this.client.getProfiler().swap("cutout");
+        terrainRenderer.renderLayer(2);
+        this.client.getProfiler().pop();
         blockTexture.setFilter(false, true);
 
-        TerrainRenderer.INSTANCE.alphaTest(false);
+        fogManager.alphaTest(false);
 
         glBindVertexArray(0);
-        terrainShader.unbind();
+        shader.unbind();
 
-        glBindTextureUnit(2, 0);
+        lightmapTextureManager.disable();
     }
 
-    @SuppressWarnings("deprecation")
-    private void renderTerrainPass2(MatrixStack matrices, double renderPosX, double renderPosY, double renderPosZ) {
-        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+    private void renderTerrainPass2(LightmapTextureManager lightmapTextureManager) {
+        lightmapTextureManager.enable();
+
+        AbstractTexture blockTexture = getTexture();
         blockTexture.bindTexture();
-        glBindTextureUnit(2, getLightMapTexture().getGlId());
-        RenderSystem.disableCull();
+        RenderSystem.enableCull();
         RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA, GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.blendFuncSeparate(
+            GlStateManager.SrcFactor.SRC_ALPHA,
+            GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
+            GlStateManager.SrcFactor.ONE,
+            GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA
+        );
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL_LEQUAL);
-        RenderSystem.disableAlphaTest();
 
         Framebuffer translucent = this.translucentFramebuffer;
         Framebuffer weather = this.weatherFramebuffer;
@@ -458,40 +655,51 @@ public abstract class MixinCoreWorldRenderer {
             MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
         }
 
-        TerrainRenderer.TerrainShader terrainShader = TerrainRenderer.INSTANCE.getShader();
-        terrainShader.bind();
+        TerrainRenderer terrainRenderer = getTerrainRenderer();
+        TerrainFogManager fogManager = terrainRenderer.getFogManager();
+
+        TerrainFogManager.Shader shader = fogManager.getShader();
+        shader.bind();
 
         blockTexture.setFilter(false, true);
-        this.renderLayer(RenderLayer.getTranslucent(), matrices, renderPosX, renderPosY, renderPosZ);
+        this.client.getProfiler().push("translucent");
+        terrainRenderer.renderLayer(3);
 
         if (usingFbo) {
             weather.beginWrite(false);
         }
-        this.renderLayer(RenderLayer.getTripwire(), matrices, renderPosX, renderPosY, renderPosZ);
+        this.client.getProfiler().swap("tripwire");
+        terrainRenderer.renderLayer(4);
+        this.client.getProfiler().pop();
 
         glBindVertexArray(0);
-        terrainShader.unbind();
+        shader.unbind();
 
-        glBindTextureUnit(2, 0);
+        lightmapTextureManager.disable();
     }
 
-    private AbstractTexture getLightMapTexture() {
-        Identifier id = ((AccessorLightmapTextureManager) MinecraftClient.getInstance().gameRenderer.getLightmapTextureManager()).getTextureIdentifier();
-        return getTexture(id);
-    }
-
-    private AbstractTexture getTexture(Identifier id) {
-        AbstractTexture texture = textureManager.getTexture(id);
+    @SuppressWarnings("deprecation")
+    private AbstractTexture getTexture() {
+        AbstractTexture texture = textureManager.getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         if (texture == null) {
-            texture = new ResourceTexture(id);
-            textureManager.registerTexture(id, texture);
+            texture = new ResourceTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+            textureManager.registerTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, texture);
         }
 
         return texture;
     }
 
     @SuppressWarnings("deprecation")
-    private boolean renderEntity(MatrixStack matrices, float tickDelta, Camera camera, double renderPosX, double renderPosY, double renderPosZ, Frustum frustum, VertexConsumerProvider.Immediate immediate) {
+    private boolean renderEntity(
+        MatrixStack matrices,
+        float tickDelta,
+        Camera camera,
+        double renderPosX,
+        double renderPosY,
+        double renderPosZ,
+        Frustum frustum,
+        VertexConsumerProvider.Immediate immediate
+    ) {
         boolean entityRendered = false;
 
         for (Entity entity : this.world.getEntities()) {
@@ -536,30 +744,49 @@ public abstract class MixinCoreWorldRenderer {
     }
 
     private void renderTileEntityFastMc(float tickDelta) {
-        FastMcMod.INSTANCE.getWorldRenderer().preRender(tickDelta);
-        FastMcMod.INSTANCE.getWorldRenderer().getTileEntityRenderer().render();
-        FastMcMod.INSTANCE.getWorldRenderer().postRender();
+        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        worldRenderer.preRender(tickDelta);
+        worldRenderer.getTileEntityRenderer().render();
+        worldRenderer.postRender();
     }
 
-    @SuppressWarnings("SynchronizeOnNonFinalField")
-    public void renderTileEntityVanilla(@NotNull MatrixStack matrices, float tickDelta, double renderPosX, double renderPosY, double renderPosZ, @NotNull VertexConsumerProvider.Immediate immediate) {
-        for (BlockEntity blockEntity : ((IPatchedWorldRenderer) this).getPatch().getRenderTileEntityList().get()) {
-            BlockPos blockPos = blockEntity.getPos();
+    @SuppressWarnings("unchecked")
+    public void renderTileEntityVanilla(
+        @NotNull MatrixStack matrices,
+        float tickDelta,
+        double renderPosX,
+        double renderPosY,
+        double renderPosZ,
+        @NotNull VertexConsumerProvider.Immediate immediate
+    ) {
+        TerrainRenderer terrainRenderer = getTerrainRenderer();
+        FastObjectArrayList<BlockEntity> renderTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getRenderTileEntityList().get();
+        for (int i = 0; i < renderTileEntityList.size(); i++) {
+            BlockEntity blockEntity = renderTileEntityList.get(i);
+            BlockPos pos = blockEntity.getPos();
             VertexConsumerProvider vertexConsumerProvider = immediate;
 
             matrices.push();
-            matrices.translate(blockPos.getX() - renderPosX, blockPos.getY() - renderPosY, blockPos.getZ() - renderPosZ);
+            matrices.translate(pos.getX() - renderPosX, pos.getY() - renderPosY, pos.getZ() - renderPosZ);
 
-            SortedSet<BlockBreakingInfo> sortedSet = this.blockBreakingProgressions.get(blockPos.asLong());
+            SortedSet<BlockBreakingInfo> sortedSet = this.blockBreakingProgressions.get(pos.asLong());
 
             if (sortedSet != null && !sortedSet.isEmpty()) {
                 int w = sortedSet.last().getStage();
                 if (w >= 0) {
                     MatrixStack.Entry blockEntityMatrixEntry = matrices.peek();
-                    VertexConsumer vertexConsumer = new OverlayVertexConsumer(this.bufferBuilders.getEffectVertexConsumers().getBuffer(ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(w)), blockEntityMatrixEntry.getModel(), blockEntityMatrixEntry.getNormal());
+                    VertexConsumer vertexConsumer = new OverlayVertexConsumer(
+                        this.bufferBuilders.getEffectVertexConsumers().getBuffer(ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(
+                            w)),
+                        blockEntityMatrixEntry.getModel(),
+                        blockEntityMatrixEntry.getNormal()
+                    );
                     vertexConsumerProvider = (renderLayer) -> {
                         VertexConsumer vertexConsumer2 = immediate.getBuffer(renderLayer);
-                        return renderLayer.hasCrumbling() ? VertexConsumers.union(vertexConsumer, vertexConsumer2) : vertexConsumer2;
+                        return renderLayer.hasCrumbling() ? VertexConsumers.union(
+                            vertexConsumer,
+                            vertexConsumer2
+                        ) : vertexConsumer2;
                     };
                 }
             }
@@ -568,14 +795,14 @@ public abstract class MixinCoreWorldRenderer {
             matrices.pop();
         }
 
-        synchronized (this.noCullingBlockEntities) {
-            for (BlockEntity blockEntity2 : this.noCullingBlockEntities) {
-                BlockPos blockPos2 = blockEntity2.getPos();
-                matrices.push();
-                matrices.translate((double) blockPos2.getX() - renderPosX, (double) blockPos2.getY() - renderPosY, (double) blockPos2.getZ() - renderPosZ);
-                BlockEntityRenderDispatcher.INSTANCE.render(blockEntity2, tickDelta, matrices, immediate);
-                matrices.pop();
-            }
+        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getGlobalTileEntityList().get();
+        for (int i = 0; i < globalTileEntityList.size(); i++) {
+            BlockEntity blockEntity = globalTileEntityList.get(i);
+            BlockPos pos = blockEntity.getPos();
+            matrices.push();
+            matrices.translate(pos.getX() - renderPosX, pos.getY() - renderPosY, pos.getZ() - renderPosZ);
+            BlockEntityRenderDispatcher.INSTANCE.render(blockEntity, tickDelta, matrices, immediate);
+            matrices.pop();
         }
 
         this.checkEmpty(matrices);
@@ -596,6 +823,7 @@ public abstract class MixinCoreWorldRenderer {
 
         FluidState fluidState = camera.getSubmergedFluidState();
         Entity entity = camera.getFocusedEntity();
+        TerrainFogManager fogManager = getTerrainRenderer().getFogManager();
 
         if (fluidState.isIn(FluidTags.WATER)) {
             float density = 0.05F;
@@ -609,7 +837,7 @@ public abstract class MixinCoreWorldRenderer {
                 }
             }
 
-            TerrainRenderer.INSTANCE.exp2(density, red, green, blue);
+            fogManager.exp2Fog(density, red, green, blue);
         } else {
             float start;
             float end;
@@ -634,7 +862,12 @@ public abstract class MixinCoreWorldRenderer {
                 end = viewDistance;
             }
 
-            TerrainRenderer.INSTANCE.linear(start, end, red, green, blue);
+            fogManager.linearFog(start, end, red, green, blue);
         }
+    }
+
+    @NotNull
+    private TerrainRenderer getTerrainRenderer() {
+        return FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
     }
 }

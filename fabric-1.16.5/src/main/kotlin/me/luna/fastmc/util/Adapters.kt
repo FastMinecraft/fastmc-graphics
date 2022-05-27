@@ -11,7 +11,6 @@ import net.minecraft.util.Identifier
 import net.minecraft.util.math.Matrix4f
 import net.minecraft.util.profiler.Profiler
 import net.minecraft.world.World
-import java.util.concurrent.Future
 
 fun Matrix4f.toJoml(dest: org.joml.Matrix4f): org.joml.Matrix4f {
     dest.m00(this.a00)
@@ -72,9 +71,6 @@ inline val Minecraft.renderViewEntity: Entity?
 
 inline val World.loadedTileEntityList: List<TileEntity>
     get() = this.blockEntities
-
-inline val Future<*>?.isDoneOrNull: Boolean
-    get() = this == null || this.isDone
 
 typealias Minecraft = MinecraftClient
 typealias BlockChest = ChestBlock

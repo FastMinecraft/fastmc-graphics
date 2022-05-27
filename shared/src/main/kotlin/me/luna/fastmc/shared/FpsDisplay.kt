@@ -10,7 +10,12 @@ object FpsDisplay {
     private val shortFps = ArrayList<Pair<Long, Int>>()
     private val longFps = ArrayList<Pair<Long, Int>>()
     private val chunkUpdate = ArrayList<Pair<Long, Int>>()
+
     var fpsValue = 0; private set
+    var chunkUpdates = 0; private set
+
+    var lastFrameTime = 16_666_667; private set
+    var nanoFrameTime = 16_666_667; private set
 
     private var renderString: CharSequence = ""
     private val projection = Matrix4f()
@@ -22,9 +27,9 @@ object FpsDisplay {
 
     fun onPostRenderTick() {
         val current = System.nanoTime()
-
-        shortFps.add(current + 1_000_000_000 to (current - lastRender).toInt())
-
+        val frameTime = (current - lastRender).toInt()
+        lastFrameTime = frameTime
+        shortFps.add(current + 1_000_000_000 to frameTime)
         lastRender = current
     }
 
@@ -42,28 +47,28 @@ object FpsDisplay {
         }
 
         val millisSum = shortFps.sumOf {
-            it.second.toDouble() / 1_000_000.0
+            it.second.toDouble()
         }
-        val renderTime = millisSum / shortFps.size
-        val fps = (1000.0 / renderTime).toInt()
+        val frameTime = millisSum / shortFps.size
+        val fps = (1_000_000_000.0 / frameTime).toInt()
+        this.nanoFrameTime = frameTime.toInt()
         fpsValue = fps
 
-        longFps.add(current + 5_000_000_000 to fps)
+        longFps.add(current + 5_000_000_000 to frameTime.toInt())
 
         val stringBuilder = StringBuilder()
         stringBuilder.append("FPS ")
         stringBuilder.append(fps)
 
         if (FastMcMod.config.avgFps) {
-            var avg = 0
-
-            for ((_, value) in longFps) {
-                avg += value
+            var avg = longFps.sumOf {
+                it.second.toDouble()
             }
 
             avg /= longFps.size
             stringBuilder.append("  AVG ")
-            stringBuilder.append(avg)
+            stringBuilder.append((1_000_000_000.0 / avg).toInt())
+            stringBuilder.append(" (%.1f ms)".format(avg / 1_000_000.0))
         }
 
         if (FastMcMod.config.maxFrameTime) {
@@ -81,6 +86,7 @@ object FpsDisplay {
             val updates = chunkUpdate.sumOf {
                 it.second
             }
+            chunkUpdates = updates
 
             stringBuilder.append("  C ")
             stringBuilder.append(updates)

@@ -8,13 +8,12 @@ import kotlinx.coroutines.runBlocking
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import me.luna.fastmc.shared.util.pollEach
 import net.minecraft.client.particle.EmitterParticle
 import net.minecraft.client.particle.Particle
 import net.minecraft.client.particle.ParticleTextureSheet
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.function.Predicate
-import kotlin.collections.ArrayList
 
 interface IPatchedParticleManager {
     fun tickParticle0(particle: Particle)
@@ -30,7 +29,7 @@ interface IPatchedParticleManager {
                 coroutineScope {
                     for (particleQueue in particles.values) {
                         if (particleQueue.isEmpty()) continue
-                        launch(FastMcCoreScope.context) {
+                        launch {
                             val list = FastObjectArrayList(particleQueue)
                             val queue = ConcurrentLinkedQueue<Particle>()
 
@@ -38,7 +37,7 @@ interface IPatchedParticleManager {
                                 ParallelUtils.splitListIndex(
                                     list.size,
                                     blockForEach = { start, end ->
-                                        launch(FastMcCoreScope.context) {
+                                        launch {
                                             for (i in start until end) {
                                                 val particle = list[i]
                                                 tickParticle0(particle)
@@ -57,10 +56,8 @@ interface IPatchedParticleManager {
                 }
 
                 if (!newParticles.isEmpty()) {
-                    var particle = newParticles.poll()
-                    while (particle != null) {
-                        particles.computeIfAbsent(particle.type) { EvictingQueue.create(16384) }.add(particle)
-                        particle = newParticles.poll()
+                    newParticles.pollEach {
+                        particles.computeIfAbsent(it.type) { EvictingQueue.create(16384) }.add(it)
                     }
                 }
             }

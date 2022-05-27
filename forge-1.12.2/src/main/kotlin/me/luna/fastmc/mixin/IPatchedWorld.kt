@@ -37,7 +37,6 @@ interface IPatchedWorld {
 
     fun batchRemoveEntities()
 
-    @OptIn(ObsoleteCoroutinesApi::class)
     fun tickTileEntity() {
         processingLoadedTiles = true //FML Move above remove to prevent CMEs
 
@@ -91,7 +90,7 @@ interface IPatchedWorld {
                 ParallelUtils.splitListIndex(
                     total = list.size,
                     blockForEach = { start, end ->
-                        launch(FastMcCoreScope.context) {
+                        launch {
                             val mainThreadCommand = ArrayList<Runnable>()
                             val parallelCommand = ArrayList<Runnable>()
 

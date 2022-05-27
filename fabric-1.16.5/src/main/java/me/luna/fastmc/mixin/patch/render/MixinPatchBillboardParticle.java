@@ -34,9 +34,9 @@ public abstract class MixinPatchBillboardParticle extends Particle {
     @Shadow
     protected abstract float getMaxV();
 
-    private final static Quaternion QUATERNION_1 = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
-    private final static Quaternion QUATERNION_2 = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
-    private final static Vec3f VEC3F = new Vec3f();
+    private static final Quaternion QUATERNION_1 = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
+    private static final Quaternion QUATERNION_2 = new Quaternion(0.0f, 0.0f, 0.0f, 0.0f);
+    private static final Vec3f VEC3F = new Vec3f();
 
     /**
      * @author Luna
@@ -76,24 +76,44 @@ public abstract class MixinPatchBillboardParticle extends Particle {
         VEC3F.rotate(quaternion);
         VEC3F.scale(size);
         VEC3F.add(x, y, z);
-        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u2, v2).color(this.colorRed, this.colorGreen, this.colorBlue, this.colorAlpha).light(brightness).next();
+        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u2, v2).color(
+            this.colorRed,
+            this.colorGreen,
+            this.colorBlue,
+            this.colorAlpha
+        ).light(brightness).next();
 
         VEC3F.set(-1.0f, 1.0f, 0.0f);
         VEC3F.rotate(quaternion);
         VEC3F.scale(size);
         VEC3F.add(x, y, z);
-        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u2, v1).color(this.colorRed, this.colorGreen, this.colorBlue, this.colorAlpha).light(brightness).next();
+        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u2, v1).color(
+            this.colorRed,
+            this.colorGreen,
+            this.colorBlue,
+            this.colorAlpha
+        ).light(brightness).next();
 
         VEC3F.set(1.0f, 1.0f, 0.0f);
         VEC3F.rotate(quaternion);
         VEC3F.scale(size);
         VEC3F.add(x, y, z);
-        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u1, v1).color(this.colorRed, this.colorGreen, this.colorBlue, this.colorAlpha).light(brightness).next();
+        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u1, v1).color(
+            this.colorRed,
+            this.colorGreen,
+            this.colorBlue,
+            this.colorAlpha
+        ).light(brightness).next();
 
         VEC3F.set(1.0f, -1.0f, 0.0f);
         VEC3F.rotate(quaternion);
         VEC3F.scale(size);
         VEC3F.add(x, y, z);
-        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u1, v2).color(this.colorRed, this.colorGreen, this.colorBlue, this.colorAlpha).light(brightness).next();
+        vertexConsumer.vertex(VEC3F.getX(), VEC3F.getY(), VEC3F.getZ()).texture(u1, v2).color(
+            this.colorRed,
+            this.colorGreen,
+            this.colorBlue,
+            this.colorAlpha
+        ).light(brightness).next();
     }
 }

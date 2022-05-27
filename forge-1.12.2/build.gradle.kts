@@ -73,9 +73,8 @@ configure<UserDevExtension> {
 
             properties(
                 mapOf(
-                    "forge.logging.markers" to "SCAN,REGISTRIES,REGISTRYDUMP",
                     "forge.logging.console.level" to "info",
-                    "fml.coreMods.load" to "me.luna.fastmc.FastMcCoremod",
+                    "fml.coreMods.load" to "me.luna.fastmc.FastMcDevFixCoremod",
                     "mixin.env.disableRefMap" to "true"
                 )
             )
@@ -85,6 +84,10 @@ configure<UserDevExtension> {
 
 tasks {
     jar {
+        exclude {
+            it.name.contains("devfix", true)
+        }
+
         manifest {
             attributes(
                 "Manifest-Version" to 1.0,
@@ -141,7 +144,7 @@ tasks {
                         Runtime.getRuntime().availableProcessors()
                     } -XX:ConcGCThreads=${
                         Runtime.getRuntime().availableProcessors() / 4
-                    } -XX:FlightRecorderOptions=stackdepth=2048 -Dforge.logging.console.level=info -Dforge.logging.markers=SCAN,REGISTRIES,REGISTRYDUMP -Dmixin.env.disableRefMap=true -Dfml.coreMods.load=me.luna.fastmc.FastMcCoremod" />
+                    } -XX:FlightRecorderOptions=stackdepth=2048 -Dforge.logging.console.level=info -Dforge.logging.markers=SCAN,REGISTRIES,REGISTRYDUMP -Dmixin.env.disableRefMap=true -Dfml.coreMods.load=me.luna.fastmc.FastMcDevFixCoremod" />
                             <option name="WORKING_DIRECTORY" value="${'$'}PROJECT_DIR$/${project.name}/run" />
                             <method v="2">
                               <option name="Gradle.BeforeRunTask" enabled="true" tasks="${project.name}:prepareRunClient" externalProjectPath="${'$'}PROJECT_DIR$" />

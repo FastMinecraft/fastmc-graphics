@@ -5,13 +5,12 @@
   "package": "me.luna.fastmc.mixin.accessor",
   "client": [
     "AccessorBackgroundRenderer",
-    "AccessorBuiltChunk",
-    "AccessorChunkBuilder",
-    "AccessorChunkData",
-    "AccessorChunkOcclusionData",
-    "AccessorVertexBuffer",
-    "AccessorWorldRenderer",
-    "AccessorLightmapTextureManager"
+    "AccessorBiomeAccess",
+    "AccessorChunkLightProvider",
+    "AccessorLevelPropagator",
+    "AccessorLightStorage",
+    "AccessorThreadExecutor",
+    "AccessorVoxelShape"
   ],
   "injectors": {
     "defaultRequire": 1

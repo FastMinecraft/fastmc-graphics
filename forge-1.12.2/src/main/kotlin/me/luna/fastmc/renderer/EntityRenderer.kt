@@ -4,10 +4,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.luna.fastmc.mixin.IPatchedRenderGlobal
 import me.luna.fastmc.shared.renderbuilder.entity.CowRenderBuilder
 import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
-import me.luna.fastmc.shared.renderer.AbstractWorldRenderer
+import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
 import net.minecraft.client.Minecraft
@@ -17,7 +16,7 @@ import net.minecraft.entity.passive.EntityCow
 import org.lwjgl.opengl.GL11.*
 import kotlin.coroutines.CoroutineContext
 
-class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRenderer) :
+class EntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer) :
     AbstractEntityRenderer<Entity>(worldRenderer) {
     init {
         register<EntityCow, CowRenderBuilder>()
@@ -25,12 +24,6 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {
         parentScope.launch(FastMcCoreScope.context) {
-            mc.world?.let {
-                parentScope.launch(FastMcCoreScope.context) {
-                    (mc.renderGlobal as? IPatchedRenderGlobal)?.updateRenderEntityList(this, mc, it)
-                }
-            }
-
             renderEntryList.forEach {
                 it.clear()
             }
@@ -42,7 +35,7 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
 
                 coroutineScope {
                     for (entry in renderEntryList) {
-                        launch(FastMcCoreScope.context) {
+                        launch {
                             entry.markDirty()
                             entry.update(mainThreadContext, this)
                         }
@@ -59,12 +52,8 @@ class EntityRenderer(private val mc: Minecraft, worldRenderer: AbstractWorldRend
     }
 
     override fun render() {
-        mc.profiler.startSection("render")
-
         GlStateManager.disableCull()
         GlStateManager.tryBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
         super.render()
-
-        mc.profiler.endSection()
     }
 }

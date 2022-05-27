@@ -1,6 +1,9 @@
 package me.luna.fastmc.shared.renderer
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.IInfo
 import me.luna.fastmc.shared.util.ClassIDRegistry
@@ -10,7 +13,7 @@ import me.luna.fastmc.shared.util.collection.FastIntMap
 import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractRenderer<ET : Any>(
-    protected val worldRenderer: AbstractWorldRenderer,
+    protected val worldRenderer: WorldRenderer,
     val registry: ClassIDRegistry<Any>
 ) :
     IRenderer by worldRenderer {
@@ -31,14 +34,9 @@ abstract class AbstractRenderer<ET : Any>(
         renderEntryList.add(renderEntry)
     }
 
-    protected val lock = Any()
-    protected var adding = ArrayList<ET>()
-    protected var removing = ArrayList<ET>()
-
-    fun updateEntities(adding: List<ET>, removing: List<ET>) {
-        synchronized(lock) {
-            this.adding.addAll(adding)
-            this.removing.addAll(removing)
+    fun add(list: List<ET>) {
+        list.forEach {
+            renderEntryMap[(it as ITypeID).typeID]?.add(it)
         }
     }
 
@@ -54,7 +52,6 @@ abstract class AbstractRenderer<ET : Any>(
 
     abstract fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope)
 
-    @OptIn(ObsoleteCoroutinesApi::class)
     protected suspend fun updateRenderers(mainThreadContext: CoroutineContext, force: Boolean) {
         coroutineScope {
             for (entry in renderEntryList) {
@@ -69,6 +66,12 @@ abstract class AbstractRenderer<ET : Any>(
     open fun render() {
         renderEntryList.forEach {
             it.render(this)
+        }
+    }
+
+    fun destroy() {
+        renderEntryList.forEach {
+            it.destroyRenderer()
         }
     }
 
