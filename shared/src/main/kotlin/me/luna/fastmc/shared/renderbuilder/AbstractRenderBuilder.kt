@@ -191,8 +191,8 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         }
     }
 
-    open class ShaderProgram(resourceName: String, vertShaderPath: String, fragShaderPath: String) :
-        DrawShaderProgram(resourceName, vertShaderPath, fragShaderPath) {
+    open class ShaderProgram(resourceName: String, vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :
+        DrawShaderProgram(resourceName, vertex, fragment) {
         val partialTicksUniform = glGetUniformLocation(id, "partialTicks")
 
         init {

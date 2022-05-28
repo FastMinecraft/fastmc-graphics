@@ -13,5 +13,8 @@ out vec4 fragColor;
 
 void main() {
     fragColor = texture2D(blockTexture, uv);
+    #if ALPHA_TEST == true
+    if (fragColor.a <= 0.5) discard;
+    #endif
     fragColor.rgb = mix(fogColor, fragColor.rgb * color * texture2D(lightMapTexture, lightMapUV).rgb, fogAmount);
 }

@@ -17,55 +17,13 @@ inline fun Buffer.skip(count: Int) {
     this.position(position() + count)
 }
 
-interface ICachedBuffer {
-    fun getByte(): ByteBuffer
-
-    fun getWithCapacityByte(minCapacity: Int, newCapacity: Int): ByteBuffer
-
-    fun getWithCapacityByte(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ByteBuffer
-
-    fun ensureCapacityByte(minCapacity: Int, newCapacity: Int): ByteBuffer
-
-    fun ensureCapacityByte(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ByteBuffer
-
-
-    fun getShort(): ShortBuffer
-
-    fun getWithCapacityShort(minCapacity: Int, newCapacity: Int): ShortBuffer
-
-    fun getWithCapacityShort(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ShortBuffer
-
-    fun ensureCapacityShort(minCapacity: Int, newCapacity: Int): ShortBuffer
-
-    fun ensureCapacityShort(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ShortBuffer
-
-
-    fun getInt(): IntBuffer
-
-    fun getWithCapacityInt(minCapacity: Int, newCapacity: Int): IntBuffer
-
-    fun getWithCapacityInt(minCapacity: Int, newCapacity: Int, maxCapacity: Int): IntBuffer
-
-    fun ensureCapacityInt(minCapacity: Int, newCapacity: Int): IntBuffer
-
-    fun ensureCapacityInt(minCapacity: Int, newCapacity: Int, maxCapacity: Int): IntBuffer
-
-
-    fun getFloat(): FloatBuffer
-
-    fun getWithCapacityFloat(minCapacity: Int, newCapacity: Int): FloatBuffer
-
-    fun getWithCapacityFloat(minCapacity: Int, newCapacity: Int, maxCapacity: Int): FloatBuffer
-
-    fun ensureCapacityFloat(minCapacity: Int, newCapacity: Int): FloatBuffer
-
-    fun ensureCapacityFloat(minCapacity: Int, newCapacity: Int, maxCapacity: Int): FloatBuffer
-}
-
 @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
-class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
+class CachedBuffer(initialCapacity: Int) {
     @Volatile
     private var byteBuffer = allocateByte(initialCapacity)
+
+    @Volatile
+    private var charBuffer: CharBuffer? = null
 
     @Volatile
     private var shortBuffer: ShortBuffer? = null
@@ -94,11 +52,11 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         intBuffer = null
     }
 
-    override fun getByte(): ByteBuffer {
+    fun getByte(): ByteBuffer {
         return byteBuffer
     }
 
-    override fun getWithCapacityByte(minCapacity: Int, newCapacity: Int): ByteBuffer {
+    fun getWithCapacityByte(minCapacity: Int, newCapacity: Int): ByteBuffer {
         if (byteBuffer.capacity() < minCapacity) {
             allocate(newCapacity)
         }
@@ -106,7 +64,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getByte()
     }
 
-    override fun getWithCapacityByte(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ByteBuffer {
+    fun getWithCapacityByte(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ByteBuffer {
         if (byteBuffer.capacity() < minCapacity || byteBuffer.capacity() > maxCapacity) {
             allocate(newCapacity)
         }
@@ -114,14 +72,14 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getByte()
     }
 
-    override fun ensureCapacityByte(minCapacity: Int, newCapacity: Int): ByteBuffer {
+    fun ensureCapacityByte(minCapacity: Int, newCapacity: Int): ByteBuffer {
         if (byteBuffer.capacity() < minCapacity) {
             reallocate(newCapacity)
         }
         return getByte()
     }
 
-    override fun ensureCapacityByte(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ByteBuffer {
+    fun ensureCapacityByte(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ByteBuffer {
         if (byteBuffer.capacity() !in minCapacity..maxCapacity) {
             reallocate(newCapacity)
         }
@@ -129,7 +87,47 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
     }
 
 
-    override fun getShort(): ShortBuffer {
+    fun getChar(): CharBuffer {
+        var buffer = charBuffer
+        if (buffer == null) {
+            buffer = this.byteBuffer.asCharBuffer()!!
+            charBuffer = buffer
+        }
+        return buffer
+    }
+
+    fun getWithCapacityChar(minCapacity: Int, newCapacity: Int): CharBuffer {
+        if (byteBuffer.capacity() < minCapacity * 2) {
+            allocate(newCapacity * 2)
+        }
+        byteBuffer.clear()
+        return getChar()
+    }
+
+    fun getWithCapacityChar(minCapacity: Int, newCapacity: Int, maxCapacity: Int): CharBuffer {
+        if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
+            allocate(newCapacity * 2)
+        }
+        byteBuffer.clear()
+        return getChar()
+    }
+
+    fun ensureCapacityChar(minCapacity: Int, newCapacity: Int): CharBuffer {
+        if (byteBuffer.capacity() < minCapacity * 2) {
+            reallocate(newCapacity * 2)
+        }
+        return getChar()
+    }
+
+    fun ensureCapacityChar(minCapacity: Int, newCapacity: Int, maxCapacity: Int): CharBuffer {
+        if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
+            reallocate(newCapacity * 2)
+        }
+        return getChar()
+    }
+
+
+    fun getShort(): ShortBuffer {
         var buffer = shortBuffer
         if (buffer == null) {
             buffer = this.byteBuffer.asShortBuffer()!!
@@ -138,7 +136,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return buffer
     }
 
-    override fun getWithCapacityShort(minCapacity: Int, newCapacity: Int): ShortBuffer {
+    fun getWithCapacityShort(minCapacity: Int, newCapacity: Int): ShortBuffer {
         if (byteBuffer.capacity() < minCapacity * 2) {
             allocate(newCapacity * 2)
         }
@@ -146,7 +144,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getShort()
     }
 
-    override fun getWithCapacityShort(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ShortBuffer {
+    fun getWithCapacityShort(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ShortBuffer {
         if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
             allocate(newCapacity * 2)
         }
@@ -154,14 +152,14 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getShort()
     }
 
-    override fun ensureCapacityShort(minCapacity: Int, newCapacity: Int): ShortBuffer {
+    fun ensureCapacityShort(minCapacity: Int, newCapacity: Int): ShortBuffer {
         if (byteBuffer.capacity() < minCapacity * 2) {
             reallocate(newCapacity * 2)
         }
         return getShort()
     }
 
-    override fun ensureCapacityShort(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ShortBuffer {
+    fun ensureCapacityShort(minCapacity: Int, newCapacity: Int, maxCapacity: Int): ShortBuffer {
         if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
             reallocate(newCapacity * 2)
         }
@@ -169,7 +167,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
     }
 
 
-    override fun getInt(): IntBuffer {
+    fun getInt(): IntBuffer {
         var buffer = intBuffer
         if (buffer == null) {
             buffer = this.byteBuffer.asIntBuffer()!!
@@ -178,7 +176,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return buffer
     }
 
-    override fun getWithCapacityInt(minCapacity: Int, newCapacity: Int): IntBuffer {
+    fun getWithCapacityInt(minCapacity: Int, newCapacity: Int): IntBuffer {
         if (byteBuffer.capacity() < minCapacity * 2) {
             allocate(newCapacity * 2)
         }
@@ -186,7 +184,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getInt()
     }
 
-    override fun getWithCapacityInt(minCapacity: Int, newCapacity: Int, maxCapacity: Int): IntBuffer {
+    fun getWithCapacityInt(minCapacity: Int, newCapacity: Int, maxCapacity: Int): IntBuffer {
         if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
             allocate(newCapacity * 2)
         }
@@ -194,14 +192,14 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getInt()
     }
 
-    override fun ensureCapacityInt(minCapacity: Int, newCapacity: Int): IntBuffer {
+    fun ensureCapacityInt(minCapacity: Int, newCapacity: Int): IntBuffer {
         if (byteBuffer.capacity() < minCapacity * 2) {
             reallocate(newCapacity * 2)
         }
         return getInt()
     }
 
-    override fun ensureCapacityInt(minCapacity: Int, newCapacity: Int, maxCapacity: Int): IntBuffer {
+    fun ensureCapacityInt(minCapacity: Int, newCapacity: Int, maxCapacity: Int): IntBuffer {
         if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
             reallocate(newCapacity * 2)
         }
@@ -209,7 +207,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
     }
 
 
-    override fun getFloat(): FloatBuffer {
+    fun getFloat(): FloatBuffer {
         var buffer = floatBuffer
         if (buffer == null) {
             buffer = this.byteBuffer.asFloatBuffer()!!
@@ -218,7 +216,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return buffer
     }
 
-    override fun getWithCapacityFloat(minCapacity: Int, newCapacity: Int): FloatBuffer {
+    fun getWithCapacityFloat(minCapacity: Int, newCapacity: Int): FloatBuffer {
         if (byteBuffer.capacity() < minCapacity * 2) {
             allocate(newCapacity * 2)
         }
@@ -226,7 +224,7 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getFloat()
     }
 
-    override fun getWithCapacityFloat(minCapacity: Int, newCapacity: Int, maxCapacity: Int): FloatBuffer {
+    fun getWithCapacityFloat(minCapacity: Int, newCapacity: Int, maxCapacity: Int): FloatBuffer {
         if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
             allocate(newCapacity * 2)
         }
@@ -234,14 +232,14 @@ class CachedBuffer(initialCapacity: Int) : ICachedBuffer {
         return getFloat()
     }
 
-    override fun ensureCapacityFloat(minCapacity: Int, newCapacity: Int): FloatBuffer {
+    fun ensureCapacityFloat(minCapacity: Int, newCapacity: Int): FloatBuffer {
         if (byteBuffer.capacity() < minCapacity * 2) {
             reallocate(newCapacity * 2)
         }
         return getFloat()
     }
 
-    override fun ensureCapacityFloat(minCapacity: Int, newCapacity: Int, maxCapacity: Int): FloatBuffer {
+    fun ensureCapacityFloat(minCapacity: Int, newCapacity: Int, maxCapacity: Int): FloatBuffer {
         if (byteBuffer.capacity() < minCapacity * 2 || byteBuffer.capacity() > maxCapacity * 2) {
             reallocate(newCapacity * 2)
         }

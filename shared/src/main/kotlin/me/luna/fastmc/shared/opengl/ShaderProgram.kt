@@ -4,7 +4,11 @@ import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.resource.Resource
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
-open class ShaderProgram(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) :
+open class ShaderProgram(
+    final override val resourceName: String,
+    vertex: ShaderSource.Vertex,
+    fragment: ShaderSource.Fragment
+) :
     Resource,
     IGLObject {
     final override val id: Int
@@ -12,8 +16,8 @@ open class ShaderProgram(final override val resourceName: String, vertShaderPath
     private val uniformBuffers = FastObjectArrayList<UniformBufferObject>()
 
     init {
-        val vertexShaderID = createShader(vertShaderPath, GL_VERTEX_SHADER)
-        val fragShaderID = createShader(fragShaderPath, GL_FRAGMENT_SHADER)
+        val vertexShaderID = createShader(vertex, GL_VERTEX_SHADER)
+        val fragShaderID = createShader(fragment, GL_FRAGMENT_SHADER)
         val id = glCreateProgram()
 
         glAttachShader(id, vertexShaderID)
@@ -34,26 +38,17 @@ open class ShaderProgram(final override val resourceName: String, vertShaderPath
         glDeleteShader(fragShaderID)
     }
 
-    private fun createShader(path: String, shaderType: Int): Int {
-        val stringBuilder = StringBuilder()
-        javaClass.getResourceAsStream(path)!!.bufferedReader().forEachLine {
-            if (it.startsWith("#import")) {
-                val importContent = javaClass.getResourceAsStream(it.substring(8))!!.readBytes().decodeToString()
-                stringBuilder.appendLine(importContent)
-            } else {
-                stringBuilder.appendLine(it)
-            }
-        }
+    private fun createShader(source: ShaderSource, shaderType: Int): Int {
         val id = glCreateShader(shaderType)
 
-        glShaderSource(id, stringBuilder)
+        glShaderSource(id, source.codeSrc)
         glCompileShader(id)
 
         val compiled = glGetShaderi(id, GL_COMPILE_STATUS)
         if (compiled == 0) {
             FastMcMod.logger.error(glGetShaderInfoLog(id, 1024))
             glDeleteShader(id)
-            throw IllegalStateException("Failed to compile shader: $path")
+            throw IllegalStateException("Failed to compile shader: $source")
         }
 
         return id

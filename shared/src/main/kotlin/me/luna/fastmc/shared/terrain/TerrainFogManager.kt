@@ -84,11 +84,15 @@ class TerrainFogManager(renderer: IRenderer) {
         val densityUniform = glGetUniformLocation(id, "density")
     }
 
-    sealed class ShaderProgram(renderer: IRenderer, type: String, alphaTest: Boolean) :
+    sealed class ShaderProgram(renderer: IRenderer, fogType: String, alphaTest: Boolean) :
         me.luna.fastmc.shared.opengl.ShaderProgram(
-            "Terrain$type",
-            "/assets/shaders/terrain/Terrain$type.vsh",
-            "/assets/shaders/terrain/Terrain${if (alphaTest) "AlphaTest" else ""}.fsh"
+            "Terrain$fogType${if (alphaTest) "AlphaTest" else ""}",
+            ShaderSource.Vertex("/assets/shaders/terrain/Terrain.vsh") {
+                define("ALPHA_TEST", alphaTest)
+            },
+            ShaderSource.Fragment("/assets/shaders/terrain/Terrain.fsh") {
+                define("FOG_TYPE", fogType)
+            }
         ) {
         init {
             glProgramUniform1i(id, glGetUniformLocation(id, "blockTexture"), 0)

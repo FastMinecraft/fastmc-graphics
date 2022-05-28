@@ -3,8 +3,8 @@ package me.luna.fastmc.shared.opengl
 import me.luna.fastmc.shared.util.MatrixUtils
 import org.joml.Matrix4f
 
-open class DrawShaderProgram(resourceName: String, vertShaderPath: String, fragShaderPath: String) :
-    ShaderProgram(resourceName, vertShaderPath, fragShaderPath) {
+open class DrawShaderProgram(resourceName: String, vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :
+    ShaderProgram(resourceName, vertex, fragment) {
     private val projectionUniform = glGetUniformLocation(id, "projection")
     private val modelViewUniform = glGetUniformLocation(id, "modelView")
 
