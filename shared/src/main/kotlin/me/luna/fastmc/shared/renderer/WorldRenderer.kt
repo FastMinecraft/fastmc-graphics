@@ -128,6 +128,7 @@ abstract class WorldRenderer : IRenderer {
     abstract fun postRender()
 
     open fun destroy() {
+        matricesUBO.destroy()
         tileEntityRenderer.destroy()
         entityRenderer.destroy()
         terrainRenderer.destroy()

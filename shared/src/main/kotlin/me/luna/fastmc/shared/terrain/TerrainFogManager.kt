@@ -88,10 +88,10 @@ class TerrainFogManager(renderer: IRenderer) {
         me.luna.fastmc.shared.opengl.ShaderProgram(
             "Terrain$fogType${if (alphaTest) "AlphaTest" else ""}",
             ShaderSource.Vertex("/assets/shaders/terrain/Terrain.vsh") {
-                define("ALPHA_TEST", alphaTest)
+                define("FOG_TYPE", fogType)
             },
             ShaderSource.Fragment("/assets/shaders/terrain/Terrain.fsh") {
-                define("FOG_TYPE", fogType)
+                if (alphaTest) define("ALPHA_TEST")
             }
         ) {
         init {

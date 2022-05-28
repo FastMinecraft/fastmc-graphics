@@ -48,14 +48,18 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
         }
 
         operator fun invoke(path: String, defines: DefineBuilder): T {
+            if (defines.stringBuilder.isEmpty()) {
+                return invoke(path)
+            }
+
             val cache = getCache(path)
             val stringBuilder = StringBuilder()
             val firstLine = cache.lines[0]
             if (firstLine.startsWith("#version")) {
                 stringBuilder.appendLine(firstLine)
-                stringBuilder.append(defines)
+                stringBuilder.append(defines.stringBuilder)
             } else {
-                stringBuilder.append(defines)
+                stringBuilder.append(defines.stringBuilder)
                 stringBuilder.appendLine(firstLine)
             }
 
@@ -133,13 +137,14 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
         }
     }
 
-    class DefineBuilder private constructor(private val stringBuilder: StringBuilder) : CharSequence by stringBuilder {
-        constructor() : this(StringBuilder())
+    class DefineBuilder {
+        internal val stringBuilder = StringBuilder()
 
         fun define(name: String) {
             stringBuilder.append("#define")
             stringBuilder.append(' ')
             stringBuilder.append(name)
+            stringBuilder.appendLine()
         }
 
         fun define(name: String, value: Any) {
@@ -148,6 +153,7 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
             stringBuilder.append(name)
             stringBuilder.append(' ')
             stringBuilder.append(value.toString())
+            stringBuilder.appendLine()
         }
 
         fun define(name: String, value: Boolean) {
@@ -156,6 +162,7 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
             stringBuilder.append(name)
             stringBuilder.append(' ')
             stringBuilder.append(value)
+            stringBuilder.appendLine()
         }
 
         fun define(name: String, value: Int) {
@@ -164,6 +171,7 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
             stringBuilder.append(name)
             stringBuilder.append(' ')
             stringBuilder.append(value)
+            stringBuilder.appendLine()
         }
     }
 }
