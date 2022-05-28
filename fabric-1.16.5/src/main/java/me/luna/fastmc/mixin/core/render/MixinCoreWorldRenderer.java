@@ -601,7 +601,7 @@ public abstract class MixinCoreWorldRenderer {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainFogManager fogManager = terrainRenderer.getFogManager();
 
-        TerrainFogManager.Shader shader = fogManager.getShader();
+        TerrainFogManager.ShaderProgram shader = fogManager.getShader();
         shader.bind();
 
         blockTexture.setFilter(false, true);
@@ -658,7 +658,7 @@ public abstract class MixinCoreWorldRenderer {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainFogManager fogManager = terrainRenderer.getFogManager();
 
-        TerrainFogManager.Shader shader = fogManager.getShader();
+        TerrainFogManager.ShaderProgram shader = fogManager.getShader();
         shader.bind();
 
         blockTexture.setFilter(false, true);

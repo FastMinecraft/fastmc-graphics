@@ -1,7 +1,10 @@
-#version 330
+#version 460
+#import /assets/shaders/util/Mat3Rotation.glsl
 
-uniform mat4 projection;
-uniform mat4 modelView;
+layout(std140) uniform Matrices {
+    mat4 projection;
+    mat4 modelView;
+};
 
 uniform float alpha;
 uniform float partialTicks;
@@ -22,8 +25,6 @@ layout(location = 8) in int isHead;
 out vec2 uv;
 flat out vec3 normal;
 out vec2 lightMapUV;
-
-#import /assets/shaders/util/Mat3Rotation.glsl
 
 void main() {
     if (isHead == vertGroupID) {

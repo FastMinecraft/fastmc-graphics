@@ -1,4 +1,6 @@
-package me.luna.fastmc.shared.opengl
+package me.luna.fastmc.shared.opengl.impl
+
+import me.luna.fastmc.shared.opengl.*
 
 class VertexAttribute private constructor(val stride: Int, private val divisor: Int, private val entries: List<Entry>) {
     fun apply(vao: VertexArrayObject, binding: Int) {

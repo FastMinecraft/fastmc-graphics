@@ -1,4 +1,5 @@
-#version 330
+#version 460
+#import /assets/shaders/util/Mat3Rotation.glsl
 
 uniform mat4 projection;
 uniform mat4 modelView;
@@ -24,8 +25,6 @@ flat out vec3 normal;
 out vec2 lightMapUV;
 
 const vec3 headRotationPointOffset = vec3(0.0, 1.5, 0.0);
-
-#import /assets/shaders/util/Mat3Rotation.glsl
 
 void main() {
     vec3 position = modelPosition;

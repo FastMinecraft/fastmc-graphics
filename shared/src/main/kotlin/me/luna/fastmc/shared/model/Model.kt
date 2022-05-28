@@ -1,6 +1,10 @@
 package me.luna.fastmc.shared.model
 
-import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.GLDataType
+import me.luna.fastmc.shared.opengl.VertexArrayObject
+import me.luna.fastmc.shared.opengl.VertexBufferObject
+import me.luna.fastmc.shared.opengl.glNamedBufferStorage
+import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.resource.Resource
 
 abstract class Model(override val resourceName: String, private val textureSizeX: Int, private val textureSizeZ: Int) :

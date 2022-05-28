@@ -2,10 +2,14 @@ package me.luna.fastmc.shared.opengl
 
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.resource.Resource
+import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
-open class Shader(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) : Resource,
+open class ShaderProgram(final override val resourceName: String, vertShaderPath: String, fragShaderPath: String) :
+    Resource,
     IGLObject {
     final override val id: Int
+
+    private val uniformBuffers = FastObjectArrayList<UniformBufferObject>()
 
     init {
         val vertexShaderID = createShader(vertShaderPath, GL_VERTEX_SHADER)
@@ -20,7 +24,7 @@ open class Shader(final override val resourceName: String, vertShaderPath: Strin
         if (linked == 0) {
             FastMcMod.logger.error(glGetProgramInfoLog(id, 1024))
             glDeleteProgram(id)
-            throw IllegalStateException("Shader failed to link")
+            throw IllegalStateException("Shader program failed to link")
         }
         this.id = id
 
@@ -55,8 +59,17 @@ open class Shader(final override val resourceName: String, vertShaderPath: Strin
         return id
     }
 
+    fun attachUBO(ubo: UniformBufferObject) {
+        val index = glGetUniformBlockIndex(id, ubo.blockName)
+        glUniformBlockBinding(id, index, uniformBuffers.size)
+        uniformBuffers.add(ubo)
+    }
+
     final override fun bind() {
         glUseProgram(id)
+        for (i in uniformBuffers.indices) {
+            glBindBufferBase(GL_UNIFORM_BUFFER, i, uniformBuffers[i].id)
+        }
     }
 
     final override fun unbind() {

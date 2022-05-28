@@ -517,7 +517,7 @@ public abstract class MixinCoreEntityRenderer {
         GlStateManager.bindTexture(blockTexture.getGlTextureId());
         GlStateManager.disableAlpha();
 
-        TerrainFogManager.Shader shader = fogManager.getShader();
+        TerrainFogManager.ShaderProgram shader = fogManager.getShader();
         shader.bind();
 
         this.mc.profiler.startSection("solid");

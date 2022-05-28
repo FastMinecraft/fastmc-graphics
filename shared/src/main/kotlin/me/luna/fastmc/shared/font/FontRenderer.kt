@@ -25,7 +25,7 @@ class FontRenderer(
     private val renderStringMap = Object2ObjectOpenHashMap<CharSequence, RenderString>()
     private var cleanTimer = System.currentTimeMillis()
 
-    val shader = Shader()
+    val shader = ShaderProgram()
 
     val fontHeight = 8
     var unicode = false
@@ -348,7 +348,7 @@ class FontRenderer(
         renderStringMap.clear()
     }
 
-    class Shader : DrawShader(
+    class ShaderProgram : DrawShaderProgram(
         "FontRenderer",
         "/assets/shaders/FontRenderer.vsh",
         "/assets/shaders/FontRenderer.fsh"

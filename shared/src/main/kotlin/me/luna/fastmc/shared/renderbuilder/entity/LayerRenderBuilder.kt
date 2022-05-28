@@ -13,7 +13,7 @@ abstract class LayerRenderBuilder {
             }
         }
 
-        fun shader(name: String): ResourceEntry<AbstractRenderBuilder.Shader> {
+        fun shader(name: String): ResourceEntry<AbstractRenderBuilder.ShaderProgram> {
             return ResourceEntry("entity/$name") {
                 it.entityShader
             }

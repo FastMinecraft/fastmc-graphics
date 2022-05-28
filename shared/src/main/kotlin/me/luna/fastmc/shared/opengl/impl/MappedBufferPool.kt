@@ -1,5 +1,6 @@
-package me.luna.fastmc.shared.opengl
+package me.luna.fastmc.shared.opengl.impl
 
+import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.terrain.ChunkBuilderTask
 import me.luna.fastmc.shared.util.ConcurrentObjectPool
 import me.luna.fastmc.shared.util.collection.AtomicByteArray

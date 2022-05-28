@@ -55,11 +55,34 @@ class GLWrapper : IGLWrapper {
     override fun glDeleteVertexArrays(array: Int) = GL30C.glDeleteVertexArrays(array)
     override fun glBindVertexArray(array: Int) = GL30C.glBindVertexArray(array)
     override fun glGenerateMipmap(target: Int) = GL30C.glGenerateMipmap(target)
+    override fun glBindBufferBase(target: Int, index: Int, buffer: Int) = GL30C.glBindBufferBase(target, index, buffer)
 
 
     // GL31
     override fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
         GL31C.glDrawArraysInstanced(mode, first, count, primcount)
+
+    override fun glGetUniformBlockIndex(program: Int, uniformBlockName: CharSequence): Int =
+        GL31C.glGetUniformBlockIndex(program, uniformBlockName)
+
+    override fun glUniformBlockBinding(program: Int, uniformBlockIndex: Int, uniformBlockBinding: Int) =
+        GL31C.glUniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding)
+
+
+    // GL32
+    private val lengthBuffer = allocateInt(1).apply {
+        put(1)
+        flip()
+    }
+    private val valueBuffer = allocateInt(1)
+
+    override fun glFenceSync(condition: Int, flags: Int): Long = GL32C.glFenceSync(condition, flags)
+    override fun glDeleteSync(sync: Long) = GL32C.glDeleteSync(sync)
+
+    override fun glGetSynciv(sync: Long, pname: Int): Int {
+        GL32C.glGetSynciv(sync, pname, lengthBuffer, valueBuffer)
+        return valueBuffer.get(0)
+    }
 
 
     // GL41
@@ -80,21 +103,6 @@ class GLWrapper : IGLWrapper {
 
     override fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
         GL41C.glProgramUniformMatrix4fv(program, location, transpose, matrices)
-
-
-    private val lengthBuffer = allocateInt(1).apply {
-        put(1)
-        flip()
-    }
-    private val valueBuffer = allocateInt(1)
-
-    override fun glFenceSync(condition: Int, flags: Int): Long = GL32C.glFenceSync(condition, flags)
-    override fun glDeleteSync(sync: Long) = GL32C.glDeleteSync(sync)
-
-    override fun glGetSynciv(sync: Long, pname: Int): Int {
-        GL32C.glGetSynciv(sync, pname, lengthBuffer, valueBuffer)
-        return valueBuffer.get(0)
-    }
 
 
     // GL43

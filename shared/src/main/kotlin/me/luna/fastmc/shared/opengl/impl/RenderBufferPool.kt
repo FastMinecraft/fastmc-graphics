@@ -1,5 +1,6 @@
-package me.luna.fastmc.shared.opengl
+package me.luna.fastmc.shared.opengl.impl
 
+import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.util.ObjectPool
 import me.luna.fastmc.shared.util.pollEach
 import java.util.concurrent.ConcurrentLinkedQueue

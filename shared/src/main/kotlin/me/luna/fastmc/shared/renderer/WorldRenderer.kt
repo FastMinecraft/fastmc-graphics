@@ -1,7 +1,12 @@
 package me.luna.fastmc.shared.renderer
 
 import kotlinx.coroutines.CoroutineScope
+import me.luna.fastmc.shared.opengl.GL_DYNAMIC_STORAGE_BIT
+import me.luna.fastmc.shared.opengl.UniformBufferObject
+import me.luna.fastmc.shared.opengl.glInvalidateBufferData
+import me.luna.fastmc.shared.opengl.glNamedBufferSubData
 import me.luna.fastmc.shared.terrain.TerrainRenderer
+import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.fastFloor
 import org.joml.FrustumIntersection
 import org.joml.Matrix4f
@@ -31,6 +36,9 @@ abstract class WorldRenderer : IRenderer {
     final override var modelViewMatrix = Matrix4f()
     final override var invertedProjectMatrix = Matrix4f()
     final override var invertedModelViewMatrix = Matrix4f()
+
+    final override val matricesUBO = UniformBufferObject("Matrices", 128, GL_DYNAMIC_STORAGE_BIT)
+    private val matricesBuffer = allocateByte(matricesUBO.size)
 
     final override val frustum = FrustumIntersection(projectionMatrix, false)
     final override var matrixHash = 0L
@@ -76,6 +84,12 @@ abstract class WorldRenderer : IRenderer {
         modelViewMatrix = modelView
         invertedProjectMatrix = projection.invert(Matrix4f())
         invertedModelViewMatrix = modelView.invert(Matrix4f())
+
+        glInvalidateBufferData(matricesUBO.id)
+        matricesBuffer.clear()
+        projection.get(0, matricesBuffer)
+        modelView.get(64, matricesBuffer)
+        glNamedBufferSubData(matricesUBO.id, 0, matricesBuffer)
     }
 
     fun updateFrustum() {

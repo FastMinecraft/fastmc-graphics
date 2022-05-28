@@ -7,7 +7,7 @@ import me.luna.fastmc.shared.model.tileentity.ModelBed
 import me.luna.fastmc.shared.model.tileentity.ModelChest
 import me.luna.fastmc.shared.model.tileentity.ModelLargeChest
 import me.luna.fastmc.shared.model.tileentity.ModelShulkerBox
-import me.luna.fastmc.shared.opengl.Shader
+import me.luna.fastmc.shared.opengl.ShaderProgram
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceProvider
@@ -25,36 +25,36 @@ class ResourceManager(mc: MinecraftClient) : IResourceManager {
         ModelShulkerBox().init(),
     )
 
-    override val entityShader: ResourceProvider<AbstractRenderBuilder.Shader> = ResourceProvider(
-        AbstractRenderBuilder.Shader(
+    override val entityShader: ResourceProvider<AbstractRenderBuilder.ShaderProgram> = ResourceProvider(
+        AbstractRenderBuilder.ShaderProgram(
             "entity/Cow",
             "/assets/shaders/entity/Cow.vsh",
             "/assets/shaders/entity/Default.fsh"
         ),
 
-        AbstractRenderBuilder.Shader(
+        AbstractRenderBuilder.ShaderProgram(
             "tileEntity/EnderChest",
             "/assets/shaders/tileentity/EnderChest.vsh",
             "/assets/shaders/tileentity/Default.fsh"
         ),
-        AbstractRenderBuilder.Shader(
+        AbstractRenderBuilder.ShaderProgram(
             "tileEntity/Bed",
             "/assets/shaders/tileentity/Bed.vsh",
             "/assets/shaders/tileentity/Default.fsh"
         ),
-        AbstractRenderBuilder.Shader(
+        AbstractRenderBuilder.ShaderProgram(
             "tileEntity/ShulkerBox",
             "/assets/shaders/tileentity/ShulkerBox.vsh",
             "/assets/shaders/tileentity/Default.fsh"
         ),
-        AbstractRenderBuilder.Shader(
+        AbstractRenderBuilder.ShaderProgram(
             "tileEntity/Chest",
             "/assets/shaders/tileentity/Chest.vsh",
             "/assets/shaders/tileentity/Default.fsh"
         )
     )
 
-    override val shader: ResourceProvider<Shader> = ResourceProvider(
+    override val shaderProgram: ResourceProvider<ShaderProgram> = ResourceProvider(
 
     )
 

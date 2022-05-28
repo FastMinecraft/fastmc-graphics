@@ -1,7 +1,7 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.opengl.RenderBufferPool
 import me.luna.fastmc.shared.opengl.VertexArrayObject
+import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
 import me.luna.fastmc.shared.util.allocateInt
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import org.joml.FrustumIntersection

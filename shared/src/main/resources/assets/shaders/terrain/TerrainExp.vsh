@@ -1,7 +1,10 @@
 #version 460
 
-uniform mat4 projection;
-uniform mat4 modelView;
+layout(std140) uniform Matrices {
+    mat4 projection;
+    mat4 modelView;
+};
+
 uniform vec3 offset;
 uniform float density;
 

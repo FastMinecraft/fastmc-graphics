@@ -1,4 +1,5 @@
-#version 330
+#version 460
+#import /assets/shaders/util/Mat3Rotation.glsl
 
 uniform mat4 projection;
 uniform mat4 modelView;
@@ -30,8 +31,6 @@ out vec2 lightMapUV;
 const float pi = 3.14159265358979323846;
 const float toRadian = 0.01745329251994329576923690768489;
 const vec3 headRotationPoint = vec3(0.0, 1.25, 0.5);
-
-#import /assets/shaders/util/Mat3Rotation.glsl
 
 void main() {
     vec3 renderPosition = mix(prevEntityPos, entityPos, partialTicks);

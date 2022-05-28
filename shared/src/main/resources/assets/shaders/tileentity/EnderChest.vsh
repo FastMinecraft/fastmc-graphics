@@ -1,7 +1,10 @@
-#version 330
+#version 460
+#import /assets/shaders/util/Mat3Rotation.glsl
 
-uniform mat4 projection;
-uniform mat4 modelView;
+layout(std140) uniform Matrices {
+    mat4 projection;
+    mat4 modelView;
+};
 
 uniform float alpha;
 uniform float partialTicks;
@@ -24,8 +27,6 @@ flat out vec3 normal;
 out vec2 lightMapUV;
 
 const vec3 rotationPointOffset = vec3(0.0, 0.5625, -0.4375);
-
-#import /assets/shaders/util/Mat3Rotation.glsl
 
 void main() {
     vec3 position = modelPosition;

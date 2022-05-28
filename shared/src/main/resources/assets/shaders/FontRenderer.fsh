@@ -1,4 +1,4 @@
-#version 330
+#version 460
 
 uniform sampler2D texture;
 

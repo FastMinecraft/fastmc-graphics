@@ -2,6 +2,7 @@ package me.luna.fastmc.shared.renderbuilder.entity
 
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.impl.VertexAttribute
 import me.luna.fastmc.shared.renderbuilder.entity.info.ICowInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
@@ -37,7 +38,7 @@ class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model
-    override val shader: ResourceEntry<Shader> get() = Companion.shader
+    override val shader: ResourceEntry<ShaderProgram> get() = Companion.shader
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
     override fun VertexAttribute.Builder.setupAttribute() {

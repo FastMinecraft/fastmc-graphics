@@ -37,7 +37,7 @@ abstract class EntityRenderBuilder<T : IEntityInfo<*>>(vertexSize: Int) : Abstra
             }
         }
 
-        fun shader(name: String): ResourceEntry<Shader> {
+        fun shader(name: String): ResourceEntry<ShaderProgram> {
             return ResourceEntry("entity/$name") {
                 it.entityShader
             }

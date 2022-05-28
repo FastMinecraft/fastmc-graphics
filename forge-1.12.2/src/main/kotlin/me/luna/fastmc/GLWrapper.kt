@@ -56,30 +56,17 @@ class GLWrapper : IGLWrapper {
     override fun glDeleteVertexArrays(array: Int) = GL30.glDeleteVertexArrays(array)
     override fun glBindVertexArray(array: Int) = GL30.glBindVertexArray(array)
     override fun glGenerateMipmap(target: Int) = GL30.glGenerateMipmap(target)
+    override fun glBindBufferBase(target: Int, index: Int, buffer: Int) = GL30.glBindBufferBase(target, index, buffer)
 
     // GL31
     override fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
         GL31.glDrawArraysInstanced(mode, first, count, primcount)
 
+    override fun glGetUniformBlockIndex(program: Int, uniformBlockName: CharSequence): Int =
+        GL31.glGetUniformBlockIndex(program, uniformBlockName)
 
-    // GL41
-    override fun glProgramUniform1i(program: Int, location: Int, v0: Int) =
-        GL41.glProgramUniform1i(program, location, v0)
-
-    override fun glProgramUniform1f(program: Int, location: Int, v0: Float) =
-        GL41.glProgramUniform1f(program, location, v0)
-
-    override fun glProgramUniform2f(program: Int, location: Int, v0: Float, v1: Float) =
-        GL41.glProgramUniform2f(program, location, v0, v1)
-
-    override fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float) =
-        GL41.glProgramUniform3f(program, location, v0, v1, v2)
-
-    override fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float) =
-        GL41.glProgramUniform4f(program, location, v0, v1, v2, v3)
-
-    override fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
-        GL41.glProgramUniformMatrix4(program, location, transpose, matrices)
+    override fun glUniformBlockBinding(program: Int, uniformBlockIndex: Int, uniformBlockBinding: Int) =
+        GL31.glUniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding)
 
 
     // GL32
@@ -111,6 +98,26 @@ class GLWrapper : IGLWrapper {
         GL32.glGetSync(glSyncInstance, pname, lengthBuffer, valueBuffer)
         return valueBuffer.get(0)
     }
+
+
+    // GL41
+    override fun glProgramUniform1i(program: Int, location: Int, v0: Int) =
+        GL41.glProgramUniform1i(program, location, v0)
+
+    override fun glProgramUniform1f(program: Int, location: Int, v0: Float) =
+        GL41.glProgramUniform1f(program, location, v0)
+
+    override fun glProgramUniform2f(program: Int, location: Int, v0: Float, v1: Float) =
+        GL41.glProgramUniform2f(program, location, v0, v1)
+
+    override fun glProgramUniform3f(program: Int, location: Int, v0: Float, v1: Float, v2: Float) =
+        GL41.glProgramUniform3f(program, location, v0, v1, v2)
+
+    override fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float) =
+        GL41.glProgramUniform4f(program, location, v0, v1, v2, v3)
+
+    override fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
+        GL41.glProgramUniformMatrix4(program, location, transpose, matrices)
 
 
     // GL43

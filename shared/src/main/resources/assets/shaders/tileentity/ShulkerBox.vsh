@@ -1,7 +1,10 @@
-#version 330
+#version 460
+#import /assets/shaders/util/Mat3Rotation.glsl
 
-uniform mat4 projection;
-uniform mat4 modelView;
+layout(std140) uniform Matrices {
+    mat4 projection;
+    mat4 modelView;
+};
 
 uniform float alpha;
 uniform float partialTicks;
@@ -27,8 +30,6 @@ out vec2 lightMapUV;
 
 const float lidAngleMultiplier = 4.7123889803846898576939650749193;
 const vec2 uvMultiplier = vec2(0.25, 0.125);
-
-#import /assets/shaders/util/Mat3Rotation.glsl
 
 void main() {
     vec3 position = modelPosition * 0.9995;

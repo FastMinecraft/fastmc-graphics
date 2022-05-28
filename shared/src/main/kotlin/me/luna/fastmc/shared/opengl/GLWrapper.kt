@@ -47,10 +47,7 @@ interface IGLWrapper {
     fun glBindVertexArray(array: Int)
     fun glDeleteVertexArrays(array: Int)
     fun glGenerateMipmap(target: Int)
-
-
-    // GL31
-    fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int)
+    fun glBindBufferBase(target: Int, index: Int, buffer: Int)
 
     // GL20
     fun glProgramUniform1i(program: Int, location: Int, v0: Int)
@@ -60,6 +57,11 @@ interface IGLWrapper {
     fun glProgramUniform4f(program: Int, location: Int, v0: Float, v1: Float, v2: Float, v3: Float)
     fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer)
 
+
+    // GL31
+    fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int)
+    fun glGetUniformBlockIndex(program: Int, uniformBlockName: CharSequence): Int
+    fun glUniformBlockBinding(program: Int, uniformBlockIndex: Int, uniformBlockBinding: Int)
 
     // GL32
     fun glFenceSync(condition: Int, flags: Int): Long
@@ -285,12 +287,20 @@ const val GL_COMPRESSED_RED_RGTC1 = 0x8DBB
 inline fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
 inline fun glDeleteVertexArrays(array: Int) = glWrapper.glDeleteVertexArrays(array)
 inline fun glBindVertexArray(array: Int) = glWrapper.glBindVertexArray(array)
+inline fun glBindBufferBase(target: Int, index: Int, buffer: Int) = glWrapper.glBindBufferBase(target, index, buffer)
 
 
 // GL31
+const val GL_UNIFORM_BUFFER = 0x8A11
+
 inline fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
     glWrapper.glDrawArraysInstanced(mode, first, count, primcount)
 
+inline fun glGetUniformBlockIndex(program: Int, uniformBlockName: CharSequence): Int =
+    glWrapper.glGetUniformBlockIndex(program, uniformBlockName)
+
+inline fun glUniformBlockBinding(program: Int, uniformBlockIndex: Int, uniformBlockBinding: Int) =
+    glWrapper.glUniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding)
 
 // GL32
 const val GL_SYNC_STATUS = 0x9114

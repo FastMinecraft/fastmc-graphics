@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.opengl.RenderBufferPool
+import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
 import me.luna.fastmc.shared.util.ObjectPool
 import me.luna.fastmc.shared.util.collection.FastIntMap
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList

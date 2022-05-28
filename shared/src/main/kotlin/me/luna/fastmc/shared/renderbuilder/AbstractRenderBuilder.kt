@@ -5,6 +5,8 @@ import kotlinx.coroutines.launch
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.impl.VertexAttribute
+import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.renderer.IRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceEntry
@@ -114,7 +116,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     private lateinit var vertexAttribute: VertexAttribute
 
     protected abstract val model: ResourceEntry<Model>
-    protected abstract val shader: ResourceEntry<Shader>
+    protected abstract val shader: ResourceEntry<ShaderProgram>
     protected abstract val texture: ResourceEntry<ITexture>
 
     protected open fun uploadBuffer(buffer: ByteBuffer): Renderer {
@@ -133,7 +135,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     }
 
     protected fun renderInfo(
-        shader: Shader,
+        shader: ShaderProgram,
         vao: VertexArrayObject,
         vboList: List<VertexBufferObject>,
         model: Model
@@ -189,8 +191,8 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         }
     }
 
-    open class Shader(resourceName: String, vertShaderPath: String, fragShaderPath: String) :
-        DrawShader(resourceName, vertShaderPath, fragShaderPath) {
+    open class ShaderProgram(resourceName: String, vertShaderPath: String, fragShaderPath: String) :
+        DrawShaderProgram(resourceName, vertShaderPath, fragShaderPath) {
         val partialTicksUniform = glGetUniformLocation(id, "partialTicks")
 
         init {
@@ -200,7 +202,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
     interface IRenderInfo {
         val resourceManager: IResourceManager
-        val shader: Shader
+        val shader: ShaderProgram
         val vao: VertexArrayObject
         val vboList: List<VertexBufferObject>
         val modelSize: Int
@@ -212,7 +214,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
     class RenderInfo(
         override val resourceManager: IResourceManager,
-        override val shader: Shader,
+        override val shader: ShaderProgram,
         override val vao: VertexArrayObject,
         override val vboList: List<VertexBufferObject>,
         override val modelSize: Int,

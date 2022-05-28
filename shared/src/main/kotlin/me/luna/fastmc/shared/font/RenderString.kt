@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.shorts.ShortArrayList
 import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.util.ColorARGB
 import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.collection.FastIntMap
@@ -62,7 +63,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
     }
 
     fun render(
-        shader: FontRenderer.Shader,
+        shader: FontRenderer.ShaderProgram,
         projection: Matrix4f,
         modelView: Matrix4f,
         color: ColorARGB,
