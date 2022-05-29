@@ -9,7 +9,7 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
     private val growAmount = 1 shl growPower
     private val regionPool = ObjectPool { Region() }
 
-    var vbo = VertexBufferObject(vertexAttribute); private set
+    var bufferObject = VertexBufferObject(vertexAttribute); private set
 
     var capacity = 0
     var allocated = 0; private set
@@ -34,7 +34,7 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
         var updated = false
 
         releaseQueue.pollEach {
-            glInvalidateBufferSubData(vbo.id, it.offset.toLong(), it.length.toLong())
+            it.invalidate()
 
             it.used = false
             allocated -= it.length
@@ -64,13 +64,13 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
     }
 
     fun destroy() {
-        vbo.destroy()
+        bufferObject.destroy()
     }
 
     fun ensureCapacity(newLength: Int) {
         if (capacity == 0) {
             val newSize = (newLength + growAmount - 1) shr growPower shl growPower
-            glNamedBufferData(vbo.id, newSize.toLong(), GL_DYNAMIC_DRAW)
+            glNamedBufferData(bufferObject.id, newSize.toLong(), GL_DYNAMIC_DRAW)
             capacity = newSize
             regionHead.length = newSize
             return
@@ -93,8 +93,8 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
             } else {
                 capacity
             }
-            val newVbo = VertexBufferObject(vertexAttribute)
-            glNamedBufferData(newVbo.id, newSize.toLong(), GL_DYNAMIC_DRAW)
+            val newBufferObject = VertexBufferObject(vertexAttribute)
+            glNamedBufferData(newBufferObject.id, newSize.toLong(), GL_DYNAMIC_DRAW)
             allocated = 0
 
             current = regionHead
@@ -104,8 +104,8 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
 
                 if (current.used) {
                     glCopyNamedBufferSubData(
-                        vbo.id,
-                        newVbo.id,
+                        bufferObject.id,
+                        newBufferObject.id,
                         current.offset.toLong(),
                         allocated.toLong(),
                         current.length.toLong()
@@ -120,8 +120,8 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
                 current = next
             }
 
-            vbo.destroy()
-            vbo = newVbo
+            bufferObject.destroy()
+            bufferObject = newBufferObject
             capacity = newSize
 
             val newTail = regionPool.get().init()
@@ -136,9 +136,9 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
             val newVbo = VertexBufferObject(vertexAttribute)
             glNamedBufferData(newVbo.id, newSize.toLong(), GL_DYNAMIC_DRAW)
 
-            glCopyNamedBufferSubData(vbo.id, newVbo.id, 0L, 0L, lastUnused.toLong())
-            vbo.destroy()
-            vbo = newVbo
+            glCopyNamedBufferSubData(bufferObject.id, newVbo.id, 0L, 0L, lastUnused.toLong())
+            bufferObject.destroy()
+            bufferObject = newVbo
             capacity = newSize
 
             val diff = newSize - tail.end
@@ -249,7 +249,7 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
     }
 
     inner class Region {
-        val vboID get() = vbo.id
+        val bufferObjectID get() = bufferObject.id
 
         var used = false; internal set
         var offset = 0; internal set
@@ -290,6 +290,10 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
 
 
             return newRegion
+        }
+
+        fun invalidate() {
+            glInvalidateBufferSubData(bufferObjectID, offset.toLong(), length.toLong())
         }
 
         fun release() {

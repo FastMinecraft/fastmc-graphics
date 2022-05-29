@@ -14,6 +14,8 @@ import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.math.max
 
 abstract class ContextProvider {
     private var bufferPool0: MappedBufferPool? = null
@@ -26,8 +28,8 @@ abstract class ContextProvider {
     protected fun postConstruct() {
         bufferPool0 = MappedBufferPool(
             (4 * 1024).countTrailingZeroBits(),
-            ParallelUtils.CPU_THREADS * 512,
-            ParallelUtils.CPU_THREADS * 64
+            max(ParallelUtils.CPU_THREADS * 1024, 4096),
+            ParallelUtils.CPU_THREADS * 128
         )
 
         rebuildContextPool = ArrayPriorityObjectPool(
@@ -54,32 +56,29 @@ abstract class ContextProvider {
 
                 override suspend fun get(): BufferContext {
                     val context = objectPool.get()
-                    context.region0 = bufferPool0!!.allocate()
+                    context.region0.set(bufferPool0!!.allocate())
                     return context
                 }
 
                 override fun tryGet(): BufferContext? {
-                    val region = bufferPool0!!.tryAllocate()
-                    return if (region != null) {
-                        val context = objectPool.get()
-                        context.region0 = region
-                        context
-                    } else {
-                        null
-                    }
+                    val region = bufferPool0!!.tryAllocate() ?: return null
+                    val context = objectPool.get()
+                    context.region0.set(region)
+                    return context
                 }
 
                 override fun put(element: BufferContext) {
-                    element.region.release()
-                    (element as BufferContextImpl).region0 = null
+                    objectPool.put(element as BufferContextImpl)
                 }
 
                 inner class BufferContextImpl : BufferContext() {
-                    public override var region0: MappedBufferPool.Region?
+                    public override val region0: AtomicReference<MappedBufferPool.Region?>
                         get() = super.region0
-                        set(value) {
-                            super.region0 = value
-                        }
+
+                    public override fun release0() {
+                        super.release0()
+                        put(this)
+                    }
                 }
             },
             ChunkBuilderTask.unsynchronizedComparator()
@@ -791,7 +790,7 @@ abstract class RebuildContext(layerCount: Int) : Context() {
 
 @Suppress("UNCHECKED_CAST")
 abstract class SortContext : Context() {
-    val tempVertexData = ByteArrayList(ByteArrayList.DEFAULT_INITIAL_CAPACITY + 1)
+    val tempIndexData = ByteArrayList(ByteArrayList.DEFAULT_INITIAL_CAPACITY + 1)
     val tempQuadCenter = FloatArrayList(FloatArrayList.DEFAULT_INITIAL_CAPACITY + 1)
 
     private val distanceList = FloatArrayList(FloatArrayList.DEFAULT_INITIAL_CAPACITY + 1)
@@ -799,39 +798,38 @@ abstract class SortContext : Context() {
     private val sortSuppIndexList = IntArrayList(IntArrayList.DEFAULT_INITIAL_CAPACITY + 1)
 
     inline fun sortQuads(task: ChunkBuilderTask, data: TranslucentData): TranslucentData {
-        return sortQuads(task, data.vertexData, data.quadCenter, data.quadCenter.size / 3)
+        return sortQuads(task, data.indexData, data.quadCenter, data.quadCenter.size / 3)
     }
 
     fun sortQuads(
         task: ChunkBuilderTask,
-        vertexData: ByteArray,
+        indexData: ByteArray,
         quadCenter: FloatArray,
         quadCount: Int
     ): TranslucentData {
+        distanceList.ensureCapacity(quadCount)
         indexList.ensureCapacity(quadCount)
         sortSuppIndexList.ensureCapacity(quadCount)
-        distanceList.ensureCapacity(quadCount)
 
+        val distanceArray = distanceList.elements()
         val indexArray = indexList.elements()
+        val sortSuppIndexArray = sortSuppIndexList.elements()
 
         for (i in 0 until quadCount) {
             val quadCenterIndex = i * 3
-            indexArray[i] = i
-            sortSuppIndexList.add(i)
-            distanceList.add(
-                -distanceSq(
-                    quadCenter[quadCenterIndex],
-                    quadCenter[quadCenterIndex + 1],
-                    quadCenter[quadCenterIndex + 2],
-                    task.relativeCameraX,
-                    task.relativeCameraY,
-                    task.relativeCameraZ
-                )
+            distanceArray[i] = -distanceSq(
+                quadCenter[quadCenterIndex],
+                quadCenter[quadCenterIndex + 1],
+                quadCenter[quadCenterIndex + 2],
+                task.relativeCameraX,
+                task.relativeCameraY,
+                task.relativeCameraZ
             )
+            indexArray[i] = i
+            sortSuppIndexArray[i] = i
         }
 
         val comparator = object : IntComparator {
-            val distanceArray = distanceList.elements()
             override fun compare(k1: Int, k2: Int): Int {
                 return distanceArray[k1].compareTo(distanceArray[k2])
             }
@@ -840,30 +838,30 @@ abstract class SortContext : Context() {
         IntArrays.mergeSort(
             indexArray,
             0,
-            indexList.size,
+            quadCount,
             comparator,
-            sortSuppIndexList.elements()
+            sortSuppIndexArray
         )
 
-        val newVertexData = ByteArray(quadCount * 4 * 16)
+        val newIndexData = ByteArray(quadCount * 6 * 4)
         val newQuadCenter = FloatArray(quadCount * 3)
 
         for (i in 0 until quadCount) {
             val sortedQuadIndex = indexArray[i]
-            System.arraycopy(vertexData, sortedQuadIndex * 64, newVertexData, i * 64, 64)
+            System.arraycopy(indexData, sortedQuadIndex * 24, newIndexData, i * 24, 24)
             System.arraycopy(quadCenter, sortedQuadIndex * 3, newQuadCenter, i * 3, 3)
         }
 
-        return TranslucentData(newVertexData, newQuadCenter)
+        return TranslucentData(newIndexData, newQuadCenter)
     }
 }
 
 @Suppress("UNCHECKED_CAST")
 abstract class BufferContext : Context() {
-    protected open var region0: MappedBufferPool.Region? = null
-    val region get() = region0!!
+    protected open val region0 = AtomicReference<MappedBufferPool.Region?>()
+    val region get() = region0.get()!!
 
     override fun release0() {
-        region.release()
+        region0.getAndSet(null)?.release()
     }
 }

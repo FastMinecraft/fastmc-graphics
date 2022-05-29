@@ -240,6 +240,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             var color = vertexData[3]
             var brightness = context.brightnessArray[0]
+
             context.layerVertexBuilder.putVertex(
                 Float.fromBits(vertexData[0]) + context.posX,
                 Float.fromBits(vertexData[1]) + context.posY,
@@ -293,6 +294,8 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 Float.fromBits(vertexData[26]),
                 context.lightMapUVArray[3]
             )
+
+            context.layerVertexBuilder.putQuad()
         }
     }
 
@@ -319,7 +322,6 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         }
 
         val vertexData = bakedQuad.vertexData
-
         var color = vertexData[3]
         context.layerVertexBuilder.putVertex(
             Float.fromBits(vertexData[0]) + context.posX,
@@ -332,7 +334,6 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             Float.fromBits(vertexData[5]),
             light
         )
-
         color = vertexData[10]
         context.layerVertexBuilder.putVertex(
             Float.fromBits(vertexData[7]) + context.posX,
@@ -345,7 +346,6 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             Float.fromBits(vertexData[12]),
             light
         )
-
         color = vertexData[17]
         context.layerVertexBuilder.putVertex(
             Float.fromBits(vertexData[14]) + context.posX,
@@ -358,7 +358,6 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             Float.fromBits(vertexData[19]),
             light
         )
-
         color = vertexData[24]
         context.layerVertexBuilder.putVertex(
             Float.fromBits(vertexData[21]) + context.posX,
@@ -371,6 +370,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             Float.fromBits(vertexData[26]),
             light
         )
+        context.layerVertexBuilder.putQuad()
     }
 
     override fun isFullCube(state: IBlockState): Boolean {
@@ -505,6 +505,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 vNE,
                 lightMapUV
             )
+            context.layerVertexBuilder.putQuad()
 
             if ((state.block as BlockLiquid).shouldRenderSides(worldSnapshot, context.renderBlockPos.up())) {
                 context.layerVertexBuilder.putVertex(
@@ -551,6 +552,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     vSW,
                     lightMapUV
                 )
+                context.layerVertexBuilder.putQuad()
             }
         }
 
@@ -611,6 +613,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 v2,
                 lightMapUV
             )
+            context.layerVertexBuilder.putQuad()
         }
 
         for (i in 0..3) {
@@ -743,6 +746,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     vTo,
                     lightMapUV
                 )
+                context.layerVertexBuilder.putQuad()
 
                 if (sideSprites !== waterOverlaySprite) {
                     context.layerVertexBuilder.putVertex(
@@ -789,6 +793,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                         vFrom1,
                         lightMapUV
                     )
+                    context.layerVertexBuilder.putQuad()
                 }
             }
         }

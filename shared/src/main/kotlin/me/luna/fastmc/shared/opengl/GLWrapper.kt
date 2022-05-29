@@ -79,6 +79,14 @@ interface IGLWrapper {
         stride: Int
     )
 
+    fun glMultiDrawElementsIndirect(
+        mode: Int,
+        type: Int,
+        indirect: Long,
+        primcount: Int,
+        stride: Int
+    )
+
 
     // GL45
     fun glCreateVertexArrays(): Int
@@ -349,6 +357,14 @@ inline fun glMultiDrawArraysIndirect(
     primcount: Int,
     stride: Int
 ) = glWrapper.glMultiDrawArraysIndirect(mode, indirect, primcount, stride)
+
+inline fun glMultiDrawElementsIndirect(
+    mode: Int,
+    type: Int,
+    indirect: Long,
+    primcount: Int,
+    stride: Int
+) = glWrapper.glMultiDrawElementsIndirect(mode, type, indirect, primcount, stride)
 
 
 // GL44

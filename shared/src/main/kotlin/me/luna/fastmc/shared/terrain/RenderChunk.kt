@@ -58,7 +58,7 @@ class RenderChunk(
     var translucentData: TranslucentData? = null
 
     @JvmField
-    val layers = arrayOfNulls<Layer>(renderer.layerCount)
+    val layers = Array(renderer.layerCount) { Layer() }
 
     @JvmField
     var tileEntityList: FastObjectArrayList<ITileEntityInfo<*>>? = null
@@ -91,7 +91,7 @@ class RenderChunk(
     fun onUpdate() {
         isEmpty = true
         for (layer in layers) {
-            if (layer != null && layer.vertexCount != 0) {
+            if (layer.indexCount != 0) {
                 isEmpty = false
                 break
             }
@@ -120,10 +120,8 @@ class RenderChunk(
 
             for (i in layers.indices) {
                 val layer = layers[i]
-                if (layer != null) {
-                    layer.region.release()
-                    layers[i] = null
-                }
+                layer.vertexRegion = null
+                layer.indexRegion = null
             }
 
             tileEntityList = null
@@ -165,12 +163,41 @@ class RenderChunk(
         lastTaskRef.getAndSet(null)?.cancel()
     }
 
-    class Layer(@JvmField val region: RenderBufferPool.Region) {
-        @JvmField
-        val vertexOffset = region.offset / 16
+    class Layer {
+        var vertexRegion: RenderBufferPool.Region? = null
+            set(value) {
+                if (value != null) {
+                    vertexOffset = value.offset / 16
+                }
 
-        @JvmField
-        val vertexCount = region.length / 16
+                val temp = field
+                if (temp != null && temp !== value) {
+                    temp.release()
+                }
+
+                field = value
+            }
+
+        var indexRegion: RenderBufferPool.Region? = null
+            set(value) {
+                if (value != null) {
+                    indexOffset = value.offset / 4
+                    indexCount = value.length / 4
+                }
+
+                val temp = field
+                if (temp != null && temp !== value) {
+                    temp.release()
+                }
+
+                field = value
+            }
+
+        var vertexOffset = 0; private set
+        var indexOffset = 0; private set
+        var indexCount = 0; private set
+
+        val isEmpty get() = vertexRegion == null
     }
 
     private inner class FrustumCullImpl : FrustumCull(renderer) {

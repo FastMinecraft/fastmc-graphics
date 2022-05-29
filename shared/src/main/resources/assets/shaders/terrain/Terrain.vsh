@@ -25,7 +25,7 @@ const float euler = 2.71828174591064453125;
 #endif
 
 void main() {
-    vec3 coord = (pos * 0.00439453125 - 16.0) + offset;
+    vec3 coord = (pos * 0.003913939 - 0.25) + offset;
     gl_Position = matrices.projection * matrices.modelView * vec4(coord, 1.0);
 
     fragData.color = color;

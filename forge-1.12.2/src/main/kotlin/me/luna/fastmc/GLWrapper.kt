@@ -132,6 +132,14 @@ class GLWrapper : IGLWrapper {
         stride: Int
     ) = GL43.glMultiDrawArraysIndirect(mode, indirect, primcount, stride)
 
+    override fun glMultiDrawElementsIndirect(
+        mode: Int,
+        type: Int,
+        indirect: Long,
+        primcount: Int,
+        stride: Int
+    ) = GL43.glMultiDrawElementsIndirect(mode, type, indirect, primcount, stride)
+
     // GL45
     override fun glCreateVertexArrays(): Int = GL45.glCreateVertexArrays()
     override fun glVertexArrayVertexBuffer(vaobj: Int, bindingindex: Int, buffer: Int, offset: Long, stride: Int) =

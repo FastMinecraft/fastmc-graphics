@@ -7,9 +7,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.FpsDisplay
-import me.luna.fastmc.shared.opengl.GLDataType
-import me.luna.fastmc.shared.opengl.GL_QUADS
-import me.luna.fastmc.shared.opengl.glMultiDrawArrays
+import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.*
@@ -33,7 +31,8 @@ abstract class TerrainRenderer(
         chunkStorageNullable = RenderChunkStorage(this, viewDistance)
     }
 
-    val fogManager = TerrainFogManager(renderer)
+    @Suppress("LeakingThis")
+    val fogManager = TerrainFogManager(this)
 
     abstract val chunkBuilder: ChunkBuilder
     abstract val contextProvider: ContextProvider
@@ -489,22 +488,15 @@ abstract class TerrainRenderer(
                         }
 
                         for (layerIndex in 0 until layerCount) {
-                            val regionLayer = region.getLayer(layerIndex)
-                            val firstBuffer = regionLayer.firstBuffer
-                            val countBuffer = regionLayer.countBuffer
-
-                            firstBuffer.clear()
-                            countBuffer.clear()
+                            val layerBatch = region.getLayer(layerIndex)
+                            layerBatch.update()
 
                             for (i in 0 until size) {
                                 val renderChunk = array[i]
-                                val layer = renderChunk.layers[layerIndex] ?: continue
-                                firstBuffer.put(layer.vertexOffset)
-                                countBuffer.put(layer.vertexCount)
+                                val layer = renderChunk.layers[layerIndex]
+                                if (layer.isEmpty) continue
+                                layerBatch.put(layer.vertexOffset, layer.indexOffset, layer.indexCount)
                             }
-
-                            firstBuffer.flip()
-                            countBuffer.flip()
                         }
                     }
                 }
@@ -533,15 +525,15 @@ abstract class TerrainRenderer(
 
                 for (i in regionArray.indices) {
                     val region = regionArray[i]
-                    val allocated = region.bufferPool.allocated
-                    totalChunkVertexSize += allocated
+                    val allocated = region.vertexBufferPool.allocated
+                    totalChunkVertexSize += allocated + region.indexBufferPool.allocated
                     if (allocated != 0) {
                         if (region.frustumCull.isInFrustum()) {
                             visibleRegionCount++
                         }
                         regionCount++
                     }
-                    bufferCapacity += region.bufferPool.capacity
+                    bufferCapacity += region.vertexBufferPool.capacity
                 }
 
                 for (i in chunkArray.indices) {
@@ -550,8 +542,15 @@ abstract class TerrainRenderer(
                     if (renderChunk.isVisible) {
                         for (i2 in layers.indices) {
                             val layer = layers[i2]
-                            if (layer != null) {
-                                visibleChunkVertexSize += layer.region.length
+
+                            val vertexRegion = layer.vertexRegion
+                            if (vertexRegion != null) {
+                                visibleChunkVertexSize += vertexRegion.length
+                            }
+
+                            val indexRegion = layer.indexRegion
+                            if (indexRegion != null) {
+                                visibleChunkVertexSize += indexRegion.length
                             }
                         }
                     }
@@ -618,8 +617,9 @@ abstract class TerrainRenderer(
         for (i in chunkStorage.regionIndices) {
             val region = regionArray[i]
             if (!region.frustumCull.isInFrustum()) continue
-            val layer = region.getLayer(layerIndex)
-            if (layer.firstBuffer.remaining() == 0) continue
+            val layerBatch = region.getLayer(layerIndex)
+            layerBatch.checkUpdate()
+            if (layerBatch.isEmpty) continue
 
             shader.setOffset(
                 (region.originX - renderPosX).toFloat(),
@@ -628,7 +628,8 @@ abstract class TerrainRenderer(
             )
 
             region.vao.bind()
-            glMultiDrawArrays(GL_QUADS, layer.firstBuffer, layer.countBuffer)
+            glBindBuffer(GL_DRAW_INDIRECT_BUFFER, layerBatch.bufferID)
+            glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, 0L, layerBatch.count, 0)
         }
     }
 

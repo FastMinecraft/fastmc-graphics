@@ -5,11 +5,11 @@ import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 class VertexArrayObject : IGLObject {
     override val id: Int = glCreateVertexArrays()
 
-    private var ibo: IndexBufferObject? = null
+    private var ibo: BufferObject? = null
     private val vboList = FastObjectArrayList<VertexBufferObject>()
     private var vboBinding = 0
 
-    fun attachIbo(ibo: IndexBufferObject) {
+    fun attachIbo(ibo: BufferObject) {
         glVertexArrayElementBuffer(id, ibo.id)
         this.ibo = ibo
     }

@@ -1,10 +1,14 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.opengl.VertexArrayObject
+import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
-import me.luna.fastmc.shared.util.allocateInt
+import me.luna.fastmc.shared.opengl.impl.VertexAttribute
+import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import org.joml.FrustumIntersection
+import sun.misc.Unsafe
+import java.nio.Buffer
+import java.nio.ByteBuffer
 
 @Suppress("NOTHING_TO_INLINE")
 class RenderRegion(
@@ -19,7 +23,7 @@ class RenderRegion(
     val frustumCull: FrustumCull = FrustumCullImpl()
 
     @JvmField
-    val regionLayerArray = Array(renderer.layerCount) { Layer() }
+    val layerBatchArray = Array(renderer.layerCount) { LayerBatch() }
 
     @JvmField
     val sortSuppArray = arrayOfNulls<RenderChunk>(renderer.renderRegionChunkCount)
@@ -29,29 +33,36 @@ class RenderRegion(
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(renderer.renderRegionChunkCount), 0)
 
     @JvmField
-    val bufferPool = RenderBufferPool(TerrainRenderer.VERTEX_ATTRIBUTE, (4 * 1024 * 1024).countTrailingZeroBits())
+    val vertexBufferPool = RenderBufferPool(TerrainRenderer.VERTEX_ATTRIBUTE, (4 * 1024 * 1024).countTrailingZeroBits())
 
-    private var vbo = bufferPool.vbo
+    @JvmField
+    val indexBufferPool = RenderBufferPool(VertexAttribute.EMPTY, (4 * 1024 * 1024).countTrailingZeroBits())
+
+    private var vbo = vertexBufferPool.bufferObject
+    private var ibo = indexBufferPool.bufferObject
 
     @JvmField
     val vao = VertexArrayObject().apply {
         attachVbo(vbo)
+        attachIbo(ibo)
     }
 
     fun updateVao() {
-        val newVbo = bufferPool.vbo
-        if (vbo !== newVbo) {
+        val newVbo = vertexBufferPool.bufferObject
+        val newIbo = indexBufferPool.bufferObject
+        if (vbo !== newVbo || ibo !== newIbo) {
             vao.clear()
             vao.attachVbo(newVbo)
+            vao.attachIbo(newIbo)
             vbo = newVbo
         }
     }
 
-    inline fun getLayer(index: Int): Layer {
-        return regionLayerArray[index]
+    inline fun getLayer(index: Int): LayerBatch {
+        return layerBatchArray[index]
     }
 
-    fun setOrigin(x: Int, z: Int) {
+    fun setPos(x: Int, z: Int) {
         if (x != originX || z != originZ) {
             originX = x
             originZ = z
@@ -60,18 +71,75 @@ class RenderRegion(
     }
 
     fun destroy() {
-        vao.destroy()
+        vao.destroyVao()
+        vertexBufferPool.destroy()
+        indexBufferPool.destroy()
+        for (layer in layerBatchArray) {
+            layer.destroy()
+        }
     }
 
-    class Layer {
-        @JvmField
-        val firstBuffer = allocateInt(4069).apply {
-            limit(0)
+    class LayerBatch {
+        private val serverBuffer = ImmutableVertexBufferObject(
+            VertexAttribute.EMPTY,
+            4096 * 20,
+            GL_DYNAMIC_STORAGE_BIT
+        )
+
+        private val clientBuffer = allocateByte(serverBuffer.size)
+        private val clientBufferAddress = clientBuffer.address
+        private var index = 0
+        private var isDirty = false
+
+        val bufferID get() = serverBuffer.id
+        var count = 0; private set
+        val isEmpty get() = count == 0
+
+        fun update() {
+            index = 0
+            isDirty = true
+            count = 0
         }
 
-        @JvmField
-        val countBuffer = allocateInt(4069).apply {
-            limit(0)
+        fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int) {
+            val address = clientBufferAddress + index
+
+            UNSAFE.putInt(address, indexCount)
+            UNSAFE.putInt(address + 4L, 1)
+            UNSAFE.putInt(address + 8L, indexOffset)
+            UNSAFE.putInt(address + 12L, vertexOffset)
+            UNSAFE.putInt(address + 16L, 0)
+
+            index += 20
+            this.count++
+        }
+
+        fun checkUpdate() {
+            if (isDirty && count != 0) {
+                clientBuffer.limit(index)
+                glInvalidateBufferData(serverBuffer.id)
+                glNamedBufferSubData(serverBuffer.id, 0L, clientBuffer)
+            }
+            isDirty = false
+        }
+
+        fun destroy() {
+            serverBuffer.destroy()
+        }
+
+        private companion object {
+            @JvmField
+            val UNSAFE = run {
+                val field = Unsafe::class.java.getDeclaredField("theUnsafe")
+                field.isAccessible = true
+                field.get(null) as Unsafe
+            }
+
+            @JvmField
+            val ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("address"))
+
+            inline val ByteBuffer.address
+                get() = UNSAFE.getLong(this, ADDRESS_OFFSET)
         }
     }
 

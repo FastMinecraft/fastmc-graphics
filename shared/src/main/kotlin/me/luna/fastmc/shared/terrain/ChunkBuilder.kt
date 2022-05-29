@@ -48,9 +48,9 @@ abstract class ChunkBuilder(
 
                 val region = it.renderChunk.renderRegion
                 var queue = pendingUploadQueueMap[region.index]
-                if (queue == null || queue.bufferPool !== region.bufferPool) {
+                if (queue == null || queue.vertexBufferPool !== region.vertexBufferPool) {
                     queue?.clear()
-                    queue = PendingUploadQueue(region.bufferPool)
+                    queue = PendingUploadQueue(region.vertexBufferPool, region.indexBufferPool)
                     pendingUploadQueueMap[region.index] = queue
                 }
                 queue.add(it)
@@ -88,28 +88,32 @@ abstract class ChunkBuilder(
         task.finish()
     }
 
-    private inner class PendingUploadQueue(val bufferPool: RenderBufferPool) {
+    private inner class PendingUploadQueue(
+        val vertexBufferPool: RenderBufferPool,
+        val indexBufferPool: RenderBufferPool
+    ) {
         private val list = FastObjectArrayList.wrap(arrayOfNulls<UploadTask>(4096), 0)
-        private var updateSize = 0
 
         val taskCount get() = list.size
 
         fun add(uploadTask: UploadTask): Boolean {
-            if (list.size >= 4096 || list.size != 0 && updateSize + uploadTask.updateSize > 4 * 1024 * 1024) return false
+            if (list.size >= 4096) return false
             list.add(uploadTask)
-            updateSize += uploadTask.updateSize
             return true
         }
 
         fun flush() {
             if (list.isEmpty) return
+            var newLength = 0L
 
             for (i in list.indices) {
-                list[i].runClear()
+                newLength += list[i].runClear()
             }
 
-            bufferPool.update()
-            bufferPool.ensureCapacity(updateSize)
+            vertexBufferPool.update()
+            indexBufferPool.update()
+            vertexBufferPool.ensureCapacity((newLength ushr 32).toInt())
+            indexBufferPool.ensureCapacity(newLength.toInt())
 
             for (i in list.indices) {
                 val task = list[i]
@@ -119,7 +123,6 @@ abstract class ChunkBuilder(
             }
 
             uploadCount += list.size
-            updateSize = 0
             list.clear()
         }
 
@@ -127,7 +130,6 @@ abstract class ChunkBuilder(
             for (i in list.indices) {
                 list[i].cancel()
             }
-            updateSize = 0
             list.clear()
         }
     }
@@ -163,11 +165,9 @@ abstract class ChunkBuilder(
             } else {
                 renderChunk.isDirty = false
                 for (i in renderChunk.layers.indices) {
-                    val data = renderChunk.layers[i]
-                    if (data != null) {
-                        data.region.release()
-                        renderChunk.layers[i] = null
-                    }
+                    val layer = renderChunk.layers[i]
+                    layer.vertexRegion = null
+                    layer.indexRegion = null
                 }
                 renderChunk.onUpdate()
                 if (renderChunk.frustumCull.isInFrustum()) {

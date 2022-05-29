@@ -56,7 +56,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindVertexArray;
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
@@ -623,6 +623,7 @@ public abstract class MixinCoreWorldRenderer {
 
         fogManager.alphaTest(false);
 
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
         shader.unbind();
 
@@ -672,6 +673,7 @@ public abstract class MixinCoreWorldRenderer {
         terrainRenderer.renderLayer(4);
         this.client.getProfiler().pop();
 
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
         shader.unbind();
 

@@ -1,7 +1,7 @@
 package me.luna.fastmc.shared.terrain
 
 data class TranslucentData(
-    @JvmField val vertexData: ByteArray,
+    @JvmField val indexData: ByteArray,
     @JvmField val quadCenter: FloatArray
 ) {
     override fun equals(other: Any?): Boolean {
@@ -10,14 +10,14 @@ data class TranslucentData(
 
         other as TranslucentData
 
-        if (!vertexData.contentEquals(other.vertexData)) return false
+        if (!indexData.contentEquals(other.indexData)) return false
         if (!quadCenter.contentEquals(other.quadCenter)) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = vertexData.contentHashCode()
+        var result = indexData.contentHashCode()
         result = 31 * result + quadCenter.contentHashCode()
         return result
     }

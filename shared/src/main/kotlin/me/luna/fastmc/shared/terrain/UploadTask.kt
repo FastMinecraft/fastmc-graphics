@@ -16,29 +16,22 @@ internal class UploadTask(
     private val modifyTileEntity: Boolean,
 ) {
     @JvmField
-    val updateSize: Int
-
-    @JvmField
     val renderChunk = parentTask.renderChunk
 
     private var cleared = false
 
-    init {
-        var sum = 0
-        for (update in updates) {
-            if (update == null) continue
-            sum += update.updateSize
-        }
-        updateSize = sum
-    }
-
-    fun runClear() {
+    fun runClear(): Long {
+        var newLength = 0L
         if (!parentTask.isCancelled) {
             for (i in updates.indices) {
-                updates[i]?.clear(parentTask, i)
+                val update = updates[i]
+                if (update != null) {
+                    newLength += update.clear(parentTask, i)
+                }
             }
             cleared = true
         }
+        return newLength
     }
 
     fun runUpdate(): Boolean {
@@ -86,11 +79,15 @@ internal class UploadTask(
             modifyTranslucentData = true
         }
 
-        fun updateLayer(index: Int, bufferContext: BufferContext?) {
-            if (bufferContext != null) {
-                updates[index] = LayerUpdateReplace(bufferContext)
+        fun updateLayer(index: Int, vertexBuffer: BufferContext?, indexBuffer: BufferContext?) {
+            if (indexBuffer != null) {
+                if (vertexBuffer != null) {
+                    updates[index] = LayerUpdate.UpdateAll(vertexBuffer, indexBuffer)
+                } else {
+                    updates[index] = LayerUpdate.UpdateIndex(indexBuffer)
+                }
             } else {
-                updates[index] = LayerUpdateClear
+                updates[index] = LayerUpdate.Clear
             }
         }
 
@@ -120,35 +117,109 @@ internal class UploadTask(
         }
     }
 
-    internal sealed class LayerUpdate(val updateSize: Int) {
-        fun clear(task: ChunkBuilderTask, index: Int) {
-            val data = task.renderChunk.layers[index]
-            if (data != null) {
-                data.region.release()
-                task.renderChunk.layers[index] = null
+    internal sealed class LayerUpdate {
+        abstract fun clear(task: ChunkBuilderTask, index: Int): Long
+        abstract fun update(task: ChunkBuilderTask, index: Int)
+
+        object Clear : LayerUpdate() {
+            override fun clear(task: ChunkBuilderTask, index: Int): Long {
+                val layer = task.renderChunk.layers[index]
+                layer.vertexRegion = null
+                layer.indexRegion = null
+                return 0L
+            }
+
+            override fun update(task: ChunkBuilderTask, index: Int) {}
+        }
+
+        open class UpdateIndex(private val indexBuffer: BufferContext) : LayerUpdate() {
+            override fun clear(task: ChunkBuilderTask, index: Int): Long {
+                val layer = task.renderChunk.layers[index]
+                val region = layer.indexRegion
+                val updateSize = indexBuffer.region.buffer.remaining()
+
+                return if (region != null) {
+                    if (region.length != updateSize) {
+                        layer.indexRegion = null
+                        updateSize.toLong()
+                    } else {
+                        0L
+                    }
+                } else {
+                    updateSize.toLong()
+                }
+            }
+
+            override fun update(task: ChunkBuilderTask, index: Int) {
+                val updateSize = indexBuffer.region.buffer.remaining()
+                val layer = task.renderChunk.layers[index]
+                var region = layer.indexRegion
+
+                if (region == null) {
+                    region = task.renderChunk.renderRegion.indexBufferPool.allocate(updateSize)
+                    layer.indexRegion = region
+                } else {
+                    region.invalidate()
+                }
+
+                glCopyNamedBufferSubData(
+                    indexBuffer.region.vboID,
+                    region.bufferObjectID,
+                    indexBuffer.region.offset.toLong(),
+                    region.offset.toLong(),
+                    updateSize.toLong()
+                )
+
+                indexBuffer.release(task)
             }
         }
 
-        abstract fun update(task: ChunkBuilderTask, index: Int)
-    }
 
-    private object LayerUpdateClear : LayerUpdate(0) {
-        override fun update(task: ChunkBuilderTask, index: Int) {}
-    }
+        class UpdateAll(private val vertexBuffer: BufferContext, indexBuffer: BufferContext) :
+            UpdateIndex(indexBuffer) {
+            override fun clear(task: ChunkBuilderTask, index: Int): Long {
+                val layer = task.renderChunk.layers[index]
+                val region = layer.vertexRegion
+                val updateSize = vertexBuffer.region.buffer.remaining()
 
-    private class LayerUpdateReplace(private val bufferContext: BufferContext) :
-        LayerUpdate(bufferContext.region.buffer.remaining()) {
-        override fun update(task: ChunkBuilderTask, index: Int) {
-            val region = task.renderChunk.renderRegion.bufferPool.allocate(updateSize)
-            glCopyNamedBufferSubData(
-                bufferContext.region.vboID,
-                region.vboID,
-                bufferContext.region.offset.toLong(),
-                region.offset.toLong(),
-                updateSize.toLong()
-            )
-            task.renderChunk.layers[index] = RenderChunk.Layer(region)
-            bufferContext.release(task)
+                val vertexUpdateSize = if (region != null) {
+                    if (region.length != updateSize) {
+                        layer.vertexRegion = null
+                        updateSize.toLong()
+                    } else {
+                        0L
+                    }
+                } else {
+                    updateSize.toLong()
+                }
+
+                return (vertexUpdateSize shl 32) or super.clear(task, index)
+            }
+
+            override fun update(task: ChunkBuilderTask, index: Int) {
+                super.update(task, index)
+
+                val updateSize = vertexBuffer.region.buffer.remaining()
+                val layer = task.renderChunk.layers[index]
+                var region = layer.vertexRegion
+
+                if (region == null) {
+                    region = task.renderChunk.renderRegion.vertexBufferPool.allocate(updateSize)
+                    layer.vertexRegion = region
+                } else {
+                    region.invalidate()
+                }
+
+                glCopyNamedBufferSubData(
+                    vertexBuffer.region.vboID,
+                    region.bufferObjectID,
+                    vertexBuffer.region.offset.toLong(),
+                    region.offset.toLong(),
+                    updateSize.toLong()
+                )
+
+                vertexBuffer.release(task)
+            }
         }
     }
 }

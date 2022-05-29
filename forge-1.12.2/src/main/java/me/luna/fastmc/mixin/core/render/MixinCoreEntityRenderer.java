@@ -40,7 +40,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static me.luna.fastmc.shared.opengl.GLWrapperKt.glBindVertexArray;
+import static me.luna.fastmc.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.*;
 
 @Mixin(value = EntityRenderer.class, priority = Integer.MAX_VALUE)
@@ -540,6 +540,7 @@ public abstract class MixinCoreEntityRenderer {
         fogManager.alphaTest(false);
         shader = fogManager.getShader();
 
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
         GlStateManager.enableAlpha();
         shader.unbind();
@@ -633,6 +634,7 @@ public abstract class MixinCoreEntityRenderer {
         terrainRenderer.renderLayer(3);
         shader.unbind();
 
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
         this.mc.profiler.endSection();
 

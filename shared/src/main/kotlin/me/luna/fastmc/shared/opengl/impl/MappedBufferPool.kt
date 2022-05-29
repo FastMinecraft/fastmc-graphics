@@ -171,20 +171,24 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     inner class Region internal constructor() {
         val vboID get() = vbo.id
 
-        var buffer = baseBuffer.duplicate().order(ByteOrder.nativeOrder())!!; private set
-        private var swapBuffer = baseBuffer.duplicate().order(ByteOrder.nativeOrder())!!
+        val buffer = baseBuffer.duplicate().order(ByteOrder.nativeOrder())!!
+        private val swapBuffer = baseBuffer.duplicate().order(ByteOrder.nativeOrder())!!
 
         var sectorOffset = -1; internal set
         var sectorLength = -1; internal set
         val sectorEnd get() = sectorOffset + sectorLength
 
+        var address = buffer.address
         val offset get() = sectorOffset * sectorSize
         val length get() = sectorLength * sectorSize
 
         fun init(start: Int): Region {
             this.sectorOffset = start
             sectorLength = 1
+
             buffer.address = baseAddress + offset
+            this.address = buffer.address
+
             buffer.capacity = length
             buffer.clear()
             return this
@@ -218,16 +222,19 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                                 if (sectorState.compareAndSet(i + allocated, FALSE, TRUE)) {
                                     allocated++
                                     if (allocated > sectorLength) {
-                                        swapBuffer.address = baseAddress + i * sectorSize
-                                        swapBuffer.capacity = allocated * sectorSize
-                                        swapBuffer.clear()
+                                        swapBuffer.address = buffer.address
+                                        swapBuffer.position = 0
+                                        swapBuffer.limit = buffer.position
+                                        swapBuffer.capacity = buffer.capacity
 
-                                        buffer.flip()
-                                        swapBuffer.put(buffer)
+                                        buffer.address = baseAddress + i * sectorSize
+                                        this.address = buffer.address
 
-                                        val swap = swapBuffer
-                                        swapBuffer = buffer
-                                        buffer = swap
+                                        buffer.capacity = allocated * sectorSize
+                                        buffer.clear()
+                                        address = buffer.address
+
+                                        buffer.put(swapBuffer)
 
                                         for (i1 in sectorOffset until sectorEnd) {
                                             sectorState.set(i1, FALSE)
@@ -294,24 +301,36 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         }
 
         @JvmField
-        val ADDRESS_OFFSET: Long
+        val ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("address"))
 
         @JvmField
-        val CAPACITY_OFFSET: Long
+        val POSITION_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("position"))
 
-        init {
-            val bufferClass = Buffer::class.java
-            ADDRESS_OFFSET = UNSAFE.objectFieldOffset(bufferClass.getDeclaredField("address"))
-            CAPACITY_OFFSET = UNSAFE.objectFieldOffset(bufferClass.getDeclaredField("capacity"))
-        }
+        @JvmField
+        val LIMIT_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("limit"))
 
-        var ByteBuffer.address
+        @JvmField
+        val CAPACITY_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("capacity"))
+
+        inline var ByteBuffer.address
             get() = UNSAFE.getLong(this, ADDRESS_OFFSET)
             set(value) {
                 UNSAFE.putLong(this, ADDRESS_OFFSET, value)
             }
 
-        var ByteBuffer.capacity
+        inline var ByteBuffer.position
+            get() = position()
+            set(value) {
+                UNSAFE.putInt(this, POSITION_OFFSET, value)
+            }
+
+        inline var ByteBuffer.limit
+            get() = position()
+            set(value) {
+                UNSAFE.putInt(this, LIMIT_OFFSET, value)
+            }
+
+        inline var ByteBuffer.capacity
             get() = capacity()
             set(value) {
                 UNSAFE.putInt(this, CAPACITY_OFFSET, value)

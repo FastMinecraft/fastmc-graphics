@@ -286,7 +286,7 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
 abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler) :
     ChunkBuilderTask(renderer, scheduler) {
     final override suspend fun run0() {
-        val bufferArray: Array<BufferContext?>
+        val bufferPairArray: Array<Pair<BufferContext, BufferContext>?>
         val occlusionData: ChunkOcclusionData
         val translucentData: TranslucentData?
         val tileEntityList: FastObjectArrayList<ITileEntityInfo<*>>?
@@ -297,20 +297,8 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
         if (rebuildContext.worldSnapshot.init()) {
             rebuildContext.renderChunk(this@RebuildTask)
 
-            bufferArray = Array(rebuildContext.layerVertexBuilderArray.size) { i ->
-                val bufferContext = rebuildContext.layerVertexBuilderArray[i].popBuffer()
-                if (bufferContext != null) {
-                    val buffer = bufferContext.region.buffer
-                    if (buffer.position() == 0) {
-                        bufferContext.release(this@RebuildTask)
-                        null
-                    } else {
-                        buffer.flip()
-                        bufferContext
-                    }
-                } else {
-                    null
-                }
+            bufferPairArray = Array(rebuildContext.layerVertexBuilderArray.size) { i ->
+                rebuildContext.layerVertexBuilderArray[i].popBuffer()
             }
 
             occlusionData = rebuildContext.occlusionDataBuilder.build()
@@ -318,36 +306,39 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
             instancingTileEntityList = rebuildContext.instancingTileEntityList.copyOrNull()
             globalTileEntityList = rebuildContext.globalTileEntityList.copyOrNull()
 
-            val translucentBuffer = bufferArray[3]?.region?.buffer
-            translucentData = if (translucentBuffer != null) {
+            val translucentBufferPair = bufferPairArray[3]
+            translucentData = if (translucentBufferPair != null) {
+                val indexBuffer = translucentBufferPair.second.region.buffer
                 val sortContext = renderer.contextProvider.getSortContext(this@RebuildTask)
-                val vertexSize = translucentBuffer.remaining()
-                val quadCount = vertexSize / 16 / 4
+                val indexSize = indexBuffer.remaining()
+                val quadCount = rebuildContext.translucentChunkVertexBuilder.posArrayList.size / 12
 
                 sortContext.tempQuadCenter.ensureCapacity(quadCount * 3)
-                val quadCenter = sortContext.tempQuadCenter.elements()
+                val quadCenterArray = sortContext.tempQuadCenter.elements()
                 val posArray = rebuildContext.translucentChunkVertexBuilder.posArrayList.elements()
 
                 for (i in 0 until quadCount) {
                     val centerIndex = i * 3
-                    quadCenter[centerIndex] = (posArray[i] + posArray[i + 3] + posArray[i + 6] + posArray[i + 9]) / 4.0f
-                    quadCenter[centerIndex + 1] =
-                        (posArray[i + 1] + posArray[i + 4] + posArray[i + 7] + posArray[i + 10]) / 4.0f
-                    quadCenter[centerIndex + 2] =
-                        (posArray[i + 2] + posArray[i + 5] + posArray[i + 8] + posArray[i + 11]) / 4.0f
+                    val posIndex = i * 12
+                    quadCenterArray[centerIndex] =
+                        (posArray[posIndex] + posArray[posIndex + 3] + posArray[posIndex + 6] + posArray[posIndex + 9]) / 4.0f
+                    quadCenterArray[centerIndex + 1] =
+                        (posArray[posIndex + 1] + posArray[posIndex + 4] + posArray[posIndex + 7] + posArray[posIndex + 10]) / 4.0f
+                    quadCenterArray[centerIndex + 2] =
+                        (posArray[posIndex + 2] + posArray[posIndex + 5] + posArray[posIndex + 8] + posArray[posIndex + 11]) / 4.0f
                 }
                 rebuildContext.release(this@RebuildTask)
 
-                sortContext.tempVertexData.ensureCapacity(vertexSize)
-                val vertexData = sortContext.tempVertexData.elements()
-                translucentBuffer.get(vertexData, 0, vertexSize)
+                sortContext.tempIndexData.ensureCapacity(indexSize)
+                val indexDataArray = sortContext.tempIndexData.elements()
+                indexBuffer.get(indexDataArray, 0, indexSize)
 
-                val data = sortContext.sortQuads(this@RebuildTask, vertexData, quadCenter, quadCount)
+                val data = sortContext.sortQuads(this@RebuildTask, indexDataArray, quadCenterArray, quadCount)
                 sortContext.release(this@RebuildTask)
 
-                translucentBuffer.clear()
-                translucentBuffer.put(data.vertexData)
-                translucentBuffer.flip()
+                indexBuffer.clear()
+                indexBuffer.put(data.indexData)
+                indexBuffer.flip()
                 data
             } else {
                 rebuildContext.release(this@RebuildTask)
@@ -358,8 +349,9 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 occlusionData(occlusionData)
                 translucentData(translucentData)
                 updateTileEntity(tileEntityList, instancingTileEntityList, globalTileEntityList)
-                for (i in bufferArray.indices) {
-                    updateLayer(i, bufferArray[i])
+                for (i in bufferPairArray.indices) {
+                    val bufferPair = bufferPairArray[i]
+                    updateLayer(i, bufferPair?.first, bufferPair?.second)
                 }
             }
         } else {
@@ -369,7 +361,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 occlusionData(null)
                 translucentData(null)
                 for (i in 0 until renderer.layerCount) {
-                    updateLayer(i, null)
+                    updateLayer(i, null, null)
                 }
             }
         }
@@ -401,24 +393,21 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler)
     }
 
     override suspend fun run0() {
-        val newData: TranslucentData
-        val bufferContext: BufferContext
-
         val sortContext = renderer.contextProvider.getSortContext(this@SortTask)
-        newData = sortContext.sortQuads(this@SortTask, data!!)
+        val newData = sortContext.sortQuads(this@SortTask, data!!)
         sortContext.release(this@SortTask)
 
-        bufferContext = renderer.contextProvider.getBufferContext(this@SortTask)
-        while (bufferContext.region.length < newData.vertexData.size) {
+        val bufferContext = renderer.contextProvider.getBufferContext(this@SortTask)
+        while (bufferContext.region.length < newData.indexData.size) {
             bufferContext.region.expand(this@SortTask)
         }
         val buffer = bufferContext.region.buffer
-        buffer.put(newData.vertexData)
+        buffer.put(newData.indexData)
         buffer.flip()
 
         renderer.chunkBuilder.scheduleUpload(this) {
             translucentData(newData)
-            updateLayer(3, bufferContext)
+            updateLayer(3, null, bufferContext)
         }
     }
 }

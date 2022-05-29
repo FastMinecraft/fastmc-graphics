@@ -80,7 +80,7 @@ class RenderChunkStorage(
             for (z in 0 until regionSizeXZ) {
                 val i = regionPos2Index(x, z)
                 val region = regionArray[i]
-                region.setOrigin(x shl 8, z shl 8)
+                region.setPos(x shl 8, z shl 8)
             }
         }
 
@@ -140,7 +140,7 @@ class RenderChunkStorage(
                     val blockZ = (Math.floorMod((i / regionSizeXZ) - offsetZ, regionSizeXZ) + startRegionZ) shl 8
 
                     val region = regionArray[i]
-                    region.setOrigin(blockX, blockZ)
+                    region.setPos(blockX, blockZ)
 
                     val startX = max(blockX shr 4, startChunkX)
                     val startZ = max(blockZ shr 4, startChunkZ)
