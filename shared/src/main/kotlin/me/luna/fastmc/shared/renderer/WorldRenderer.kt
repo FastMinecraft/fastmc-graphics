@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.renderer
 
 import kotlinx.coroutines.CoroutineScope
+import me.luna.fastmc.shared.opengl.BufferObject
 import me.luna.fastmc.shared.opengl.GL_DYNAMIC_STORAGE_BIT
-import me.luna.fastmc.shared.opengl.UniformBufferObject
 import me.luna.fastmc.shared.opengl.glInvalidateBufferData
 import me.luna.fastmc.shared.opengl.glNamedBufferSubData
 import me.luna.fastmc.shared.terrain.TerrainRenderer
@@ -37,7 +37,9 @@ abstract class WorldRenderer : IRenderer {
     final override var invertedProjectMatrix = Matrix4f()
     final override var invertedModelViewMatrix = Matrix4f()
 
-    final override val matricesUBO = UniformBufferObject("Matrices", 128, GL_DYNAMIC_STORAGE_BIT)
+    final override val matricesUBO = BufferObject.Immutable(BufferObject.Target.GL_UNIFORM_BUFFER)
+        .apply { allocate(128, GL_DYNAMIC_STORAGE_BIT) }
+
     private val matricesBuffer = allocateByte(matricesUBO.size)
 
     final override val frustum = FrustumIntersection(projectionMatrix, false)

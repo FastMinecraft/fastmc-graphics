@@ -124,12 +124,12 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         val model = model.get(resourceManager)
 
         val vao = VertexArrayObject()
-        val vbo = VertexBufferObject(vertexAttribute)
+        val vbo = BufferObject.Immutable(BufferObject.Target.GL_ARRAY_BUFFER)
 
-        glNamedBufferStorage(vbo.id, buffer, 0)
+        vbo.allocate(buffer, 0)
 
         model.attachVbo(vao)
-        vao.attachVbo(vbo)
+        vao.attachVbo(vbo, vertexAttribute)
 
         return SingleTextureRenderer(renderInfo(shader, vao, listOf(vbo), model), texture)
     }
@@ -137,7 +137,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     protected fun renderInfo(
         shader: ShaderProgram,
         vao: VertexArrayObject,
-        vboList: List<VertexBufferObject>,
+        vboList: List<BufferObject>,
         model: Model
     ): RenderInfo {
         return RenderInfo(resourceManager, shader, vao, vboList, model.modelSize, size, builtPosX, builtPosY, builtPosZ)
@@ -204,7 +204,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         val resourceManager: IResourceManager
         val shader: ShaderProgram
         val vao: VertexArrayObject
-        val vboList: List<VertexBufferObject>
+        val vboList: List<BufferObject>
         val modelSize: Int
         val size: Int
         val builtPosX: Double
@@ -216,7 +216,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         override val resourceManager: IResourceManager,
         override val shader: ShaderProgram,
         override val vao: VertexArrayObject,
-        override val vboList: List<VertexBufferObject>,
+        override val vboList: List<BufferObject>,
         override val modelSize: Int,
         override val size: Int,
         override val builtPosX: Double,

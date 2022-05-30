@@ -2,7 +2,6 @@ package me.luna.fastmc.shared.terrain
 
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
-import me.luna.fastmc.shared.opengl.impl.VertexAttribute
 import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import org.joml.FrustumIntersection
@@ -33,17 +32,17 @@ class RenderRegion(
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(renderer.renderRegionChunkCount), 0)
 
     @JvmField
-    val vertexBufferPool = RenderBufferPool(TerrainRenderer.VERTEX_ATTRIBUTE, (4 * 1024 * 1024).countTrailingZeroBits())
+    val vertexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())
 
     @JvmField
-    val indexBufferPool = RenderBufferPool(VertexAttribute.EMPTY, (4 * 1024 * 1024).countTrailingZeroBits())
+    val indexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())
 
     private var vbo = vertexBufferPool.bufferObject
     private var ibo = indexBufferPool.bufferObject
 
     @JvmField
     val vao = VertexArrayObject().apply {
-        attachVbo(vbo)
+        attachVbo(vbo, TerrainRenderer.VERTEX_ATTRIBUTE)
         attachIbo(ibo)
     }
 
@@ -52,7 +51,7 @@ class RenderRegion(
         val newIbo = indexBufferPool.bufferObject
         if (vbo !== newVbo || ibo !== newIbo) {
             vao.clear()
-            vao.attachVbo(newVbo)
+            vao.attachVbo(newVbo, TerrainRenderer.VERTEX_ATTRIBUTE)
             vao.attachIbo(newIbo)
             vbo = newVbo
         }
@@ -80,11 +79,9 @@ class RenderRegion(
     }
 
     class LayerBatch {
-        private val serverBuffer = ImmutableVertexBufferObject(
-            VertexAttribute.EMPTY,
-            4096 * 20,
-            GL_DYNAMIC_STORAGE_BIT
-        )
+        private val serverBuffer = BufferObject.Immutable(BufferObject.Target.GL_ELEMENT_ARRAY_BUFFER).apply {
+            allocate(4096 * 20, GL_DYNAMIC_STORAGE_BIT)
+        }
 
         private val clientBuffer = allocateByte(serverBuffer.size)
         private val clientBufferAddress = clientBuffer.address

@@ -22,11 +22,10 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     private val sectorSize = 1 shl sectorSizePower
     val capacity = sectorSize * sectorCapacity
 
-    private val vbo = ImmutableVertexBufferObject(
-        VertexAttribute.EMPTY,
-        capacity,
-        GL_MAP_WRITE_BIT or GL_MAP_PERSISTENT_BIT or GL_MAP_COHERENT_BIT
-    )
+    private val vbo = BufferObject.Immutable(BufferObject.Target.NONE).apply {
+        allocate(capacity, GL_MAP_WRITE_BIT or GL_MAP_PERSISTENT_BIT or GL_MAP_COHERENT_BIT)
+    }
+
     private val baseBuffer = glMapNamedBufferRange(
         vbo.id,
         0,

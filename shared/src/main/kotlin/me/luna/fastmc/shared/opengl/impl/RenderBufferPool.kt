@@ -1,15 +1,18 @@
 package me.luna.fastmc.shared.opengl.impl
 
-import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.BufferObject
+import me.luna.fastmc.shared.opengl.GL_DYNAMIC_DRAW
+import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
+import me.luna.fastmc.shared.opengl.glInvalidateBufferSubData
 import me.luna.fastmc.shared.util.ObjectPool
 import me.luna.fastmc.shared.util.pollEach
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val growPower: Int) {
+class RenderBufferPool(private val growPower: Int) {
     private val growAmount = 1 shl growPower
     private val regionPool = ObjectPool { Region() }
 
-    var bufferObject = VertexBufferObject(vertexAttribute); private set
+    var bufferObject = BufferObject.Mutable(BufferObject.Target.NONE); private set
 
     var capacity = 0
     var allocated = 0; private set
@@ -70,7 +73,7 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
     fun ensureCapacity(newLength: Int) {
         if (capacity == 0) {
             val newSize = (newLength + growAmount - 1) shr growPower shl growPower
-            glNamedBufferData(bufferObject.id, newSize.toLong(), GL_DYNAMIC_DRAW)
+            bufferObject.allocate(newSize, GL_DYNAMIC_DRAW)
             capacity = newSize
             regionHead.length = newSize
             return
@@ -93,8 +96,8 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
             } else {
                 capacity
             }
-            val newBufferObject = VertexBufferObject(vertexAttribute)
-            glNamedBufferData(newBufferObject.id, newSize.toLong(), GL_DYNAMIC_DRAW)
+            val newBufferObject = BufferObject.Mutable(BufferObject.Target.NONE)
+            newBufferObject.allocate(newSize, GL_DYNAMIC_DRAW)
             allocated = 0
 
             current = regionHead
@@ -133,12 +136,12 @@ class RenderBufferPool(private val vertexAttribute: VertexAttribute, private val
             val tail = regionTail
             val lastUnused = if (!tail.used) tail.offset else capacity
             val newSize = (lastUnused + newLength + growAmount - 1) shr growPower shl growPower
-            val newVbo = VertexBufferObject(vertexAttribute)
-            glNamedBufferData(newVbo.id, newSize.toLong(), GL_DYNAMIC_DRAW)
+            val newBufferObject = BufferObject.Mutable(BufferObject.Target.NONE)
+            newBufferObject.allocate(newSize, GL_DYNAMIC_DRAW)
 
-            glCopyNamedBufferSubData(bufferObject.id, newVbo.id, 0L, 0L, lastUnused.toLong())
+            glCopyNamedBufferSubData(bufferObject.id, newBufferObject.id, 0L, 0L, lastUnused.toLong())
             bufferObject.destroy()
-            bufferObject = newVbo
+            bufferObject = newBufferObject
             capacity = newSize
 
             val diff = newSize - tail.end

@@ -1,12 +1,13 @@
 package me.luna.fastmc.shared.opengl
 
+import me.luna.fastmc.shared.opengl.impl.VertexAttribute
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
 class VertexArrayObject : IGLObject {
     override val id: Int = glCreateVertexArrays()
 
     private var ibo: BufferObject? = null
-    private val vboList = FastObjectArrayList<VertexBufferObject>()
+    private val vboList = FastObjectArrayList<BufferObject>()
     private var vboBinding = 0
 
     fun attachIbo(ibo: BufferObject) {
@@ -14,10 +15,10 @@ class VertexArrayObject : IGLObject {
         this.ibo = ibo
     }
 
-    fun attachVbo(vbo: VertexBufferObject) {
+    fun attachVbo(vbo: BufferObject, vertexAttribute: VertexAttribute) {
         vboList.add(vbo)
-        glVertexArrayVertexBuffer(id, vboBinding, vbo.id, 0, vbo.vertexAttribute.stride)
-        vbo.vertexAttribute.apply(this, vboBinding++)
+        glVertexArrayVertexBuffer(id, vboBinding, vbo.id, 0, vertexAttribute.stride)
+        vertexAttribute.apply(this, vboBinding++)
     }
 
     override fun bind() {

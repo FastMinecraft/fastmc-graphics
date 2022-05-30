@@ -117,14 +117,12 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
     private class RenderInfo private constructor(
         private val texture: GlyphTexture,
         private val size: Int,
-        private val vao: VertexArrayObject,
-        private val ibo: IndexBufferObject
+        private val vao: VertexArrayObject
     ) {
         fun render(drawShadow: Boolean) {
             texture.bind()
 
             vao.bind()
-            ibo.bind()
 
             if (drawShadow) {
                 glDrawElements(GL_TRIANGLES, size * 2 * 6, GL_UNSIGNED_SHORT, 0L)
@@ -135,7 +133,6 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
 
         fun destroy() {
             vao.destroy()
-            ibo.destroy()
         }
 
         class Builder(private val texture: GlyphTexture) {
@@ -180,15 +177,16 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                 val iboBuffer = buildIboBuffer()
 
                 val vao = VertexArrayObject()
-                val vbo = VertexBufferObject(vertexAttribute)
-                val ibo = IndexBufferObject()
+                val vbo = BufferObject.Immutable(BufferObject.Target.GL_ARRAY_BUFFER)
+                val ibo = BufferObject.Immutable(BufferObject.Target.GL_ELEMENT_ARRAY_BUFFER)
 
-                glNamedBufferStorage(vbo.id, vboBuffer, 0)
-                glNamedBufferStorage(ibo.id, iboBuffer, 0)
+                vbo.allocate(vboBuffer, 0)
+                ibo.allocate(iboBuffer, 0)
 
-                vao.attachVbo(vbo)
+                vao.attachVbo(vbo, VERTEX_ATTRIBUTE)
+                vao.attachIbo(ibo)
 
-                return RenderInfo(texture, size, vao, ibo)
+                return RenderInfo(texture, size, vao)
             }
 
             private fun buildVboBuffer(): ByteBuffer {
@@ -331,7 +329,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             }
 
             private companion object {
-                val vertexAttribute = buildAttribute(16) {
+                val VERTEX_ATTRIBUTE = buildAttribute(16) {
                     float(0, 2, GLDataType.GL_FLOAT, false)
                     float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true)
                     int(2, 1, GLDataType.GL_BYTE)

@@ -226,8 +226,8 @@ inline fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
 
 
 // GL15
-const val GL_ELEMENT_ARRAY_BUFFER = 0x8893
 const val GL_ARRAY_BUFFER = 0x8892
+const val GL_ELEMENT_ARRAY_BUFFER = 0x8893
 const val GL_STREAM_DRAW = 0x88E0
 const val GL_STATIC_DRAW = 0x88E4
 const val GL_DYNAMIC_DRAW = 0x88E8

@@ -13,7 +13,7 @@ open class ShaderProgram(
     IGLObject {
     final override val id: Int
 
-    private val uniformBuffers = FastObjectArrayList<UniformBufferObject>()
+    private val uniformBuffers = FastObjectArrayList<BufferObject>()
 
     init {
         val vertexShaderID = createShader(vertex, GL_VERTEX_SHADER)
@@ -54,8 +54,8 @@ open class ShaderProgram(
         return id
     }
 
-    fun attachUBO(ubo: UniformBufferObject) {
-        val index = glGetUniformBlockIndex(id, ubo.blockName)
+    fun attachUBO(ubo: BufferObject, blockName: String) {
+        val index = glGetUniformBlockIndex(id, blockName)
         glUniformBlockBinding(id, index, uniformBuffers.size)
         uniformBuffers.add(ubo)
     }
