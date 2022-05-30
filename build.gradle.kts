@@ -52,6 +52,15 @@ allprojects {
 }
 
 subprojects {
+    val javaVersion = findProperty("javaVersion")?.toString()?.toInt() ?: 8
+    val fullJavaVersion = if (javaVersion < 9) "1.$javaVersion" else javaVersion.toString()
+
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(javaVersion))
+        }
+    }
+
     tasks {
         jar {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -61,13 +70,13 @@ subprojects {
 
         compileJava {
             options.encoding = "UTF-8"
-            sourceCompatibility = "1.8"
-            targetCompatibility = "1.8"
+            sourceCompatibility = fullJavaVersion
+            targetCompatibility = fullJavaVersion
         }
 
         compileKotlin {
             kotlinOptions {
-                jvmTarget = "1.8"
+                jvmTarget = fullJavaVersion
                 freeCompilerArgs = listOf(
                     "-opt-in=kotlin.RequiresOptIn",
                     "-opt-in=kotlin.contracts.ExperimentalContracts",
@@ -87,6 +96,8 @@ tasks {
             }
         }
     }
+
+    disable(jar)
 
     val collectJars by register<Copy>("collectJars") {
         group = "build"

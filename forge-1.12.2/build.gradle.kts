@@ -40,7 +40,8 @@ dependencies {
     minecraft("net.minecraftforge:forge:$minecraftVersion-$forgeVersion")
 
     // Dependencies
-    library(project(":shared")) {
+    library(project(":shared-src"))
+    library(project(":shared-java8")) {
         exclude(group = "org.apache.logging.log4j")
     }
 

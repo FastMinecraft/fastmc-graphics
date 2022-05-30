@@ -4,7 +4,7 @@ import java.util.function.Consumer
 
 @Suppress("UNCHECKED_CAST")
 class DoubleBufferedCollection<T : MutableCollection<*>> {
-    constructor(delegate: T, swap: T)  {
+    constructor(delegate: T, swap: T) {
         this.delegate = delegate
         this.swap = swap
         this.initAction = DEFAULT_INIT_ACTION as Consumer<T>
@@ -18,6 +18,7 @@ class DoubleBufferedCollection<T : MutableCollection<*>> {
 
     @Volatile
     private var delegate: T
+
     @Volatile
     private var swap: T
     private val initAction: Consumer<T>
