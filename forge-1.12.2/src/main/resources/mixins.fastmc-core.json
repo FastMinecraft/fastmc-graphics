@@ -8,7 +8,6 @@
     "MixinCoreMinecraft",
     "entity.MixinEntity",
     "entity.MixinEntityCow",
-    "render.MixinCompiledChunk",
     "render.MixinCoreEntityRenderer",
     "render.MixinCoreRenderGlobal",
     "render.MixinFontRenderer",

@@ -14,7 +14,7 @@ interface IGLWrapper {
     fun glDeleteTextures(texture: Int)
     fun glBindTexture(texture: Int)
     fun glDrawArrays(mode: Int, first: Int, count: Int)
-    fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long)
+    fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long)
 
 
     // GL14
@@ -197,8 +197,8 @@ const val GL_RGBA8 = 0x8058
 inline fun glDeleteTextures(texture: Int) = glWrapper.glDeleteTextures(texture)
 inline fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
 inline fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArrays(mode, first, count)
-inline fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
-    glWrapper.glDrawElements(mode, indices_count, type, indices_buffer_offset)
+inline fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) =
+    glWrapper.glDrawElements(mode, count, type, indices)
 
 
 // GL12

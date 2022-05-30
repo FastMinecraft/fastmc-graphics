@@ -19,8 +19,31 @@ class GLWrapper : IGLWrapper {
     override fun glDeleteTextures(texture: Int) = GL11.glDeleteTextures(texture)
     override fun glBindTexture(texture: Int) = GlStateManager.bindTexture(texture)
     override fun glDrawArrays(mode: Int, first: Int, count: Int) = GL11.glDrawArrays(mode, first, count)
-    override fun glDrawElements(mode: Int, indices_count: Int, type: Int, indices_buffer_offset: Long) =
-        GL11.glDrawElements(mode, indices_count, type, indices_buffer_offset)
+
+    // LWJGL checks for GL_ELEMENT_ARRAY_BUFFER binding when invoking glDrawElements() with indices buffer offset.
+    // However, it breaks when rendering with a bound VAO that has an element buffer attached (which is 100% valid).
+    private val glDrawElementsFunctionPointer =
+        GLContext::class.java.getDeclaredMethod("getFunctionAddress", String::class.java).run {
+            isAccessible = true
+            val pointer = invoke(null, "glDrawElements")
+            isAccessible = false
+            pointer as Long
+        }
+
+    private val nglDrawElementsBOMethod = GL11::class.java.getDeclaredMethod(
+        "nglDrawElementsBO",
+        Int::class.java,
+        Int::class.java,
+        Int::class.java,
+        Long::class.java,
+        Long::class.java
+    ).apply {
+        isAccessible = true
+    }
+
+    override fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) {
+        nglDrawElementsBOMethod.invoke(null, mode, count, type, indices, glDrawElementsFunctionPointer)
+    }
 
     // GL14
     override fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =

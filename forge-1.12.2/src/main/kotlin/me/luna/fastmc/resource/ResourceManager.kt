@@ -8,6 +8,7 @@ import me.luna.fastmc.shared.model.tileentity.ModelChest
 import me.luna.fastmc.shared.model.tileentity.ModelLargeChest
 import me.luna.fastmc.shared.model.tileentity.ModelShulkerBox
 import me.luna.fastmc.shared.opengl.ShaderProgram
+import me.luna.fastmc.shared.opengl.ShaderSource
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceProvider
@@ -28,29 +29,29 @@ class ResourceManager(mc: Minecraft) : IResourceManager {
     override val entityShader: ResourceProvider<AbstractRenderBuilder.ShaderProgram> = ResourceProvider(
         AbstractRenderBuilder.ShaderProgram(
             "entity/Cow",
-            "/assets/shaders/entity/Cow.vsh",
-            "/assets/shaders/entity/Default.fsh"
+            ShaderSource.Vertex("/assets/shaders/entity/Cow.vsh"),
+            ShaderSource.Fragment("/assets/shaders/entity/Default.fsh")
         ),
 
         AbstractRenderBuilder.ShaderProgram(
             "tileEntity/EnderChest",
-            "/assets/shaders/tileentity/EnderChest.vsh",
-            "/assets/shaders/tileentity/Default.fsh"
+            ShaderSource.Vertex("/assets/shaders/tileentity/EnderChest.vsh"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         ),
         AbstractRenderBuilder.ShaderProgram(
             "tileEntity/Bed",
-            "/assets/shaders/tileentity/Bed.vsh",
-            "/assets/shaders/tileentity/Default.fsh"
+            ShaderSource.Vertex("/assets/shaders/tileentity/Bed.vsh"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         ),
         AbstractRenderBuilder.ShaderProgram(
             "tileEntity/ShulkerBox",
-            "/assets/shaders/tileentity/ShulkerBox.vsh",
-            "/assets/shaders/tileentity/Default.fsh"
+            ShaderSource.Vertex("/assets/shaders/tileentity/ShulkerBox.vsh"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         ),
         AbstractRenderBuilder.ShaderProgram(
             "tileEntity/Chest",
-            "/assets/shaders/tileentity/Chest.vsh",
-            "/assets/shaders/tileentity/Default.fsh"
+            ShaderSource.Vertex("/assets/shaders/tileentity/Chest.vsh"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         )
     )
 
