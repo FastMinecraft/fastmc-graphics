@@ -1,5 +1,4 @@
 plugins {
-    kotlin("jvm")
     id("fabric-loom")
 }
 
@@ -22,10 +21,7 @@ dependencies {
 
     modImplementation("net.fabricmc:fabric-loader:$loaderVersion")
 
-    library(project(":shared-src"))
-    library(project(":shared-java8")) {
-        exclude(group = "org.apache.logging.log4j")
-    }
+    library(project(":shared:java8"))
 }
 
 loom {

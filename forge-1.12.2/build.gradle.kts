@@ -40,21 +40,14 @@ dependencies {
     minecraft("net.minecraftforge:forge:$minecraftVersion-$forgeVersion")
 
     // Dependencies
-    library(project(":shared-src"))
-    library(project(":shared-java8")) {
-        exclude(group = "org.apache.logging.log4j")
-    }
+    library(project(":shared:java8"))
 
     library("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
-        exclude("commons-io")
-        exclude("gson")
-        exclude("guava")
-        exclude("launchwrapper")
-        exclude(group = "org.apache.logging.log4j")
+        isTransitive = false
     }
 
     annotationProcessor("org.spongepowered:mixin:0.8.4:processor") {
-        exclude("gson")
+        isTransitive = false
     }
 }
 

@@ -525,8 +525,8 @@ abstract class TerrainRenderer(
 
                 for (i in regionArray.indices) {
                     val region = regionArray[i]
-                    val allocated = region.vertexBufferPool.allocated
-                    totalChunkVertexSize += allocated + region.indexBufferPool.allocated
+                    val allocated = region.vertexBufferPool.allocated + region.indexBufferPool.allocated
+                    totalChunkVertexSize += allocated
                     if (allocated != 0) {
                         if (region.frustumCull.isInFrustum()) {
                             visibleRegionCount++
@@ -534,6 +534,7 @@ abstract class TerrainRenderer(
                         regionCount++
                     }
                     bufferCapacity += region.vertexBufferPool.capacity
+                    bufferCapacity += region.indexBufferPool.capacity
                 }
 
                 for (i in chunkArray.indices) {

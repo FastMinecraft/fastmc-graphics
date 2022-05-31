@@ -43,6 +43,7 @@ allprojects {
 
         compileOnly("org.jetbrains.kotlin:kotlin-stdlib-common:$kotlinVersion")
         compileOnly("org.jetbrains:annotations:23.0.0")
+        compileOnly("org.apache.logging.log4j:log4j-api:2.8.1")
 
         compileOnly("it.unimi.dsi:fastutil:7.1.0")
         library("org.joml:joml:$jomlVersion")
