@@ -1,6 +1,24 @@
+val disableTask: (TaskProvider<*>) -> Unit = {
+    it.get().enabled = false
+}
+
+ext {
+    set("disableTask", disableTask)
+}
+
 plugins {
     java
     kotlin("jvm")
+    idea
+}
+
+idea {
+    module {
+        excludeDirs.add(file(".architectury-transformer"))
+        subprojects.forEach {
+            excludeDirs.add(file("${it.projectDir}/run"))
+        }
+    }
 }
 
 allprojects {
@@ -17,6 +35,7 @@ allprojects {
         maven("https://libraries.minecraft.net")
     }
 
+    val libraryImplementation by configurations.creating
     val library by configurations.creating
 
     dependencies {
@@ -28,15 +47,15 @@ allprojects {
         val kotlinxCoroutineVersion: String by rootProject
         val jomlVersion: String by rootProject
 
-        library("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion") {
+        libraryImplementation("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
-        library("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion") {
+        libraryImplementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
-        library("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutineVersion") {
+        libraryImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutineVersion") {
             exclude("kotlin-stdlib-common")
             exclude("annotations")
         }
@@ -46,9 +65,10 @@ allprojects {
         compileOnly("org.apache.logging.log4j:log4j-api:2.8.1")
 
         compileOnly("it.unimi.dsi:fastutil:7.1.0")
-        library("org.joml:joml:$jomlVersion")
+        libraryImplementation("org.joml:joml:$jomlVersion")
 
-        implementation(library)
+        library(libraryImplementation)
+        implementation(libraryImplementation)
     }
 }
 
@@ -65,8 +85,6 @@ subprojects {
     tasks {
         jar {
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-            archiveBaseName.set(rootProject.name)
-            archiveAppendix.set(project.name)
         }
 
         compileJava {
@@ -90,32 +108,35 @@ subprojects {
 }
 
 tasks {
-    fun disable(vararg tasks: TaskProvider<*>) {
-        tasks.forEach {
-            it {
-                enabled = false
-            }
-        }
-    }
-
-    disable(jar)
+    disableTask(jar)
 
     val collectJars by register<Copy>("collectJars") {
         group = "build"
 
-        subprojects.forEach {
-            it.tasks {
-                dependsOn(build)
+        subprojects.asSequence()
+            .filterNot {
+                it.name.contains("shared")
+            }
+            .forEach {
+                dependsOn(it.tasks.assemble)
+            }
+
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+        subprojects.forEach { project ->
+            val regex =
+                "${rootProject.name}-(fabric|forge)-${project.findProperty("minecraftVersion")}-${rootProject.version}-release\\.jar".toRegex()
+            from(file("${project.buildDir}/libs/")) {
+                include {
+                    it.name.matches(regex)
+                }
             }
         }
 
-        subprojects.forEach {
-            from(file("${it.buildDir}/libs/${rootProject.name}-${it.name}-${rootProject.version}-release.jar"))
-        }
         into(file("$buildDir/libs"))
     }
 
-    build {
+    assemble {
         finalizedBy(collectJars)
     }
 }

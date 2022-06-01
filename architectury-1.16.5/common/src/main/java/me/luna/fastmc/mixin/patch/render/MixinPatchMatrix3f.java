@@ -1,11 +1,9 @@
 package me.luna.fastmc.mixin.patch.render;
 
 import me.luna.fastmc.mixin.IPatchedMatrix3f;
-import me.luna.fastmc.mixin.IPatchedMatrix4f;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.util.math.Matrix3f;
-import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Quaternion;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Math;

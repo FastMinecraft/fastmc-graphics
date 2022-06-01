@@ -1,0 +1,80 @@
+accessWidener v1 named
+
+accessible class net/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk$Task
+accessible class net/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk$RebuildTask
+accessible class net/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk$SortTask
+accessible class net/minecraft/client/render/chunk/ChunkBuilder$Result
+
+accessible class net/minecraft/client/render/WorldRenderer$ChunkInfo
+
+accessible class net/minecraft/client/model/ModelPart$Quad
+accessible class net/minecraft/client/model/ModelPart$Vertex
+
+accessible class net/minecraft/block/AbstractBlock$AbstractBlockState$ShapeCache
+
+accessible class net/minecraft/client/render/model/WeightedBakedModel$Entry
+
+accessible method net/minecraft/client/render/WorldRenderer$ChunkInfo <init> (Lnet/minecraft/client/render/WorldRenderer;Lnet/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk;Lnet/minecraft/util/math/Direction;I)V
+accessible method net/minecraft/client/util/math/MatrixStack$Entry <init> (Lnet/minecraft/util/math/Matrix4f;Lnet/minecraft/util/math/Matrix3f;)V
+
+accessible method net/minecraft/util/shape/VoxelShape <init> (Lnet/minecraft/util/shape/VoxelSet;)V
+accessible method net/minecraft/util/shape/FractionalDoubleList <init> (I)V
+accessible method net/minecraft/util/shape/FractionalPairList <init> (II)V
+
+accessible method net/minecraft/util/math/ChunkSectionPos <init> (III)V
+
+accessible field net/minecraft/client/render/RenderPhase PARTICLES_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
+accessible field net/minecraft/client/render/RenderPhase CLOUDS_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
+accessible field net/minecraft/client/render/RenderPhase WEATHER_TARGET Lnet/minecraft/client/render/RenderPhase$Target;
+accessible field net/minecraft/client/render/RenderPhase name Ljava/lang/String;
+
+accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo chunk Lnet/minecraft/client/render/chunk/ChunkBuilder$BuiltChunk;
+accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo direction Lnet/minecraft/util/math/Direction;
+accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo cullingState B
+accessible field net/minecraft/client/render/WorldRenderer$ChunkInfo propagationLevel I
+
+accessible field net/minecraft/world/chunk/light/LightingProvider blockLightProvider Lnet/minecraft/world/chunk/light/ChunkLightProvider;
+accessible field net/minecraft/world/chunk/light/LightingProvider skyLightProvider Lnet/minecraft/world/chunk/light/ChunkLightProvider;
+
+accessible field net/minecraft/client/model/ModelPart$Cuboid sides [Lnet/minecraft/client/model/ModelPart$Quad;
+
+accessible field net/minecraft/block/AbstractBlock$AbstractBlockState$ShapeCache extrudedFaces [Lnet/minecraft/util/shape/VoxelShape;
+
+accessible field net/minecraft/world/chunk/light/SkyLightStorage$Data minSectionY I
+accessible field net/minecraft/world/chunk/light/SkyLightStorage$Data columnToTopSection Lit/unimi/dsi/fastutil/longs/Long2IntOpenHashMap;
+
+accessible field net/minecraft/util/collection/WeightedPicker$Entry weight I
+accessible field net/minecraft/client/render/model/WeightedBakedModel$Entry model Lnet/minecraft/client/render/model/BakedModel;
+
+accessible field net/minecraft/util/math/Matrix3f a00 F
+accessible field net/minecraft/util/math/Matrix3f a01 F
+accessible field net/minecraft/util/math/Matrix3f a02 F
+accessible field net/minecraft/util/math/Matrix3f a10 F
+accessible field net/minecraft/util/math/Matrix3f a11 F
+accessible field net/minecraft/util/math/Matrix3f a12 F
+accessible field net/minecraft/util/math/Matrix3f a20 F
+accessible field net/minecraft/util/math/Matrix3f a21 F
+accessible field net/minecraft/util/math/Matrix3f a22 F
+
+accessible field net/minecraft/util/math/Matrix4f a00 F
+accessible field net/minecraft/util/math/Matrix4f a01 F
+accessible field net/minecraft/util/math/Matrix4f a02 F
+accessible field net/minecraft/util/math/Matrix4f a03 F
+accessible field net/minecraft/util/math/Matrix4f a10 F
+accessible field net/minecraft/util/math/Matrix4f a11 F
+accessible field net/minecraft/util/math/Matrix4f a12 F
+accessible field net/minecraft/util/math/Matrix4f a13 F
+accessible field net/minecraft/util/math/Matrix4f a20 F
+accessible field net/minecraft/util/math/Matrix4f a21 F
+accessible field net/minecraft/util/math/Matrix4f a22 F
+accessible field net/minecraft/util/math/Matrix4f a23 F
+accessible field net/minecraft/util/math/Matrix4f a30 F
+accessible field net/minecraft/util/math/Matrix4f a31 F
+accessible field net/minecraft/util/math/Matrix4f a32 F
+accessible field net/minecraft/util/math/Matrix4f a33 F
+
+accessible field net/minecraft/world/biome/Biome$Weather downfall F
+accessible field net/minecraft/world/biome/Biome$Weather temperature F
+
+accessible field net/minecraft/block/AbstractBlock$AbstractBlockState shapeCache Lnet/minecraft/block/AbstractBlock$AbstractBlockState$ShapeCache;
+accessible field net/minecraft/block/FluidBlock fluid Lnet/minecraft/fluid/FlowableFluid;

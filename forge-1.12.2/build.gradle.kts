@@ -22,8 +22,6 @@ repositories {
     maven("https://repo.spongepowered.org/repository/maven-public/")
 }
 
-val library by configurations
-
 val minecraftVersion: String by project
 val forgeVersion: String by project
 val mappingsChannel: String by project
@@ -40,9 +38,10 @@ dependencies {
     minecraft("net.minecraftforge:forge:$minecraftVersion-$forgeVersion")
 
     // Dependencies
-    library(project(":shared:java8"))
+    compileOnly(project(":shared"))
+    libraryImplementation(project(":shared:java8"))
 
-    library("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
+    libraryImplementation("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
         isTransitive = false
     }
 
@@ -94,7 +93,7 @@ tasks {
         }
 
         from(
-            library.map {
+            configurations["library"].map {
                 if (it.isDirectory) it else zipTree(it)
             }
         )

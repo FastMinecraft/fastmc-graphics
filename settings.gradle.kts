@@ -11,13 +11,14 @@ pluginManagement {
     }
 
     plugins {
-        id("dev.architectury.loom").version("0.12-SNAPSHOT")
-        id("architectury-plugin").version("3.4-SNAPSHOT")
-
-        id("fabric-loom").version("0.12-SNAPSHOT")
         id("org.jetbrains.kotlin.jvm").version(kotlinVersion)
     }
 }
 
-include("shared", "shared:java8", "shared:java16", "shared:java17")
-include("forge-1.12.2", "fabric-1.16.5")
+include("shared")
+include("shared:java8")
+include("forge-1.12.2")
+include("architectury-1.16.5", "architectury-1.16.5:common", "architectury-1.16.5:fabric")
+
+//include("shared:java17")
+//include("shared:java16")

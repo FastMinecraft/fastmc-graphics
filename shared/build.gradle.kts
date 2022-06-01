@@ -1,25 +1,24 @@
+val disableTask: (TaskProvider<*>) -> Unit by rootProject.ext
+val sharedProject = project
+
 subprojects {
     kotlin {
         sourceSets["main"].apply {
-            kotlin.srcDir(project(":shared").kotlin.sourceSets["main"].kotlin)
+            kotlin.source(sharedProject.kotlin.sourceSets["main"].kotlin)
         }
     }
 
     sourceSets {
-        main.get().java.srcDir(project(":shared").sourceSets.main.get().java)
-        main.get().resources.srcDir(project(":shared").sourceSets.main.get().resources)
+        main {
+            java.source(sharedProject.sourceSets.main.get().java)
+            resources.source(sharedProject.sourceSets.main.get().resources)
+        }
     }
 }
 
 tasks {
-    fun disable(vararg tasks: TaskProvider<*>) {
-        tasks.forEach {
-            it {
-                enabled = false
-            }
-        }
-    }
-
-    disable(compileJava)
-    disable(compileKotlin)
+    disableTask(compileJava)
+    disableTask(compileKotlin)
+    disableTask(processResources)
+    disableTask(jar)
 }

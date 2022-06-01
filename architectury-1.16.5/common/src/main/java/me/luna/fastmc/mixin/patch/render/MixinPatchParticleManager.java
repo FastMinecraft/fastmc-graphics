@@ -1,8 +1,6 @@
 package me.luna.fastmc.mixin.patch.render;
 
-import com.google.common.collect.EvictingQueue;
 import me.luna.fastmc.mixin.IPatchedParticleManager;
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.tileentity.IPatchedParticle;
 import net.minecraft.client.particle.EmitterParticle;
 import net.minecraft.client.particle.Particle;
