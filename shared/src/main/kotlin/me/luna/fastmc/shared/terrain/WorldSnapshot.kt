@@ -12,6 +12,9 @@ abstract class WorldSnapshot112<T_Chunk, T_BlockState, T_ColorResolver>(
 ) {
     abstract val context: RebuildContext
 
+    var minChunkY = 0; protected set
+    var maxChunkY = 16; protected set
+
     protected var biomeBlendRadius = 0
     private val colorCacheMap = Object2ObjectArrayMap<T_ColorResolver, ColorBlender>()
     private var lastKey: T_ColorResolver? = null
@@ -27,6 +30,8 @@ abstract class WorldSnapshot112<T_Chunk, T_BlockState, T_ColorResolver>(
     abstract fun init(): Boolean
 
     open fun clear() {
+        minChunkY = 0
+        maxChunkY = 16
         biomeBlendRadius = 0
         Arrays.fill(chunkArray, null)
         blockStateArray.fill(emptyBlockState)
@@ -113,7 +118,7 @@ abstract class WorldSnapshot112<T_Chunk, T_BlockState, T_ColorResolver>(
     }
 
     protected inline fun indexBlockExt2(x: Int, y: Int, z: Int): Int {
-        return (x - ((context.chunkX shl 4) - 2)) * 400 + (z - ((context.chunkZ shl 4) - 2)) * 20 + (y - ((context.chunkY shl 4) - 2))
+        return (x - ((context.chunkX shl 4) - 2)) * 400 + (z - ((context.chunkZ shl 4) - 2)) * 20 + (y - (((context.chunkY) shl 4) - 2))
     }
 
     protected inline fun indexBlockExt16(x: Int, z: Int): Int {

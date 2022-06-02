@@ -18,10 +18,13 @@ import java.util.concurrent.Future
 @Suppress("NOTHING_TO_INLINE")
 abstract class TerrainRenderer(
     renderer: WorldRenderer,
-    val layerCount: Int,
-    val chunkSectionYSize: Int
+    val layerCount: Int
 ) : IRenderer by renderer {
-    val renderRegionChunkCount = 16 * chunkSectionYSize * 16
+    abstract val minChunkY: Int
+    abstract val maxChunkY: Int
+    val chunkYSize get() = maxChunkY - minChunkY
+
+    val renderRegionChunkCount get() = 16 * chunkYSize * 16
 
     private var chunkStorageNullable: RenderChunkStorage? = null
     val chunkStorage get() = chunkStorageNullable!!

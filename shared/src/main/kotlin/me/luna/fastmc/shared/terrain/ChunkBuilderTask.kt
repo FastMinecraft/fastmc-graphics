@@ -60,6 +60,9 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
         } catch (e: CancellationException) {
             reset()
             false
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            false
         }
     }
 

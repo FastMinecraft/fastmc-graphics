@@ -9,6 +9,7 @@ architectury {
 dependencies {
     modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
 
+    compileOnly(project.project(":architectury-$minecraftVersion:common"))
     runtimeOnly(project.project(":architectury-$minecraftVersion:common").sourceSets.main.get().output)
     library(project(":architectury-$minecraftVersion:common", "transformProductionFabric"))
     libraryImplementation(project(":shared:java8"))

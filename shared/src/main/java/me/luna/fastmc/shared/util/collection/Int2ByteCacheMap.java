@@ -16,7 +16,7 @@ public final class Int2ByteCacheMap implements Int2ByteMap {
 
     public Int2ByteCacheMap(int capacity, byte defaultReturnValue) {
         this.capacity = capacity;
-        this.backingMap = new Int2ByteLinkedOpenHashMap(capacity, 1.0f) {
+        this.backingMap = new Int2ByteLinkedOpenHashMap(capacity, 0.9999999f) {
             @Override
             protected void rehash(int newN) {}
         };
@@ -25,7 +25,7 @@ public final class Int2ByteCacheMap implements Int2ByteMap {
 
     public Int2ByteCacheMap(int capacity) {
         this.capacity = capacity;
-        this.backingMap = new Int2ByteLinkedOpenHashMap(capacity, 0.9999f) {
+        this.backingMap = new Int2ByteLinkedOpenHashMap(capacity, 0.9999999f) {
             @Override
             protected void rehash(int newN) {}
         };

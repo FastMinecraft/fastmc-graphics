@@ -12,10 +12,11 @@ import java.nio.ByteBuffer
 @Suppress("NOTHING_TO_INLINE")
 class RenderRegion(
     private val renderer: TerrainRenderer,
+    private val storage: RenderChunkStorage,
     @JvmField val index: Int
 ) {
     var originX = 0; private set
-    inline val originY get() = 0
+    val originY get() = storage.minY shl 4
     var originZ = 0; private set
 
     @JvmField
@@ -143,7 +144,7 @@ class RenderRegion(
     private inner class FrustumCullImpl : FrustumCull(renderer) {
         override fun isInFrustum(frustum: FrustumIntersection): Boolean {
             val x = (originX - renderer.renderPosX).toFloat()
-            val y = (-renderer.renderPosY).toFloat()
+            val y = (originY - renderer.renderPosY).toFloat()
             val z = (originZ - renderer.renderPosZ).toFloat()
             return frustum.testAab(x, y, z, x + 256.0f, y + 256.0f, z + 256.0f)
         }

@@ -152,13 +152,13 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     var blockZ = 0
 
     @JvmField
-    var posX = 0.0f
+    var renderPosX = 0.0f
 
     @JvmField
-    var posY = 0.0f
+    var renderPosY = 0.0f
 
     @JvmField
-    var posZ = 0.0f
+    var renderPosZ = 0.0f
 
     var activeLayer = 0
     val translucentChunkVertexBuilder = TranslucentChunkVertexBuilder()
@@ -214,9 +214,9 @@ abstract class RebuildContext(layerCount: Int) : Context() {
         blockY = 0
         blockZ = 0
 
-        posX = 0.0f
-        posY = 0.0f
-        posZ = 0.0f
+        renderPosX = 0.0f
+        renderPosY = 0.0f
+        renderPosZ = 0.0f
 
         activeLayer = 0
 
@@ -235,6 +235,12 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     }
 
     abstract suspend fun renderChunk(task: RebuildTask)
+
+    fun setupRenderPos() {
+        renderPosX = (blockX and 255).toFloat()
+        renderPosY = (blockY - (worldSnapshot.minChunkY shl 4)).toFloat()
+        renderPosZ = (blockZ and 255).toFloat()
+    }
 
     inline fun calculateAO(
         thisX: Int,

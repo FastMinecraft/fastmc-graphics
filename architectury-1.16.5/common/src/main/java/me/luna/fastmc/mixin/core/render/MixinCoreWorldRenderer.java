@@ -130,7 +130,7 @@ public abstract class MixinCoreWorldRenderer {
     @Mutable
     @Shadow
     @Final
-    private ObjectList<net.minecraft.client.render.WorldRenderer.ChunkInfo> visibleChunks;
+    private ObjectList<?> visibleChunks;
 
     @Shadow
     protected abstract void resetTransparencyShader();
@@ -305,7 +305,7 @@ public abstract class MixinCoreWorldRenderer {
         Matrix4f projection
     ) {
         Profiler profiler = this.world.getProfiler();
-        profiler.swap("setip");
+        profiler.swap("setup");
 
         BlockEntityRenderDispatcher.INSTANCE.configure(
             this.world,

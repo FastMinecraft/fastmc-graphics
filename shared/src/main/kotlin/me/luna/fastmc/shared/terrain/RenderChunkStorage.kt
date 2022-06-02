@@ -20,7 +20,13 @@ class RenderChunkStorage(
     viewDistance: Int,
 ) {
     @JvmField
-    val sizeY = renderer.chunkSectionYSize
+    val minY = renderer.minChunkY
+
+    @JvmField
+    val maxY = renderer.maxChunkY
+
+    @JvmField
+    val sizeY = renderer.chunkYSize
 
     @JvmField
     val sizeXZ = viewDistance * 2 + 1
@@ -29,14 +35,14 @@ class RenderChunkStorage(
     val regionSizeXZ = ((viewDistance + 7) shr 3) + 1
 
     @JvmField
-    val totalChunk = sizeXZ * renderer.chunkSectionYSize * sizeXZ
+    val totalChunk = sizeXZ * renderer.chunkYSize * sizeXZ
 
     @JvmField
     val totalRegion = regionSizeXZ * regionSizeXZ
 
     @JvmField
     val regionArray = Array(totalRegion) {
-        RenderRegion(renderer, it)
+        RenderRegion(renderer, this, it)
     }
 
     @JvmField
@@ -94,7 +100,7 @@ class RenderChunkStorage(
         updateCaveCulling()
         cameraChunk = getRenderChunkByChunk0(
             renderer.cameraChunkX,
-            renderer.cameraChunkY.coerceIn(0, sizeY - 1),
+            renderer.cameraChunkY,
             renderer.cameraChunkZ
         )
 
@@ -149,7 +155,7 @@ class RenderChunkStorage(
 
                     for (x in startX until endX) {
                         for (z in startZ until endZ) {
-                            for (y in 0 until sizeY) {
+                            for (y in minY until maxY) {
                                 val renderChunk = getRenderChunkByChunk0(x, y, z)
                                 renderChunk.setPos(x, y, z)
                                 renderChunk.renderRegion = region
@@ -327,7 +333,7 @@ class RenderChunkStorage(
 
     @Suppress("ConvertTwoComparisonsToRangeCheck")
     fun getRenderChunkByChunk(chunkX: Int, chunkY: Int, chunkZ: Int): RenderChunk? {
-        return if (chunkY >= 0 && chunkY < sizeY) {
+        return if (chunkY >= minY && chunkY < maxY) {
             getRenderChunkByChunk0(chunkX, chunkY, chunkZ)
         } else {
             null
@@ -347,7 +353,7 @@ class RenderChunkStorage(
     }
 
     inline fun chunkPos2Index(x: Int, y: Int, z: Int): Int {
-        return y + (x + z * sizeXZ) * sizeY
+        return (y - minY) + (x + z * sizeXZ) * sizeY
     }
 
     inline fun regionPos2Index(x: Int, z: Int): Int {

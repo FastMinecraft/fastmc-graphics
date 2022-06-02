@@ -15,7 +15,7 @@ public final class Int2ObjectCacheMap<V> implements Int2ObjectMap<V> {
 
     public Int2ObjectCacheMap(int capacity) {
         this.capacity = capacity;
-        this.backingMap = new Int2ObjectLinkedOpenHashMap<V>(capacity, 0.9999f) {
+        this.backingMap = new Int2ObjectLinkedOpenHashMap<V>(capacity, 0.9999999f) {
             @Override
             protected void rehash(int newN) {}
         };

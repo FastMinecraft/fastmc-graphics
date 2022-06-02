@@ -19,8 +19,10 @@ import net.minecraft.util.math.BlockPos
 class TerrainRendererImpl(renderer: me.luna.fastmc.shared.renderer.WorldRenderer) : TerrainRenderer(
     renderer,
     BlockRenderLayer.values().size,
-    16
 ) {
+    override val minChunkY get() = 0
+    override val maxChunkY get() = 16
+
     override val chunkBuilder: ChunkBuilder = ChunkBuilderImpl(this)
     override val contextProvider: ContextProvider = ChunkBuilderContextProviderImpl()
 
@@ -133,10 +135,6 @@ abstract class RebuildContextImpl : RebuildContext(BlockRenderLayer.values().siz
                     blockX = x
                     blockY = y
                     blockZ = z
-
-                    posX = (x and 255).toFloat()
-                    posY = (y and 255).toFloat()
-                    posZ = (z and 255).toFloat()
 
                     val block = blockState.block
 

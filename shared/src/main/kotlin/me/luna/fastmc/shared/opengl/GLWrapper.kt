@@ -215,6 +215,39 @@ const val GL_UNSIGNED_INT_8_8_8_8_REV = 0x8367
 
 
 // GL13
+const val GL_TEXTURE0 = 0x84C0
+const val GL_TEXTURE1 = 0x84C1
+const val GL_TEXTURE2 = 0x84C2
+const val GL_TEXTURE3 = 0x84C3
+const val GL_TEXTURE4 = 0x84C4
+const val GL_TEXTURE5 = 0x84C5
+const val GL_TEXTURE6 = 0x84C6
+const val GL_TEXTURE7 = 0x84C7
+const val GL_TEXTURE8 = 0x84C8
+const val GL_TEXTURE9 = 0x84C9
+const val GL_TEXTURE10 = 0x84CA
+const val GL_TEXTURE11 = 0x84CB
+const val GL_TEXTURE12 = 0x84CC
+const val GL_TEXTURE13 = 0x84CD
+const val GL_TEXTURE14 = 0x84CE
+const val GL_TEXTURE15 = 0x84CF
+const val GL_TEXTURE16 = 0x84D0
+const val GL_TEXTURE17 = 0x84D1
+const val GL_TEXTURE18 = 0x84D2
+const val GL_TEXTURE19 = 0x84D3
+const val GL_TEXTURE20 = 0x84D4
+const val GL_TEXTURE21 = 0x84D5
+const val GL_TEXTURE22 = 0x84D6
+const val GL_TEXTURE23 = 0x84D7
+const val GL_TEXTURE24 = 0x84D8
+const val GL_TEXTURE25 = 0x84D9
+const val GL_TEXTURE26 = 0x84DA
+const val GL_TEXTURE27 = 0x84DB
+const val GL_TEXTURE28 = 0x84DC
+const val GL_TEXTURE29 = 0x84DD
+const val GL_TEXTURE30 = 0x84DE
+const val GL_TEXTURE31 = 0x84DF
+
 const val GL_COMPRESSED_RGBA = 0x84EE
 
 

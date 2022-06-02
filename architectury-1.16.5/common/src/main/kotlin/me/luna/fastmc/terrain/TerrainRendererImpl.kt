@@ -35,9 +35,11 @@ import net.minecraft.world.chunk.ChunkStatus
 
 class TerrainRendererImpl(renderer: me.luna.fastmc.shared.renderer.WorldRenderer) : TerrainRenderer(
     renderer,
-    RenderLayer.getBlockLayers().size,
-    16
+    RenderLayer.getBlockLayers().size
 ) {
+    override val minChunkY get() = 0
+    override val maxChunkY get() = 16
+
     override val chunkBuilder: ChunkBuilder = ChunkBuilderImpl(this)
     override val contextProvider: ContextProvider = ChunkBuilderContextProviderImpl()
 

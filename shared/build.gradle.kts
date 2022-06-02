@@ -2,16 +2,15 @@ val disableTask: (TaskProvider<*>) -> Unit by rootProject.ext
 val sharedProject = project
 
 subprojects {
-    kotlin {
-        sourceSets["main"].apply {
-            kotlin.source(sharedProject.kotlin.sourceSets["main"].kotlin)
+    tasks {
+        processResources {
+            from(sharedProject.sourceSets.main.get().resources)
         }
-    }
-
-    sourceSets {
-        main {
-            java.source(sharedProject.sourceSets.main.get().java)
-            resources.source(sharedProject.sourceSets.main.get().resources)
+        compileJava {
+            source(sharedProject.sourceSets.main.get().java)
+        }
+        compileKotlin {
+            source(sharedProject.kotlin.sourceSets["main"].kotlin)
         }
     }
 }

@@ -20,5 +20,7 @@ include("shared:java8")
 include("forge-1.12.2")
 include("architectury-1.16.5", "architectury-1.16.5:common", "architectury-1.16.5:fabric")
 
-//include("shared:java17")
 //include("shared:java16")
+
+include("shared:java17")
+include("architectury-1.18.2", "architectury-1.18.2:common", "architectury-1.18.2:fabric")
