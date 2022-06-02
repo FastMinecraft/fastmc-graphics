@@ -595,7 +595,6 @@ public abstract class MixinCoreEntityRenderer {
         GlStateManager.disableBlend();
 
         if (!this.debugView) {
-
             this.mc.profiler.endStartSection("litParticles");
             this.enableLightmap();
             particleManager.renderLitParticles(viewEntity, partialTicks);

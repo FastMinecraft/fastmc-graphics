@@ -428,7 +428,7 @@ public abstract class MixinCoreRenderGlobal {
 
         FastObjectArrayList<TileEntity> globalTileEntityList = (FastObjectArrayList<TileEntity>) (Object) getTerrainRenderer().getGlobalTileEntityList().get();
         for (int i = 0; i < globalTileEntityList.size(); i++) {
-            TileEntity tileEntity = renderTileEntityList.get(i);
+            TileEntity tileEntity = globalTileEntityList.get(i);
             if (!tileEntity.shouldRenderInPass(pass)) continue;
             if (!camera.isBoundingBoxInFrustum(tileEntity.getRenderBoundingBox())) continue;
             TileEntityRendererDispatcher.instance.render(tileEntity, partialTicks, -1);

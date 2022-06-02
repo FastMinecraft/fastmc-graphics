@@ -428,6 +428,7 @@ abstract class TerrainRenderer(
         }
 
         renderTileEntityList.getAndSwap()
+        globalTileEntityList.getAndSwap()
     }
 
     private inline fun RenderChunk.checkAnyAdjBuilt(): Boolean {

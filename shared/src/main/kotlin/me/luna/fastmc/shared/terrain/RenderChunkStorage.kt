@@ -100,7 +100,7 @@ class RenderChunkStorage(
         updateCaveCulling()
         cameraChunk = getRenderChunkByChunk0(
             renderer.cameraChunkX,
-            renderer.cameraChunkY,
+            renderer.cameraChunkY.coerceIn(minY, maxY),
             renderer.cameraChunkZ
         )
 

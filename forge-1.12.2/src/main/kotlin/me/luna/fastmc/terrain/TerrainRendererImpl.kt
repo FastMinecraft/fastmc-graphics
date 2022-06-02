@@ -140,8 +140,9 @@ abstract class RebuildContextImpl : RebuildContext(BlockRenderLayer.values().siz
 
                     when (blockState.renderType) {
                         EnumBlockRenderType.MODEL -> {
+                            val extendState = block.getExtendedState(blockState, worldSnapshot, renderBlockPos)
                             setActiveLayer(task, block.renderLayer.ordinal)
-                            blockRenderer.renderBlock(blockState)
+                            blockRenderer.renderBlock(extendState)
                         }
                         EnumBlockRenderType.LIQUID -> {
                             val extendState = block.getExtendedState(blockState, worldSnapshot, renderBlockPos)
