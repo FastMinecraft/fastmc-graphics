@@ -73,7 +73,7 @@ class RenderChunk(
         get() = isDestroyed
 
     fun checkFogRange(): Boolean {
-        return distanceSq(
+        return renderer.fogManager.shader.fogShape.distanceSq(
             renderer.cameraBlockX, renderer.cameraBlockY, renderer.cameraBlockZ,
             originX + 8, originY + 8, originZ + 8
         ) <= renderer.fogManager.fogRangeSq

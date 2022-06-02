@@ -404,10 +404,10 @@ public abstract class MixinCoreWorldRenderer {
         BackgroundRenderer.applyFog(
             camera,
             BackgroundRenderer.FogType.FOG_TERRAIN,
-            Math.max(viewDistance, 32.0f),
+            viewDistance,
             thickFog
         );
-        applyFogShader(camera, fogDistance, thickFog);
+        setupTerrainFog(camera, fogDistance, thickFog);
 
         profiler.swap("terrain");
         renderTerrainPass1(lightmapTextureManager);
@@ -864,53 +864,72 @@ public abstract class MixinCoreWorldRenderer {
     }
 
     @SuppressWarnings("deprecation")
-    private void applyFogShader(Camera camera, float viewDistance, boolean thickFog) {
-        float red = AccessorBackgroundRenderer.getRed();
-        float green = AccessorBackgroundRenderer.getGreen();
-        float blue = AccessorBackgroundRenderer.getBlue();
-
-        CameraSubmersionType type = camera.getSubmersionType();
+    private static void setupTerrainFog(
+        Camera camera,
+        float viewDistance,
+        boolean thickFog
+    ) {
+        float end;
+        float start;
+        CameraSubmersionType cameraSubmersionType = camera.getSubmersionType();
         Entity entity = camera.getFocusedEntity();
-        TerrainFogManager fogManager = getTerrainRenderer().getFogManager();
-
-        if (type == CameraSubmersionType.WATER) {
-            float density = 0.05F;
-            if (entity instanceof ClientPlayerEntity clientPlayerEntity) {
-                float underwaterVisibility = clientPlayerEntity.getUnderwaterVisibility();
-                density -= underwaterVisibility * underwaterVisibility * 0.03F;
-                RegistryEntry<Biome> biome = clientPlayerEntity.world.getBiome(clientPlayerEntity.getBlockPos());
-                if (Biome.getCategory(biome) == Biome.Category.SWAMP) {
-                    density += 0.005F;
-                }
-            }
-
-            fogManager.exp2Fog(density, red, green, blue);
-        } else {
-            float start;
-            float end;
-            if (type == CameraSubmersionType.LAVA) {
-                if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
-                    start = 0.0F;
-                    end = 3.0F;
-                } else {
-                    start = 0.25F;
-                    end = 1.0F;
-                }
-            } else if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.BLINDNESS)) {
-                int duration = ((LivingEntity) entity).getStatusEffect(StatusEffects.BLINDNESS).getDuration();
-                float amount = MathHelper.lerp(Math.min(1.0F, (float) duration / 20.0F), viewDistance, 5.0F);
-                start = amount * 0.25F;
-                end = amount;
-            } else if (thickFog) {
-                start = viewDistance * 0.05F;
-                end = Math.min(viewDistance, 192.0F) * 0.5F;
+        TerrainFogManager.FogShape fogShape = TerrainFogManager.FogShape.SPHERE;
+        if (cameraSubmersionType == CameraSubmersionType.LAVA) {
+            if (entity.isSpectator()) {
+                start = -8.0f;
+                end = viewDistance * 0.5f;
+            } else if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
+                start = 0.0f;
+                end = 3.0f;
             } else {
-                start = viewDistance * 0.75F;
-                end = viewDistance;
+                start = 0.25f;
+                end = 1.0f;
             }
-
-            fogManager.linearFog(start, end, red, green, blue);
+        } else if (cameraSubmersionType == CameraSubmersionType.POWDER_SNOW) {
+            if (entity.isSpectator()) {
+                start = -8.0f;
+                end = viewDistance * 0.5f;
+            } else {
+                start = 0.0f;
+                end = 2.0f;
+            }
+        } else if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.BLINDNESS)) {
+            @SuppressWarnings("ConstantConditions")
+            int i = ((LivingEntity) entity).getStatusEffect(StatusEffects.BLINDNESS).getDuration();
+            float h = MathHelper.lerp(Math.min(1.0f, (float) i / 20.0f), viewDistance, 5.0f);
+            start = cameraSubmersionType == CameraSubmersionType.WATER ? -4.0f : h * 0.25f;
+            end = h;
+        } else if (cameraSubmersionType == CameraSubmersionType.WATER) {
+            start = -8.0f;
+            end = 96.0f;
+            if (entity instanceof ClientPlayerEntity clientPlayerEntity) {
+                end *= Math.max(0.25f, clientPlayerEntity.getUnderwaterVisibility());
+                RegistryEntry<Biome> registryEntry = clientPlayerEntity.world.getBiome(clientPlayerEntity.getBlockPos());
+                if (Biome.getCategory(registryEntry) == Biome.Category.SWAMP) {
+                    end *= 0.85f;
+                }
+            }
+            if (end > viewDistance) {
+                end = viewDistance;
+                fogShape = TerrainFogManager.FogShape.CYLINDER;
+            }
+        } else if (thickFog) {
+            start = viewDistance * 0.05f;
+            end = Math.min(viewDistance * 0.5f, 96.0f);
+        } else {
+            start = viewDistance - MathHelper.clamp(viewDistance / 10.0f, 4.0f, 64.0f);
+            end = viewDistance;
+            fogShape = TerrainFogManager.FogShape.CYLINDER;
         }
+
+        FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer().getFogManager().linearFog(
+            fogShape,
+            start,
+            end,
+            AccessorBackgroundRenderer.getRed(),
+            AccessorBackgroundRenderer.getGreen(),
+            AccessorBackgroundRenderer.getBlue()
+        );
     }
 
     @NotNull

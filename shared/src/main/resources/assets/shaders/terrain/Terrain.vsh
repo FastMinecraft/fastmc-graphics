@@ -5,8 +5,12 @@ layout(std140) uniform Matrices {
     mat4 modelView;
 } matrices;
 
+layout(std140) uniform FogParameters {
+    vec3 color;
+    vec2 densityRange;
+} fogParameters;
+
 uniform vec3 offset;
-uniform vec2 range;
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec2 uv;
@@ -20,7 +24,7 @@ out FragData {
     float fogAmount;
 } fragData;
 
-#if FOG_TYPE != Linear
+#if FOG_TYPE != FOG_TYPE_LINEAR
 const float euler = 2.71828174591064453125;
 #endif
 
@@ -32,12 +36,18 @@ void main() {
     fragData.uv = uv;
     fragData.lightMapUV = (lightMapUV + 8.0) * 0.00390625;
 
-    #if FOG_TYPE == Linear
-    fragData.fogAmount = clamp((range.x - length(coord)) * range.y, 0.0, 1.0);
-    #elif FOG_TYPE == Exp
-    fragData.fogAmount = clamp(pow(euler, -(density * length(coord))), 0.0, 1.0);
+    #if FOG_SHAPE == FOG_SHAPE_SPHERE
+    float fogDistance = length(coord);
     #else
-    float exponent = density * length(coord);
+    float fogDistance = length(coord.xz);
+    #endif
+
+    #if FOG_TYPE == FOG_TYPE_LINEAR
+    fragData.fogAmount = clamp((fogParameters.densityRange.x - fogDistance) * fogParameters.densityRange.y, 0.0, 1.0);
+    #elif FOG_TYPE == FOG_TYPE_EXP
+    fragData.fogAmount = clamp(pow(euler, -(fogParameters.densityRange.x * fogDistance)), 0.0, 1.0);
+    #else
+    float exponent = fogParameters.densityRange.x * fogDistance;
     fragData.fogAmount = clamp(pow(euler, -(exponent * exponent)), 0.0, 1.0);
     #endif
 }

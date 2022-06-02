@@ -46,3 +46,8 @@ inline fun <T> Queue<T>.pollEach(block: (T) -> Unit) {
         e = this.poll()
     }
 }
+
+@Suppress("FunctionName")
+inline fun <reified K : Enum<K>, V> EnumMap(): EnumMap<K, V> {
+    return EnumMap<K, V>(K::class.java)
+}

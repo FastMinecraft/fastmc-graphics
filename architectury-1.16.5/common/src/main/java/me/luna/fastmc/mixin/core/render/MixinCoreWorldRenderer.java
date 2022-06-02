@@ -839,7 +839,7 @@ public abstract class MixinCoreWorldRenderer {
                 }
             }
 
-            fogManager.exp2Fog(density, red, green, blue);
+            fogManager.exp2Fog(TerrainFogManager.FogShape.SPHERE, density, red, green, blue);
         } else {
             float start;
             float end;
@@ -864,7 +864,7 @@ public abstract class MixinCoreWorldRenderer {
                 end = viewDistance;
             }
 
-            fogManager.linearFog(start, end, red, green, blue);
+            fogManager.linearFog(TerrainFogManager.FogShape.SPHERE, start, end, red, green, blue);
         }
     }
 

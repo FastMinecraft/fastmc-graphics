@@ -1,8 +1,12 @@
 #version 460
 
+layout(std140) uniform FogParameters {
+    vec3 color;
+    vec2 densityRange;
+} fogParameters;
+
 uniform sampler2D blockTexture;
 uniform sampler2D lightMapTexture;
-uniform vec3 fogColor;
 
 in FragData {
     vec3 color;
@@ -18,5 +22,5 @@ void main() {
     #ifdef ALPHA_TEST
     if (fragColor.a <= 0.5) discard;
     #endif
-    fragColor.rgb = mix(fogColor, fragColor.rgb * fragData.color * texture2D(lightMapTexture, fragData.lightMapUV).rgb, fragData.fogAmount);
+    fragColor.rgb = mix(fogParameters.color, fragColor.rgb * fragData.color * texture2D(lightMapTexture, fragData.lightMapUV).rgb, fragData.fogAmount);
 }

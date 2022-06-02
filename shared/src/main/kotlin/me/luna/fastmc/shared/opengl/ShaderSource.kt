@@ -54,17 +54,16 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
 
             val cache = getCache(path)
             val stringBuilder = StringBuilder()
-            val firstLine = cache.lines[0]
-            if (firstLine.startsWith("#version")) {
-                stringBuilder.appendLine(firstLine)
-                stringBuilder.append(defines.stringBuilder)
-            } else {
-                stringBuilder.append(defines.stringBuilder)
-                stringBuilder.appendLine(firstLine)
-            }
 
-            for (i in 1 until cache.lines.size) {
-                stringBuilder.appendLine(cache.lines[i])
+            var inserted = false
+
+            for (i in 0 until cache.lines.size) {
+                val line = cache.lines[i]
+                if (!inserted && !line.startsWith("#version") && !line.startsWith("#define")) {
+                    stringBuilder.append(defines.stringBuilder)
+                    inserted = true
+                }
+                stringBuilder.appendLine(line)
             }
 
             return newInstance(stringBuilder)
