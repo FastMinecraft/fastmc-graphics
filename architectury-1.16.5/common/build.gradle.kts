@@ -17,14 +17,5 @@ loom {
 }
 
 tasks {
-    processResources {
-        doFirst {
-            findProject(":architectury-$minecraftVersion:fabric")?.let {
-                file("${projectDir.absolutePath}/src/main/resources/FastMinecraft.accessWidener")
-                    .copyTo(file("${it.projectDir.absolutePath}/src/main/resources/FastMinecraft.accessWidener"), true)
-            }
-        }
-    }
-
     remapJar.get().isEnabled = false
 }

@@ -6,10 +6,13 @@ architectury {
     fabric()
 }
 
+loom {
+    accessWidenerPath.set(file("${project(":architectury-$minecraftVersion:common").projectDir}/src/main/resources/FastMinecraft.accesswidener"))
+}
+
 dependencies {
     modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
 
-    compileOnly(project.project(":architectury-$minecraftVersion:common"))
     runtimeOnly(project.project(":architectury-$minecraftVersion:common").sourceSets.main.get().output)
     library(project(":architectury-$minecraftVersion:common", "transformProductionFabric"))
     libraryImplementation(project(":shared:java17"))
@@ -17,9 +20,14 @@ dependencies {
 
 tasks {
     processResources {
+        from(loom.accessWidenerPath.get().asFile.path)
         filesMatching("fabric.mod.json") {
             expand("version" to project.version)
         }
+    }
+
+    classes {
+        dependsOn(project(":architectury-$minecraftVersion:common").tasks.classes)
     }
 
     jar {

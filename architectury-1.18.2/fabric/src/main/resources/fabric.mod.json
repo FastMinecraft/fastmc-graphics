@@ -3,7 +3,7 @@
   "id": "fastmc",
   "version": "${version}",
   "name": "Fast Minecraft",
-  "description": "Agressive optimization mod",
+  "description": "Aggressive optimization mod",
   "authors": [
     "Luna"
   ],
@@ -21,7 +21,7 @@
     "mixins.fastmc-accessor.json",
     "mixins.fastmc-patch.json"
   ],
-  "accessWidener": "FastMinecraft.accessWidener",
+  "accessWidener": "FastMinecraft.accesswidener",
   "depends": {
     "fabricloader": ">=0.11",
     "minecraft": "1.18.2"

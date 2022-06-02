@@ -60,9 +60,9 @@ open class ChunkVertexBuilder {
 
         val address = region.address + vertexByteIndex
 
-        UNSAFE.putShort(address, ((x + 0.25f) * 255.50098f).toInt().toShort())
-        UNSAFE.putShort(address + 2L, ((y + 0.25f) * 255.50098f).toInt().toShort())
-        UNSAFE.putShort(address + 4L, ((z + 0.25f) * 255.50098f).toInt().toShort())
+        UNSAFE.putShort(address, ((x + 0.25f) * 255.49707f).toInt().toShort())
+        UNSAFE.putShort(address + 2L, ((y + 0.25f) * 255.49707f).toInt().toShort())
+        UNSAFE.putShort(address + 4L, ((z + 0.25f) * 255.49707f).toInt().toShort())
 
         UNSAFE.putShort(address + 6L, (u * 65535.0f).toInt().toShort())
         UNSAFE.putShort(address + 8L, (v * 65535.0f).toInt().toShort())
