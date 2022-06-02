@@ -30,6 +30,7 @@ class RenderBufferPool(private val growPower: Int) {
 
     fun allocate(newLength: Int): Region {
         updateUnusedNodes()
+        ensureCapacity(newLength)
         return allocate0(unusedHead!!, newLength)!!
     }
 
