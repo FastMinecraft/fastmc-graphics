@@ -27,7 +27,7 @@ public class MixinPatchMinecraft {
 
     @Inject(method = "init", at = @At("RETURN"))
     private void Inject$init$RETURN(CallbackInfo ci) {
-        Thread.currentThread().setPriority(6);
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
     }
 
     /**

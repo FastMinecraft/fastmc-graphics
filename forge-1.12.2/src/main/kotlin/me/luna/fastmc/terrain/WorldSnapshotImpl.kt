@@ -51,8 +51,10 @@ class WorldSnapshotImpl(override val context: RebuildContextImpl) :
                             val infoArray = sectionLocalInfo[sectionIndex]
                             for (info in infoArray) {
                                 val index = info and 0xFFFF
-                                val blockState = section.get(info shr 24, info shr 20 and 15, info shr 16 and 15)
-                                blockStateArray[index] = blockState
+                                val blockX = info shr 24
+                                val blockY = info shr 20 and 15
+                                val blockZ = info shr 16 and 15
+                                blockStateArray[index] = section.get(blockX, blockY, blockZ)
                             }
                         }
                     }

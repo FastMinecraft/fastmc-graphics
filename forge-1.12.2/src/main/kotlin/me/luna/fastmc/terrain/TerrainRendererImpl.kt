@@ -128,26 +128,27 @@ abstract class RebuildContextImpl : RebuildContext(BlockRenderLayer.values().siz
             task.checkCancelled()
             for (z in startZ..endZ) {
                 for (x in startX..endX) {
-                    renderBlockPos.setPos(x, y, z)
-                    val blockState = worldSnapshot.getBlockState(x, y, z)
+                    var blockState = worldSnapshot.getBlockState(x, y, z)
                     if (blockState.material == Material.AIR) continue
 
+                    renderBlockPos.setPos(x, y, z)
                     blockX = x
                     blockY = y
                     blockZ = z
+
+                    blockState = blockState.getActualState(worldSnapshot, renderBlockPos)
+                    blockState = blockState.block.getExtendedState(blockState, worldSnapshot, renderBlockPos)
 
                     val block = blockState.block
 
                     when (blockState.renderType) {
                         EnumBlockRenderType.MODEL -> {
-                            val extendState = block.getExtendedState(blockState, worldSnapshot, renderBlockPos)
                             setActiveLayer(task, block.renderLayer.ordinal)
-                            blockRenderer.renderBlock(extendState)
+                            blockRenderer.renderBlock(blockState)
                         }
                         EnumBlockRenderType.LIQUID -> {
-                            val extendState = block.getExtendedState(blockState, worldSnapshot, renderBlockPos)
                             setActiveLayer(task, block.renderLayer.ordinal)
-                            blockRenderer.renderFluid(extendState, extendState)
+                            blockRenderer.renderFluid(blockState, blockState)
                         }
                         else -> {
 
