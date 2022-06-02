@@ -1,6 +1,7 @@
 package me.luna.fastmc.shared.opengl
 
 import me.luna.fastmc.FastMcMod
+import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
 import me.luna.fastmc.shared.resource.Resource
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
@@ -13,7 +14,7 @@ open class ShaderProgram(
     IGLObject {
     final override val id: Int
 
-    private val uniformBuffers = FastObjectArrayList<BufferObject>()
+    private val uniformBuffers = FastObjectArrayList<UniformBufferObject>()
 
     init {
         val vertexShaderID = createShader(vertex, GL_VERTEX_SHADER)
@@ -54,8 +55,8 @@ open class ShaderProgram(
         return id
     }
 
-    fun attachUBO(ubo: BufferObject, blockName: String) {
-        val index = glGetUniformBlockIndex(id, blockName)
+    fun attachUBO(ubo: UniformBufferObject) {
+        val index = glGetUniformBlockIndex(id, ubo.blockName)
         glUniformBlockBinding(id, index, uniformBuffers.size)
         uniformBuffers.add(ubo)
     }

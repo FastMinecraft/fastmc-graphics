@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.renderer
 
-import me.luna.fastmc.shared.opengl.BufferObject
+import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
 import me.luna.fastmc.shared.resource.IResourceManager
 import org.joml.FrustumIntersection
 import org.joml.Matrix4f
@@ -28,7 +28,7 @@ interface IRenderer {
     val invertedProjectMatrix: Matrix4f
     val invertedModelViewMatrix: Matrix4f
 
-    val matricesUBO: BufferObject
+    val matricesUBO: UniformBufferObject
 
     val frustum: FrustumIntersection
     val matrixHash: Long

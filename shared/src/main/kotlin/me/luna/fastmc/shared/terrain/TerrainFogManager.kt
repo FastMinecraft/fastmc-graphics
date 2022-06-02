@@ -97,7 +97,7 @@ class TerrainFogManager(renderer: IRenderer) {
         init {
             glProgramUniform1i(id, glGetUniformLocation(id, "blockTexture"), 0)
             glProgramUniform1i(id, glGetUniformLocation(id, "lightMapTexture"), FastMcMod.glWrapper.lightMapUnit)
-            attachUBO(renderer.matricesUBO, "Matrices")
+            attachUBO(renderer.matricesUBO)
         }
 
         private val offsetUniform = glGetUniformLocation(id, "offset")
