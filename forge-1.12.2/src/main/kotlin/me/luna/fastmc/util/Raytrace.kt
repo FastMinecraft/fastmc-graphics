@@ -38,7 +38,6 @@ fun rayTrace(
             || startBlockState.getCollisionBoundingBox(world, blockPos) != null)
         && startBlockState.block.canCollideCheck(startBlockState, stopOnLiquid)
     ) {
-
         startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end).let { return it }
     }
 
@@ -51,7 +50,7 @@ fun rayTrace(
 
     while (count-- >= 0) {
         if (currentBlockX == endBlockX && currentBlockY == endBlockY && currentBlockZ == endBlockZ) {
-            return null
+            break
         }
 
         var nextX = 999
@@ -122,8 +121,8 @@ fun rayTrace(
                 || blockState.getCollisionBoundingBox(world, blockPos) != null)
             && blockState.block.canCollideCheck(blockState, stopOnLiquid)
         ) {
-            startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end)
-                .let { return it }
+            @Suppress("UNNECESSARY_SAFE_CALL")
+            startBlockState.collisionRayTrace(world, blockPos, Vec3d(currentX, currentY, currentZ), end)?.let { return it }
         }
     }
 
