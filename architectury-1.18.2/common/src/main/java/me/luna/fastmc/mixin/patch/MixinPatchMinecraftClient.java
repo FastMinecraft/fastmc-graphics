@@ -32,11 +32,6 @@ public abstract class MixinPatchMinecraftClient extends ReentrantThreadExecutor<
         super(string);
     }
 
-    @Inject(method = "run", at = @At("HEAD"))
-    private void Inject$run$HEAD(CallbackInfo ci) {
-        Thread.currentThread().setPriority(6);
-    }
-
     @Redirect(method = "render", at = @At(value = "INVOKE", target = "Ljava/lang/Thread;yield()V", remap = false))
     private void render$Redirect$INVOKE$yield() {
 

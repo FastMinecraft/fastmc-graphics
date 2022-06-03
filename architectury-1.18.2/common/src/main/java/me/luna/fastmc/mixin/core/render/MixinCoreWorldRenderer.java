@@ -788,7 +788,7 @@ public abstract class MixinCoreWorldRenderer {
 
     private void renderTileEntityFastMc(float tickDelta) {
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.preRender(1.0f - tickDelta);
+        worldRenderer.preRender(tickDelta);
         worldRenderer.getTileEntityRenderer().render();
         worldRenderer.postRender();
     }

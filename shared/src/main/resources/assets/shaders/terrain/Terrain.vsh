@@ -5,12 +5,12 @@ layout(std140) uniform Matrices {
     mat4 modelView;
 } matrices;
 
-layout(std140) uniform FogParameters {
-    vec3 color;
-    vec2 densityRange;
-} fogParameters;
+layout(std140) uniform TerrainParameters {
+    vec3 fogColor;
+    vec2 fogParams;
+} terrainParameters;
 
-uniform vec3 offset;
+uniform vec3 regionOffset;
 
 layout(location = 0) in vec3 pos;
 layout(location = 1) in vec2 uv;
@@ -28,13 +28,17 @@ out FragData {
 const float euler = 2.71828174591064453125;
 #endif
 
+const ivec3 shiftVec = ivec3(20, 10, 0);
+const vec3 coordConvert = vec3(2.51773861295491E-4);
+
 void main() {
-    vec3 coord = (pos * 0.003913939 - 0.25) + offset;
+    // gl_BaseInstance exploit
+    vec3 coord = fma(pos, coordConvert, ((gl_BaseInstance >> shiftVec) & 1023) + regionOffset);
     gl_Position = matrices.projection * matrices.modelView * vec4(coord, 1.0);
 
     fragData.color = color;
     fragData.uv = uv;
-    fragData.lightMapUV = (lightMapUV + 8.0) * 0.00390625;
+    fragData.lightMapUV = lightMapUV * 0.00390625;
 
     #if FOG_SHAPE == FOG_SHAPE_SPHERE
     float fogDistance = length(coord);
@@ -43,11 +47,11 @@ void main() {
     #endif
 
     #if FOG_TYPE == FOG_TYPE_LINEAR
-    fragData.fogAmount = clamp((fogParameters.densityRange.x - fogDistance) * fogParameters.densityRange.y, 0.0, 1.0);
+    fragData.fogAmount = clamp(fma(terrainParameters.fogParams.x, fogDistance, terrainParameters.fogParams.y), 0.0, 1.0);
     #elif FOG_TYPE == FOG_TYPE_EXP
-    fragData.fogAmount = clamp(pow(euler, -(fogParameters.densityRange.x * fogDistance)), 0.0, 1.0);
+    fragData.fogAmount = pow(euler, -terrainParameters.fogParams.x * fogDistance);
     #else
-    float exponent = fogParameters.densityRange.x * fogDistance;
-    fragData.fogAmount = clamp(pow(euler, -(exponent * exponent)), 0.0, 1.0);
+    float exponent = terrainParameters.fogParams.x * fogDistance;
+    fragData.fogAmount = pow(euler, -(exponent * exponent));
     #endif
 }

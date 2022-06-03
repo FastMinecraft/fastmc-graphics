@@ -22,9 +22,6 @@ abstract class TerrainRenderer(
 ) : IRenderer by renderer {
     abstract val minChunkY: Int
     abstract val maxChunkY: Int
-    val chunkYSize get() = maxChunkY - minChunkY
-
-    val renderRegionChunkCount get() = 16 * chunkYSize * 16
 
     private var chunkStorageNullable: RenderChunkStorage? = null
     val chunkStorage get() = chunkStorageNullable!!
@@ -211,7 +208,7 @@ abstract class TerrainRenderer(
     fun reload() {
         chunkCullingResults = Array(chunkStorage.totalRegion) {
             Array(ParallelUtils.CPU_THREADS * 2) {
-                FastObjectArrayList.wrap(arrayOfNulls(renderRegionChunkCount), 0)
+                FastObjectArrayList.wrap(arrayOfNulls(chunkStorage.regionChunkCount), 0)
             }
         }
         tileEntityResults = Array(ParallelUtils.CPU_THREADS * 2) {
@@ -499,7 +496,14 @@ abstract class TerrainRenderer(
                                 val renderChunk = array[i]
                                 val layer = renderChunk.layers[layerIndex]
                                 if (layer.isEmpty) continue
-                                layerBatch.put(layer.vertexOffset, layer.indexOffset, layer.indexCount)
+                                layerBatch.put(
+                                    layer.vertexOffset,
+                                    layer.indexOffset,
+                                    layer.indexCount,
+                                    (renderChunk.originX and 255 shl 20)
+                                        or ((renderChunk.chunkY - chunkStorage.minY) shl 14)
+                                        or (renderChunk.originZ and 255)
+                                )
                             }
                         }
                     }
@@ -626,7 +630,7 @@ abstract class TerrainRenderer(
             layerBatch.checkUpdate()
             if (layerBatch.isEmpty) continue
 
-            shader.setOffset(
+            shader.setRegionOffset(
                 (region.originX - renderPosX).toFloat(),
                 (region.originY - renderPosY).toFloat(),
                 (region.originZ - renderPosZ).toFloat()

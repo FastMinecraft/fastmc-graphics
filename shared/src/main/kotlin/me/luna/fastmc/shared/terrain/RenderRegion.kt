@@ -26,11 +26,11 @@ class RenderRegion(
     val layerBatchArray = Array(renderer.layerCount) { LayerBatch() }
 
     @JvmField
-    val sortSuppArray = arrayOfNulls<RenderChunk>(renderer.renderRegionChunkCount)
+    val sortSuppArray = arrayOfNulls<RenderChunk>(storage.regionChunkCount)
 
     @Suppress("UNCHECKED_CAST")
     @JvmField
-    val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(renderer.renderRegionChunkCount), 0)
+    val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(storage.regionChunkCount), 0)
 
     @JvmField
     val vertexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())
@@ -99,14 +99,14 @@ class RenderRegion(
             count = 0
         }
 
-        fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int) {
+        fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
             val address = clientBufferAddress + index
 
             UNSAFE.putInt(address, indexCount)
             UNSAFE.putInt(address + 4L, 1)
             UNSAFE.putInt(address + 8L, indexOffset)
             UNSAFE.putInt(address + 12L, vertexOffset)
-            UNSAFE.putInt(address + 16L, 0)
+            UNSAFE.putInt(address + 16L, baseInstance)
 
             index += 20
             this.count++
@@ -146,7 +146,7 @@ class RenderRegion(
             val x = (originX - renderer.renderPosX).toFloat()
             val y = (originY - renderer.renderPosY).toFloat()
             val z = (originZ - renderer.renderPosZ).toFloat()
-            return frustum.testAab(x, y, z, x + 256.0f, y + 256.0f, z + 256.0f)
+            return frustum.testAab(x, y, z, x + 256.0f, y + (storage.sizeY shl 4), z + 256.0f)
         }
     }
 }

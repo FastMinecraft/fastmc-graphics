@@ -237,9 +237,9 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     abstract suspend fun renderChunk(task: RebuildTask)
 
     fun setupRenderPos() {
-        renderPosX = (blockX and 255).toFloat()
-        renderPosY = (blockY - (worldSnapshot.minChunkY shl 4)).toFloat()
-        renderPosZ = (blockZ and 255).toFloat()
+        renderPosX = (blockX and 15).toFloat()
+        renderPosY = (blockY and 15).toFloat()
+        renderPosZ = (blockZ and 15).toFloat()
     }
 
     inline fun calculateAO(

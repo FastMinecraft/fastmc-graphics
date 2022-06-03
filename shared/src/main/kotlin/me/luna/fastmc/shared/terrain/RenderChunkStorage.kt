@@ -25,8 +25,7 @@ class RenderChunkStorage(
     @JvmField
     val maxY = renderer.maxChunkY
 
-    @JvmField
-    val sizeY = renderer.chunkYSize
+    val sizeY get() = maxY - minY
 
     @JvmField
     val sizeXZ = viewDistance * 2 + 1
@@ -35,10 +34,12 @@ class RenderChunkStorage(
     val regionSizeXZ = ((viewDistance + 7) shr 3) + 1
 
     @JvmField
-    val totalChunk = sizeXZ * renderer.chunkYSize * sizeXZ
+    val totalChunk = sizeXZ * sizeY * sizeXZ
 
     @JvmField
     val totalRegion = regionSizeXZ * regionSizeXZ
+
+    val regionChunkCount get() = 16 * (maxY - minY) * 16
 
     @JvmField
     val regionArray = Array(totalRegion) {
@@ -100,7 +101,7 @@ class RenderChunkStorage(
         updateCaveCulling()
         cameraChunk = getRenderChunkByChunk0(
             renderer.cameraChunkX,
-            renderer.cameraChunkY.coerceIn(minY, maxY),
+            renderer.cameraChunkY.coerceIn(minY, maxY - 1),
             renderer.cameraChunkZ
         )
 
@@ -266,7 +267,7 @@ class RenderChunkStorage(
                 caveCullingQueue.enqueue(nextRenderChunk.index or (nextDirection.idOpposite shl 17) or (nextDirection.bitOpposite shl 20))
             }
         } else {
-            if (renderer.cameraChunkY < 0) {
+            if (renderer.cameraChunkY < minY) {
                 for (i in 0 until sizeXZ * sizeXZ) {
                     val renderChunk = renderChunkArray[i * sizeY]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue
