@@ -1,9 +1,10 @@
 #version 460
 
-layout(std140) uniform Matrices {
+layout(std140) uniform Global {
     mat4 projection;
     mat4 modelView;
-} matrices;
+    float partialTicks;
+};
 
 layout(std140) uniform TerrainParameters {
     vec3 fogColor;
@@ -34,7 +35,7 @@ const vec3 coordConvert = vec3(2.51773861295491E-4);
 void main() {
     // gl_BaseInstance exploit
     vec3 coord = fma(pos, coordConvert, ((gl_BaseInstance >> shiftVec) & 1023) + regionOffset);
-    gl_Position = matrices.projection * matrices.modelView * vec4(coord, 1.0);
+    gl_Position = projection * modelView * vec4(coord, 1.0);
 
     fragData.color = color;
     fragData.uv = uv;

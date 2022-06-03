@@ -46,7 +46,7 @@ class TerrainFogManager(private val renderer: TerrainRenderer) {
 
     private fun getShader(fogShape: FogShape, fogType: FogType): ShaderGroup {
         return shaderMap.getOrPut(fogShape, ::EnumMap).getOrPut(fogType) {
-            ShaderGroup(renderer.matricesUBO, terrainParametersUBO, fogShape, fogType)
+            ShaderGroup(renderer.globalUBO, terrainParametersUBO, fogShape, fogType)
         }
     }
 

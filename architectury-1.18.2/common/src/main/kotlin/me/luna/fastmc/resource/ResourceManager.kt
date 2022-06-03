@@ -46,7 +46,9 @@ class ResourceManager(mc: MinecraftClient) : IResourceManager {
         AbstractRenderBuilder.ShaderProgram(
             "tileEntity/ShulkerBox",
             ShaderSource.Vertex("/assets/shaders/tileentity/ShulkerBox.vsh"),
-            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh") {
+                define("ALPHA_TEST")
+            }
         ),
         AbstractRenderBuilder.ShaderProgram(
             "tileEntity/Chest",

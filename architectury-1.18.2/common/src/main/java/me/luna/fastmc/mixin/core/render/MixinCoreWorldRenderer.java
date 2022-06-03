@@ -335,7 +335,7 @@ public abstract class MixinCoreWorldRenderer {
         TerrainRenderer terrainRenderer = worldRenderer.getTerrainRenderer();
         org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
         org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
-        worldRenderer.updateMatrix(projection1, modelView1);
+        worldRenderer.updateMatrix(projection1, modelView1, tickDelta);
         worldRenderer.updateCameraPos(renderPosX, renderPosY, renderPosZ);
         worldRenderer.updateRenderPos(renderPosX, renderPosY, renderPosZ);
         worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());

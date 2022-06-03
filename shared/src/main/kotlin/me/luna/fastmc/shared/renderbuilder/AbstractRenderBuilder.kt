@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.*
+import me.luna.fastmc.shared.opengl.ShaderSource.Companion.invoke
 import me.luna.fastmc.shared.opengl.impl.VertexAttribute
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.renderer.IRenderer
@@ -14,7 +15,6 @@ import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.allocateByte
-import org.joml.Matrix4f
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -146,19 +146,15 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     open class Renderer(
         renderInfo: RenderInfo
     ) : IRenderInfo by renderInfo {
-        private val matrixSwap = Matrix4f()
-
         fun render(renderer: IRenderer) {
             shader.bind()
             preRender()
 
-            renderer.modelViewMatrix.translate(
+            shader.setOffset(
                 (builtPosX - renderer.renderPosX).toFloat(),
                 (builtPosY - renderer.renderPosY).toFloat(),
                 (builtPosZ - renderer.renderPosZ).toFloat(),
-                matrixSwap
             )
-            shader.updateModelViewMatrix(matrixSwap)
 
             glBindVertexArray(vao.id)
             glDrawArraysInstanced(GL_TRIANGLES, 0, modelSize, size)
@@ -192,11 +188,26 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     }
 
     open class ShaderProgram(resourceName: String, vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :
-        DrawShaderProgram(resourceName, vertex, fragment) {
-        val partialTicksUniform = glGetUniformLocation(id, "partialTicks")
+        me.luna.fastmc.shared.opengl.ShaderProgram(
+            resourceName,
+            vertex,
+            fragment {
+                define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit)
+            }
+        ) {
+        private val offsetUniform = glGetUniformLocation(id, "offset")
+        private var attached = false
 
-        init {
-            glProgramUniform1i(id, glGetUniformLocation(id, "lightMapTexture"), FastMcMod.glWrapper.lightMapUnit)
+        override fun bind() {
+            if (!attached) {
+                attachUBO(FastMcMod.worldRenderer.globalUBO)
+                attached = true
+            }
+            super.bind()
+        }
+
+        fun setOffset(x: Float, y: Float, z: Float) {
+            glProgramUniform3f(id, offsetUniform, x, y, z)
         }
     }
 

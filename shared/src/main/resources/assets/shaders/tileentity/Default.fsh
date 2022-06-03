@@ -1,7 +1,7 @@
 #version 460
 
-uniform sampler2D lightMapTexture;
-uniform sampler2D texture;
+layout(binding = 0) uniform sampler2D texture;
+layout(binding = LIGHT_MAP_UNIT) uniform sampler2D lightMapTexture;
 
 in vec2 uv;
 flat in vec3 normal;
@@ -18,6 +18,9 @@ float calcDiffuse(vec3 lightPos) {
 
 void main() {
     fragColor = texture2D(texture, uv);
+    #ifdef ALPHA_TEST
+    if (fragColor.a <= 0.5) discard;
+    #endif
 
     vec3 lightColor = texture2D(lightMapTexture, lightMapUV).rgb;
     float diffuse = calcDiffuse(lightPos1) + calcDiffuse(lightPos2);

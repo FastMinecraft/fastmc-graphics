@@ -128,7 +128,7 @@ public abstract class MixinCoreEntityRenderer {
         setupCameraTransform0(partialTicks, pass, projection, modelView);
 
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.updateMatrix(projection, modelView);
+        worldRenderer.updateMatrix(projection, modelView, partialTicks);
 
         Entity entity = this.mc.getRenderViewEntity();
         if (entity != null) {

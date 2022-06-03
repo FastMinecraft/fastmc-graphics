@@ -1,8 +1,6 @@
 package me.luna.fastmc.shared.renderer
 
 import kotlinx.coroutines.CoroutineScope
-import me.luna.fastmc.shared.opengl.glInvalidateBufferData
-import me.luna.fastmc.shared.opengl.glNamedBufferSubData
 import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
 import me.luna.fastmc.shared.terrain.TerrainRenderer
 import me.luna.fastmc.shared.util.fastFloor
@@ -36,7 +34,7 @@ abstract class WorldRenderer : IRenderer {
     final override var invertedProjectMatrix = Matrix4f()
     final override var invertedModelViewMatrix = Matrix4f()
 
-    final override val matricesUBO = UniformBufferObject("Matrices", 128)
+    final override val globalUBO = UniformBufferObject("Global", 132)
 
     final override val frustum = FrustumIntersection(projectionMatrix, false)
     final override var matrixHash = 0L
@@ -77,16 +75,17 @@ abstract class WorldRenderer : IRenderer {
         this.renderPosZ = renderPosZ
     }
 
-    fun updateMatrix(projection: Matrix4f, modelView: Matrix4f) {
+    fun updateMatrix(projection: Matrix4f, modelView: Matrix4f, partialTicks: Float) {
         projectionMatrix = projection
         modelViewMatrix = modelView
         invertedProjectMatrix = projection.invert(Matrix4f())
         invertedModelViewMatrix = modelView.invert(Matrix4f())
 
-        matricesUBO.update {
+        globalUBO.update {
             projection.get(0, it)
             modelView.get(64, it)
             it.skip(128)
+            it.putFloat(partialTicks)
         }
     }
 
@@ -126,7 +125,7 @@ abstract class WorldRenderer : IRenderer {
     abstract fun postRender()
 
     open fun destroy() {
-        matricesUBO.destroy()
+        globalUBO.destroy()
         tileEntityRenderer.destroy()
         entityRenderer.destroy()
         terrainRenderer.destroy()

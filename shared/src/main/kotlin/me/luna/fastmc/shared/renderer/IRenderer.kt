@@ -28,7 +28,7 @@ interface IRenderer {
     val invertedProjectMatrix: Matrix4f
     val invertedModelViewMatrix: Matrix4f
 
-    val matricesUBO: UniformBufferObject
+    val globalUBO: UniformBufferObject
 
     val frustum: FrustumIntersection
     val matrixHash: Long

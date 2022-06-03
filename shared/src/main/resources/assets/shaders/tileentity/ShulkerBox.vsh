@@ -1,13 +1,13 @@
 #version 460
 #import /assets/shaders/util/Mat3Rotation.glsl
 
-layout(std140) uniform Matrices {
+layout(std140) uniform Global {
     mat4 projection;
     mat4 modelView;
+    float partialTicks;
 };
 
-uniform float alpha;
-uniform float partialTicks;
+uniform vec3 offset;
 
 layout(location = 0) in vec3 modelPosition;
 layout(location = 1) in vec2 vertUV;
@@ -37,7 +37,7 @@ void main() {
     normal = vertNormal;
 
     if (vertGroupID != 0) {
-        float renderProgress = mix(prevProgress / 1.0, progress, partialTicks);
+        float renderProgress = mix(prevProgress, progress, partialTicks);
 
         mat3 lidMatrix = mat3(1.0);
         lidMatrix = rotateY90(lidMatrix, renderProgress * 3.0);
@@ -56,7 +56,7 @@ void main() {
     position = position * rotationMatrix;
     position.y += 0.5;
 
-    gl_Position = projection * modelView * vec4(position + renderPosition, 1.0);
+    gl_Position = projection * modelView * vec4(position + (renderPosition + offset), 1.0);
     uv = (vertUV + vec2(float(colorIndex % 4), float(colorIndex / 4))) * uvMultiplier;
     normal = normal * rotationMatrix;
     lightMapUV = vertLightMapUV * 0.99609375 + 0.03125;

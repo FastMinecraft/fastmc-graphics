@@ -9,7 +9,12 @@ import java.security.DigestInputStream
 import java.security.MessageDigest
 
 sealed class ShaderSource(val codeSrc: CharSequence) {
+    private val lines by lazy { codeSrc.lines() }
+    protected abstract val provider: Provider<*>
+
     class Vertex private constructor(codeSrc: CharSequence) : ShaderSource(codeSrc) {
+        override val provider: Provider<Vertex> get() = Companion
+
         companion object : Provider<Vertex>("vsh") {
             override fun newInstance(codeSrc: CharSequence): Vertex {
                 return Vertex(codeSrc)
@@ -18,6 +23,8 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
     }
 
     class Fragment private constructor(codeSrc: CharSequence) : ShaderSource(codeSrc) {
+        override val provider: Provider<Fragment> get() = Companion
+
         companion object : Provider<Fragment>("fsh") {
             override fun newInstance(codeSrc: CharSequence): Fragment {
                 return Fragment(codeSrc)
@@ -26,6 +33,8 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
     }
 
     class Util private constructor(codeSrc: CharSequence) : ShaderSource(codeSrc) {
+        override val provider: Provider<Util> get() = Companion
+
         companion object : Provider<Util>("glsl") {
             override fun newInstance(codeSrc: CharSequence): Util {
                 return Util(codeSrc)
@@ -44,21 +53,28 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
         }
 
         inline operator fun invoke(path: String, crossinline block: DefineBuilder.() -> Unit): T {
-            return invoke(path, DefineBuilder().apply(block))
+            return getWithDefines(path, DefineBuilder().apply(block))
         }
 
-        operator fun invoke(path: String, defines: DefineBuilder): T {
-            if (defines.stringBuilder.isEmpty()) {
-                return invoke(path)
-            }
+        fun getWithDefines(path: String, defines: DefineBuilder): T {
+            return getWithDefines(getCache(path), defines)
+        }
 
-            val cache = getCache(path)
+        private fun getWithDefines(cache: Cache, defines: DefineBuilder): T {
+            return if (defines.stringBuilder.isEmpty()) {
+                cache.instance
+            } else {
+                buildWithDefines(cache.lines, defines)
+            }
+        }
+
+        fun buildWithDefines(lines: List<CharSequence>, defines: DefineBuilder): T {
             val stringBuilder = StringBuilder()
 
             var inserted = false
 
-            for (i in 0 until cache.lines.size) {
-                val line = cache.lines[i]
+            for (i in lines.indices) {
+                val line = lines[i]
                 if (!inserted && !line.startsWith("#version") && !line.startsWith("#define")) {
                     stringBuilder.append(defines.stringBuilder)
                     inserted = true
@@ -171,6 +187,21 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
             stringBuilder.append(' ')
             stringBuilder.append(value)
             stringBuilder.appendLine()
+        }
+    }
+
+    companion object {
+        inline operator fun <T: ShaderSource> T.invoke(crossinline block: DefineBuilder.() -> Unit): T {
+            return this.withDefines(DefineBuilder().apply(block))
+        }
+
+        fun <T: ShaderSource> T.withDefines(defines: DefineBuilder): T {
+            return if (defines.stringBuilder.isEmpty()) {
+                this
+            } else {
+                @Suppress("UNCHECKED_CAST")
+                (this.provider as Provider<T>).buildWithDefines(this.lines, defines)
+            }
         }
     }
 }

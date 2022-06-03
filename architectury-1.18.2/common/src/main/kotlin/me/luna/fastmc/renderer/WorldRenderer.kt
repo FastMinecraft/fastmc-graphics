@@ -30,14 +30,6 @@ class WorldRenderer(private val mc: Minecraft, override val resourceManager: IRe
 
     override fun preRender(partialTicks: Float) {
         RenderSystem.blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
-        glUseProgramForce(0)
-
-        MatrixUtils.putMatrix(projectionMatrix)
-
-        resourceManager.entityShader.resources.forEach {
-            glProgramUniform1f(it.id, it.partialTicksUniform, partialTicks)
-            it.updateProjectionMatrix()
-        }
     }
 
     override fun postRender() {

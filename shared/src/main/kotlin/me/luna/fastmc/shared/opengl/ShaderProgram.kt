@@ -61,14 +61,14 @@ open class ShaderProgram(
         uniformBuffers.add(ubo)
     }
 
-    final override fun bind() {
+    override fun bind() {
         glUseProgram(id)
         for (i in uniformBuffers.indices) {
             glBindBufferBase(GL_UNIFORM_BUFFER, i, uniformBuffers[i].id)
         }
     }
 
-    final override fun unbind() {
+    override fun unbind() {
         glUseProgram(0)
     }
 
