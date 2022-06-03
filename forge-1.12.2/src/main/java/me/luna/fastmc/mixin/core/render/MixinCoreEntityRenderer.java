@@ -497,7 +497,7 @@ public abstract class MixinCoreEntityRenderer {
         GlStateManager.shadeModel(GL_SMOOTH);
 
         if (viewEntity.posY + (double) viewEntity.getEyeHeight() < 128.0D) {
-            this.mc.profiler.endStartSection("belowCloud");
+            this.mc.profiler.endStartSection("clouds");
             this.renderCloudsCheck(renderGlobal, partialTicks, pass, renderPosX, renderPosY, renderPosZ);
         }
 
@@ -542,11 +542,12 @@ public abstract class MixinCoreEntityRenderer {
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
-        GlStateManager.enableAlpha();
         shader.unbind();
         this.mc.profiler.endSection();
 
-        GlStateManager.shadeModel(GL_FLAT);
+        GlStateManager.enableAlpha();
+        GlStateManager.shadeModel(7424);
+        GlStateManager.alphaFunc(516, 0.1F);
 
         if (!this.debugView) {
             RenderHelper.enableStandardItemLighting();
@@ -567,8 +568,9 @@ public abstract class MixinCoreEntityRenderer {
                 mc.objectMouseOver,
                 0,
                 partialTicks
-            ))
+            )) {
                 renderGlobal.drawSelectionBox(entityplayer, this.mc.objectMouseOver, 0, partialTicks);
+            }
             GlStateManager.enableAlpha();
         }
 
@@ -659,7 +661,7 @@ public abstract class MixinCoreEntityRenderer {
         GlStateManager.disableFog();
 
         if (viewEntity.posY + (double) viewEntity.getEyeHeight() >= 128.0D) {
-            this.mc.profiler.endStartSection("aboveClouds");
+            this.mc.profiler.endStartSection("clouds");
             this.renderCloudsCheck(renderGlobal, partialTicks, pass, renderPosX, renderPosY, renderPosZ);
         }
 
@@ -698,7 +700,7 @@ public abstract class MixinCoreEntityRenderer {
         );
 
         if (eventDensity >= 0.0f) {
-            fogManager.expFog(eventDensity, red, green, blue);
+            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, eventDensity, red, green, blue);
             return;
         }
 
@@ -710,7 +712,14 @@ public abstract class MixinCoreEntityRenderer {
                 if (duration < 20) {
                     fogDistance = 5.0f + (this.farPlaneDistance - 5.0f) * (1.0f - (float) duration / 20.0f);
                 }
-                fogManager.linearFog(fogDistance * 0.25f, fogDistance, red, green, blue);
+                fogManager.linearFog(
+                    TerrainFogManager.FogShape.SPHERE,
+                    fogDistance * 0.25f,
+                    fogDistance,
+                    red,
+                    green,
+                    blue
+                );
                 return;
             }
         }
@@ -718,7 +727,7 @@ public abstract class MixinCoreEntityRenderer {
         if (this.cloudFog) {
             GlStateManager.setFog(GlStateManager.FogMode.EXP);
             GlStateManager.setFogDensity(0.1f);
-            fogManager.expFog(0.1f, red, green, blue);
+            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, 0.1f, red, green, blue);
         } else if (blockState.getMaterial() == Material.WATER) {
             GlStateManager.setFog(GlStateManager.FogMode.EXP);
 
@@ -734,9 +743,9 @@ public abstract class MixinCoreEntityRenderer {
                 density = 0.1f;
             }
 
-            fogManager.expFog(density, red, green, blue);
+            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, density, red, green, blue);
         } else if (blockState.getMaterial() == Material.LAVA) {
-            fogManager.expFog(2.0f, red, green, blue);
+            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, 2.0f, red, green, blue);
         } else {
             float viewDistance = this.farPlaneDistance;
             float start;
@@ -751,7 +760,7 @@ public abstract class MixinCoreEntityRenderer {
                 end = viewDistance;
             }
 
-            fogManager.linearFog(start, end, red, green, blue);
+            fogManager.linearFog(TerrainFogManager.FogShape.SPHERE, start, end, red, green, blue);
 
             ForgeHooksClient.onFogRender(
                 entityRenderer,
