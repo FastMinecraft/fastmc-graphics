@@ -442,6 +442,7 @@ public abstract class MixinCoreWorldRenderer {
         // Entity outline
         profiler.swap("entities");
         profiler.push("outline");
+        this.bufferBuilders.getOutlineVertexConsumers().draw();
         if (entityRendered) {
             this.entityOutlineShader.render(tickDelta);
             this.client.getFramebuffer().beginWrite(false);
@@ -815,7 +816,6 @@ public abstract class MixinCoreWorldRenderer {
         immediate.draw(TexturedRenderLayers.getShulkerBoxes());
         immediate.draw(TexturedRenderLayers.getSign());
         immediate.draw(TexturedRenderLayers.getChest());
-        this.bufferBuilders.getOutlineVertexConsumers().draw();
     }
 
     private void applyFogShader(Camera camera, float viewDistance, boolean thickFog) {

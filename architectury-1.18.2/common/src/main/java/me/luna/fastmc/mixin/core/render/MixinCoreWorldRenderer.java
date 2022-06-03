@@ -465,6 +465,7 @@ public abstract class MixinCoreWorldRenderer {
         // Entity outline
         profiler.swap("entities");
         profiler.push("outline");
+        this.bufferBuilders.getOutlineVertexConsumers().draw();
         if (entityRendered) {
             assert this.entityOutlineShader != null;
             this.entityOutlineShader.render(tickDelta);
@@ -860,7 +861,6 @@ public abstract class MixinCoreWorldRenderer {
         immediate.draw(TexturedRenderLayers.getShulkerBoxes());
         immediate.draw(TexturedRenderLayers.getSign());
         immediate.draw(TexturedRenderLayers.getChest());
-        this.bufferBuilders.getOutlineVertexConsumers().draw();
     }
 
     @SuppressWarnings("deprecation")
