@@ -26,11 +26,11 @@ object RendererReloader : ResourceReloader {
         prepareExecutor: Executor,
         applyExecutor: Executor
     ): CompletableFuture<Void> {
-        return CompletableFuture.runAsync(EMPTY_RUNNABLE, applyExecutor).thenCompose {
-            val resourceManager: IResourceManager = me.luna.fastmc.resource.ResourceManager(mc)
+        return synchronizer.whenPrepared(null).thenAcceptAsync({
+            val resourceManager = me.luna.fastmc.resource.ResourceManager(manager)
             FastMcMod.logger.info("Resource manager initialized")
 
-            val fontRenderer: IFontRendererWrapper = FontRendererWrapper(mc)
+            val fontRenderer = FontRendererWrapper(manager)
             FastMcMod.logger.info("Font Renderer initialized")
             fontRenderer.wrapped.unicode = mc.options.forceUnicodeFont
 
@@ -44,10 +44,7 @@ object RendererReloader : ResourceReloader {
                 worldRenderer.terrainRenderer.updateChunkStorage(mc.options.viewDistance)
             }
             FastMcMod.logger.info("World renderer initialized")
-
-            synchronizer.whenPrepared(Triple(resourceManager, worldRenderer, fontRenderer))
-        }.thenAccept {
-            FastMcMod.init(it.first, it.second, it.third)
-        }
+            FastMcMod.init(resourceManager, worldRenderer, fontRenderer)
+        }, applyExecutor)
     }
 }

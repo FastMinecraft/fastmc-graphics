@@ -24,65 +24,65 @@ class ResourceLocationTexture(
     }
 }
 
-fun smallChestTexture(mc: MinecraftClient): ITexture {
+fun smallChestTexture(resourceManager: net.minecraft.resource.ResourceManager): ITexture {
     val images = arrayOf(
-        transformSmallChestTexture(mc, "normal"),
-        transformSmallChestTexture(mc, "trapped"),
-        transformSmallChestTexture(mc, "christmas")
+        transformSmallChestTexture(resourceManager, "normal"),
+        transformSmallChestTexture(resourceManager, "trapped"),
+        transformSmallChestTexture(resourceManager, "christmas")
     )
 
     return DefaultTexture("tileEntity/SmallChest", TextureUtils.combineTexturesVertically(images))
 }
 
-fun transformSmallChestTexture(mc: MinecraftClient, name: String): BufferedImage {
-    val input = ResourceLocation("textures/entity/chest/$name.png").toBufferedImage(mc)
+fun transformSmallChestTexture(resourceManager: net.minecraft.resource.ResourceManager, name: String): BufferedImage {
+    val input = ResourceLocation("textures/entity/chest/$name.png").toBufferedImage(resourceManager)
     return ChestTexture.v115Small(input)
 }
 
-fun largeChestTexture(mc: MinecraftClient): ITexture {
-    fun transformTexture(mc: MinecraftClient, name: String): BufferedImage {
-        val left = ResourceLocation("textures/entity/chest/${name}_left.png").toBufferedImage(mc)
-        val right = ResourceLocation("textures/entity/chest/${name}_right.png").toBufferedImage(mc)
+fun largeChestTexture(resourceManager: net.minecraft.resource.ResourceManager): ITexture {
+    fun transformTexture(resourceManager: net.minecraft.resource.ResourceManager, name: String): BufferedImage {
+        val left = ResourceLocation("textures/entity/chest/${name}_left.png").toBufferedImage(resourceManager)
+        val right = ResourceLocation("textures/entity/chest/${name}_right.png").toBufferedImage(resourceManager)
         return ChestTexture.v115Large(left, right)
     }
 
     val images = arrayOf(
-        transformTexture(mc, "normal"),
-        transformTexture(mc, "trapped"),
-        transformTexture(mc, "christmas")
+        transformTexture(resourceManager, "normal"),
+        transformTexture(resourceManager, "trapped"),
+        transformTexture(resourceManager, "christmas")
     )
 
     return DefaultTexture("tileEntity/LargeChest", TextureUtils.combineTexturesVertically(images))
 }
 
-fun bedTexture(mc: MinecraftClient): ITexture {
+fun bedTexture(resourceManager: net.minecraft.resource.ResourceManager): ITexture {
     val images = Array(DyeColor.values().size) {
         val enumDyeColor = DyeColor.values()[it]
         val resourceLocation = ResourceLocation("textures/entity/bed/${enumDyeColor.getName()}.png")
-        BedTexture.vAll(resourceLocation.toBufferedImage(mc))
+        BedTexture.vAll(resourceLocation.toBufferedImage(resourceManager))
     }
 
     return DefaultTexture("tileEntity/Bed", TextureUtils.combineColoredTextures(images))
 }
 
-fun shulkerTexture(mc: MinecraftClient): ITexture {
+fun shulkerTexture(resourceManager: net.minecraft.resource.ResourceManager): ITexture {
     val enumDyeColors = DyeColor.values()
     val images = Array(enumDyeColors.size + 1) {
         if (it < 16) {
             val enumDyeColor = enumDyeColors[it]
             val resourceLocation = ResourceLocation("textures/entity/shulker/shulker_${enumDyeColor.getName()}.png")
-            resourceLocation.toBufferedImage(mc)
+            resourceLocation.toBufferedImage(resourceManager)
         } else {
             val resourceLocation = ResourceLocation("textures/entity/shulker/shulker.png")
-            resourceLocation.toBufferedImage(mc)
+            resourceLocation.toBufferedImage(resourceManager)
         }
     }
 
     return DefaultTexture("tileEntity/ShulkerBox", TextureUtils.combineColoredWithUncoloredTextures(images))
 }
 
-fun ResourceLocation.toBufferedImage(mc: MinecraftClient): BufferedImage {
-    return mc.resourceManager.getResource(this).inputStream.use {
+fun ResourceLocation.toBufferedImage(resourceManager: net.minecraft.resource.ResourceManager): BufferedImage {
+    return resourceManager.getResource(this).inputStream.use {
         ImageIO.read(it)
     }
 }

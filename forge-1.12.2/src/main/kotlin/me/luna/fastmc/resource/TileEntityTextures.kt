@@ -8,46 +8,46 @@ import net.minecraft.client.Minecraft
 import net.minecraft.item.EnumDyeColor
 import net.minecraft.util.ResourceLocation
 
-fun smallChestTexture(mc: Minecraft): ITexture {
+fun smallChestTexture(resourceManager: net.minecraft.client.resources.IResourceManager): ITexture {
     val images = arrayOf(
-        ResourceLocation("textures/entity/chest/normal.png").readImage(mc),
-        ResourceLocation("textures/entity/chest/trapped.png").readImage(mc),
-        ResourceLocation("textures/entity/chest/christmas.png").readImage(mc)
+        ResourceLocation("textures/entity/chest/normal.png").readImage(resourceManager),
+        ResourceLocation("textures/entity/chest/trapped.png").readImage(resourceManager),
+        ResourceLocation("textures/entity/chest/christmas.png").readImage(resourceManager)
     )
 
     return DefaultTexture("tileEntity/SmallChest", TextureUtils.combineTexturesVertically(images))
 }
 
-fun largeChestTexture(mc: Minecraft): ITexture {
+fun largeChestTexture(resourceManager: net.minecraft.client.resources.IResourceManager): ITexture {
     val images = arrayOf(
-        ResourceLocation("textures/entity/chest/normal_double.png").readImage(mc),
-        ResourceLocation("textures/entity/chest/trapped_double.png").readImage(mc),
-        ResourceLocation("textures/entity/chest/christmas_double.png").readImage(mc)
+        ResourceLocation("textures/entity/chest/normal_double.png").readImage(resourceManager),
+        ResourceLocation("textures/entity/chest/trapped_double.png").readImage(resourceManager),
+        ResourceLocation("textures/entity/chest/christmas_double.png").readImage(resourceManager)
     )
 
     return DefaultTexture("tileEntity/LargeChest", TextureUtils.combineTexturesVertically(images))
 }
 
-fun bedTexture(mc: Minecraft): ITexture {
+fun bedTexture(resourceManager: net.minecraft.client.resources.IResourceManager): ITexture {
     val images = Array(EnumDyeColor.values().size) {
         val enumDyeColor = EnumDyeColor.values()[it]
         val resourceLocation = ResourceLocation("textures/entity/bed/${enumDyeColor.dyeColorName}.png")
-        BedTexture.vAll(resourceLocation.readImage(mc))
+        BedTexture.vAll(resourceLocation.readImage(resourceManager))
     }
 
     return DefaultTexture("tileEntity/Bed", TextureUtils.combineColoredTextures(images))
 }
 
-fun shulkerTexture(mc: Minecraft): ITexture {
+fun shulkerTexture(resourceManager: net.minecraft.client.resources.IResourceManager): ITexture {
     val enumDyeColors = EnumDyeColor.values()
     val images = Array(enumDyeColors.size + 1) {
         if (it < 16) {
             val enumDyeColor = enumDyeColors[it]
             val resourceLocation = ResourceLocation("textures/entity/shulker/shulker_${enumDyeColor.getName()}.png")
-            resourceLocation.readImage(mc)
+            resourceLocation.readImage(resourceManager)
         } else {
             val resourceLocation = ResourceLocation("textures/entity/shulker/shulker_purple.png")
-            resourceLocation.readImage(mc)
+            resourceLocation.readImage(resourceManager)
         }
     }
 

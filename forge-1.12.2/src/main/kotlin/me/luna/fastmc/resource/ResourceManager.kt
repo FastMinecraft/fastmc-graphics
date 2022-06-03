@@ -16,7 +16,7 @@ import me.luna.fastmc.shared.texture.ITexture
 import net.minecraft.client.Minecraft
 import net.minecraft.util.ResourceLocation
 
-class ResourceManager(mc: Minecraft) : IResourceManager {
+class ResourceManager(resourceManager: net.minecraft.client.resources.IResourceManager) : IResourceManager {
     override val model: ResourceProvider<Model> = ResourceProvider(
         ModelCow().init(),
 
@@ -60,12 +60,12 @@ class ResourceManager(mc: Minecraft) : IResourceManager {
     )
 
     override val texture: ResourceProvider<ITexture> = ResourceProvider(
-        cowTexture(mc),
+        cowTexture(resourceManager),
 
-        ResourceLocationTexture(mc, "tileEntity/EnderChest", ResourceLocation("textures/entity/chest/ender.png")),
-        bedTexture(mc),
-        shulkerTexture(mc),
-        smallChestTexture(mc),
-        largeChestTexture(mc)
+        ResourceLocationTexture( "tileEntity/EnderChest", ResourceLocation("textures/entity/chest/ender.png")),
+        bedTexture(resourceManager),
+        shulkerTexture(resourceManager),
+        smallChestTexture(resourceManager),
+        largeChestTexture(resourceManager)
     )
 }

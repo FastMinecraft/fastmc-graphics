@@ -6,29 +6,29 @@ import me.luna.fastmc.shared.font.FontRenderer
 import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.shared.opengl.glUseProgramForce
 import me.luna.fastmc.shared.util.ColorARGB
-import me.luna.fastmc.util.Minecraft
 import me.luna.fastmc.util.ResourceLocation
+import net.minecraft.resource.ResourceManager
 import org.joml.Matrix4f
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 
-class FontRendererWrapper(mc: Minecraft) : IFontRendererWrapper {
+class FontRendererWrapper(resourceManager: ResourceManager) : IFontRendererWrapper {
     override val wrapped: FontRenderer
 
     init {
-        val asciiFont = ResourceLocation("textures/font/ascii.png").toBufferedImage(mc)
+        val asciiFont = ResourceLocation("textures/font/ascii.png").toBufferedImage(resourceManager)
 
         val unicodeFonts = Array(256) {
             runCatching {
-                ResourceLocation("textures/font/unicode_page_%02x.png".format(it)).toBufferedImage(mc)
+                ResourceLocation("textures/font/unicode_page_%02x.png".format(it)).toBufferedImage(resourceManager)
             }.getOrNull()
         }
 
         val glyphWidths = ByteArray(65536)
-        val bytes = mc.resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin")).use {
+        val bytes = resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin")).use {
             it.inputStream.readBytes()
         }
-        mc.resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin")).use {
+        resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin")).use {
             it.inputStream.read(glyphWidths)
         }
 

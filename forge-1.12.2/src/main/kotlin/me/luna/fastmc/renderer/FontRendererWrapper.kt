@@ -12,20 +12,20 @@ import org.joml.Matrix4f
 import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
 import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 
-class FontRendererWrapper(mc: Minecraft) : IFontRendererWrapper {
+class FontRendererWrapper(resourceManager: net.minecraft.client.resources.IResourceManager) : IFontRendererWrapper {
     override val wrapped: FontRenderer
 
     init {
-        val asciiFont = ResourceLocation("textures/font/ascii.png").readImage(mc)
+        val asciiFont = ResourceLocation("textures/font/ascii.png").readImage(resourceManager)
 
         val unicodeFonts = Array(256) {
             runCatching {
-                ResourceLocation("textures/font/unicode_page_%02x.png".format(it)).readImage(mc)
+                ResourceLocation("textures/font/unicode_page_%02x.png".format(it)).readImage(resourceManager)
             }.getOrNull()
         }
 
         val glyphWidths = ByteArray(65536)
-        val glyphSizes = mc.resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin"))
+        val glyphSizes = resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin"))
         glyphSizes.inputStream.read(glyphWidths)
 
         wrapped = FontRenderer(asciiFont, unicodeFonts, glyphWidths, Minecraft.getGLMaximumTextureSize())

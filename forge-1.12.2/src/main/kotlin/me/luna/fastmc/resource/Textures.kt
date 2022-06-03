@@ -7,7 +7,6 @@ import net.minecraft.util.ResourceLocation
 import java.awt.image.BufferedImage
 
 class ResourceLocationTexture(
-    private val mc: Minecraft,
     override val resourceName: String,
     private val resourceLocation: ResourceLocation
 ) : ITexture {
@@ -21,8 +20,12 @@ class ResourceLocationTexture(
     override fun destroy() {
 
     }
+
+    private companion object {
+        private val mc = Minecraft.getMinecraft()
+    }
 }
 
-fun ResourceLocation.readImage(mc: Minecraft): BufferedImage {
-    return TextureUtil.readBufferedImage(mc.resourceManager.getResource(this).inputStream)
+fun ResourceLocation.readImage(resourceManager: net.minecraft.client.resources.IResourceManager): BufferedImage {
+    return TextureUtil.readBufferedImage(resourceManager.getResource(this).inputStream)
 }

@@ -21,10 +21,10 @@ object RendererReloader : ISelectiveResourceReloadListener {
         resourcePredicate: Predicate<IResourceType>
     ) {
         if (resourcePredicate.test(VanillaResourceType.MODELS) || resourcePredicate.test(VanillaResourceType.TEXTURES)) {
-            val resourceManager1 = me.luna.fastmc.resource.ResourceManager(mc)
+            val resourceManager1 = me.luna.fastmc.resource.ResourceManager(resourceManager)
             FastMcMod.logger.info("Resource manager initialized")
 
-            val fontRenderer: IFontRendererWrapper = FontRendererWrapper(mc)
+            val fontRenderer: IFontRendererWrapper = FontRendererWrapper(resourceManager)
             FastMcMod.logger.info("Font Renderer initialized")
             fontRenderer.wrapped.unicode = mc.gameSettings.forceUnicodeFont
 

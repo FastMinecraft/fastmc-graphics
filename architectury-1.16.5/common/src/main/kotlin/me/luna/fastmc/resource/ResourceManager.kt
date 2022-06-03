@@ -16,7 +16,7 @@ import me.luna.fastmc.shared.texture.DefaultTexture
 import me.luna.fastmc.shared.texture.ITexture
 import net.minecraft.client.MinecraftClient
 
-class ResourceManager(mc: MinecraftClient) : IResourceManager {
+class ResourceManager(resourceManager: net.minecraft.resource.ResourceManager) : IResourceManager {
     override val model: ResourceProvider<Model> = ResourceProvider(
         ModelCow().init(),
 
@@ -60,10 +60,10 @@ class ResourceManager(mc: MinecraftClient) : IResourceManager {
     )
 
     override val texture: ResourceProvider<ITexture> = ResourceProvider(
-        DefaultTexture("tileEntity/EnderChest", transformSmallChestTexture(mc, "ender")),
-        bedTexture(mc),
-        shulkerTexture(mc),
-        smallChestTexture(mc),
-        largeChestTexture(mc)
+        DefaultTexture("tileEntity/EnderChest", transformSmallChestTexture(resourceManager, "ender")),
+        bedTexture(resourceManager),
+        shulkerTexture(resourceManager),
+        smallChestTexture(resourceManager),
+        largeChestTexture(resourceManager)
     )
 }
