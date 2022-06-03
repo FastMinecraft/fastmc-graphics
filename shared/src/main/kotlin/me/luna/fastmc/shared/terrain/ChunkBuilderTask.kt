@@ -70,9 +70,9 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
         this.renderChunkNullable = renderChunk
         id0.set(nextId())
 
-        relativeCameraX = (renderer.cameraX - renderChunk.renderRegion.originX).toFloat()
-        relativeCameraY = (renderer.cameraY - renderChunk.renderRegion.originY).toFloat()
-        relativeCameraZ = (renderer.cameraZ - renderChunk.renderRegion.originZ).toFloat()
+        relativeCameraX = (renderer.cameraX - renderChunk.originX).toFloat()
+        relativeCameraY = (renderer.cameraY - renderChunk.originY).toFloat()
+        relativeCameraZ = (renderer.cameraZ - renderChunk.originZ).toFloat()
 
         originX = renderChunk.originX
         originY = renderChunk.originY

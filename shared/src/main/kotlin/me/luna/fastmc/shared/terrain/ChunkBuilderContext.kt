@@ -841,13 +841,7 @@ abstract class SortContext : Context() {
             }
         }
 
-        IntArrays.mergeSort(
-            indexArray,
-            0,
-            quadCount,
-            comparator,
-            sortSuppIndexArray
-        )
+        IntArrays.mergeSort(indexArray, 0, quadCount, comparator, sortSuppIndexArray)
 
         val newIndexData = ByteArray(quadCount * 6 * 4)
         val newQuadCenter = FloatArray(quadCount * 3)
