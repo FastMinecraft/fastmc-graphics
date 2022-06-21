@@ -3,7 +3,7 @@ package me.luna.fastmc.shared.opengl
 import me.luna.fastmc.shared.opengl.impl.VertexAttribute
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
-class VertexArrayObject : IGLObject {
+class VertexArrayObject : IGLObject, IGLBinding {
     override val id: Int = glCreateVertexArrays()
 
     private var ibo: BufferObject? = null

@@ -59,7 +59,7 @@ class VertexAttribute private constructor(val stride: Int, private val divisor: 
         }
     }
 
-    private open class IntEntry(
+    private class IntEntry(
         override val index: Int,
         override val size: Int,
         override val type: Int,

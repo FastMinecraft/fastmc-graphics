@@ -8,8 +8,6 @@ import java.util.concurrent.ForkJoinWorkerThread
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.max
-import kotlin.math.min
 
 @JvmField
 val threadGroupMain = ThreadGroup("FastMinecraft").apply {
@@ -38,7 +36,7 @@ object FastMcCoreScope : CoroutineScope by CoroutineScope(coreContext) {
 }
 
 private val extendPool = ForkJoinPool(
-    max(min(ParallelUtils.CPU_THREADS, 4), 1),
+    ParallelUtils.CPU_THREADS,
     object : ForkJoinWorkerThreadFactory {
         private val idRegistry = IDRegistry()
         override fun newThread(pool: ForkJoinPool): ForkJoinWorkerThread {

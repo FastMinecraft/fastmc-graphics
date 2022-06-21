@@ -7,7 +7,9 @@
     "AccessorBackgroundRenderer",
     "AccessorBufferRenderer",
     "AccessorChunkLightProvider",
+    "AccessorGlStateManager",
     "AccessorLevelPropagator",
+    "AccessorLightmapTextureManager",
     "AccessorLightStorage",
     "AccessorThreadExecutor",
     "AccessorVoxelShape"

@@ -349,7 +349,6 @@ class FontRenderer(
     }
 
     class ShaderProgram : DrawShaderProgram(
-        "FontRenderer",
         ShaderSource.Vertex("/assets/shaders/FontRenderer.vsh"),
         ShaderSource.Fragment("/assets/shaders/FontRenderer.fsh")
     ) {

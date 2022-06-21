@@ -10,6 +10,7 @@ import me.luna.fastmc.shared.opengl.impl.VertexAttribute
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.renderer.IRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
+import me.luna.fastmc.shared.resource.Resource
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.FastMcCoreScope
@@ -116,7 +117,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     private lateinit var vertexAttribute: VertexAttribute
 
     protected abstract val model: ResourceEntry<Model>
-    protected abstract val shader: ResourceEntry<ShaderProgram>
+    protected abstract val shader: ResourceEntry<InstancingShaderProgram>
     protected abstract val texture: ResourceEntry<ITexture>
 
     protected open fun uploadBuffer(buffer: ByteBuffer): Renderer {
@@ -124,7 +125,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         val model = model.get(resourceManager)
 
         val vao = VertexArrayObject()
-        val vbo = BufferObject.Immutable(BufferObject.Target.GL_ARRAY_BUFFER)
+        val vbo = BufferObject.Immutable()
 
         vbo.allocate(buffer, 0)
 
@@ -135,7 +136,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
     }
 
     protected fun renderInfo(
-        shader: ShaderProgram,
+        shader: InstancingShaderProgram,
         vao: VertexArrayObject,
         vboList: List<BufferObject>,
         model: Model
@@ -187,14 +188,11 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
         }
     }
 
-    open class ShaderProgram(resourceName: String, vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :
-        me.luna.fastmc.shared.opengl.ShaderProgram(
-            resourceName,
-            vertex,
-            fragment {
-                define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit)
-            }
-        ) {
+    open class InstancingShaderProgram(
+        override val resourceName: String,
+        vertex: ShaderSource.Vertex,
+        fragment: ShaderSource.Fragment
+    ) : ShaderProgram(vertex, fragment { define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit) }), Resource {
         private val offsetUniform = glGetUniformLocation(id, "offset")
         private var attached = false
 
@@ -213,7 +211,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
     interface IRenderInfo {
         val resourceManager: IResourceManager
-        val shader: ShaderProgram
+        val shader: InstancingShaderProgram
         val vao: VertexArrayObject
         val vboList: List<BufferObject>
         val modelSize: Int
@@ -225,7 +223,7 @@ abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) 
 
     class RenderInfo(
         override val resourceManager: IResourceManager,
-        override val shader: ShaderProgram,
+        override val shader: InstancingShaderProgram,
         override val vao: VertexArrayObject,
         override val vboList: List<BufferObject>,
         override val modelSize: Int,

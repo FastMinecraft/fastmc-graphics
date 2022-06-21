@@ -32,7 +32,7 @@ abstract class TerrainRenderer(
     }
 
     @Suppress("LeakingThis")
-    val fogManager = TerrainFogManager(this)
+    val shaderManager = TerrainShaderManager(this)
 
     abstract val chunkBuilder: ChunkBuilder
     abstract val contextProvider: ContextProvider
@@ -70,6 +70,7 @@ abstract class TerrainRenderer(
     private var lastSortChunkZ = Int.MAX_VALUE
 
     private val forceUpdateTimer = TickTimer()
+    private val rebuildTimer = TickTimer()
     private var lastMatrixHash = 0L
 
     private var lastDebugUpdateTask: Future<*>? = null
@@ -198,6 +199,7 @@ abstract class TerrainRenderer(
         lastSortChunkZ = Int.MAX_VALUE
 
         forceUpdateTimer.reset(-999L)
+        rebuildTimer.reset(-999L)
         lastMatrixHash = 0
 
         debugInfoString = ""
@@ -218,7 +220,7 @@ abstract class TerrainRenderer(
     }
 
     private fun scheduleRebuild() {
-        if (lastRebuildScheduleTask.isDoneOrNull) {
+        if (lastRebuildScheduleTask.isDoneOrNull && rebuildTimer.tickAndReset(16L)) {
             lastRebuildScheduleTask = FastMcExtendScope.pool.submit(scheduleRebuildRunnable)
         }
     }
@@ -621,7 +623,7 @@ abstract class TerrainRenderer(
 
     fun renderLayer(layerIndex: Int) {
         val regionArray = chunkStorage.regionArray
-        val shader = fogManager.shader
+        val shader = shaderManager.shader
 
         for (i in chunkStorage.regionIndices) {
             val region = regionArray[i]
@@ -646,7 +648,7 @@ abstract class TerrainRenderer(
         chunkBuilder.clear()
         chunkStorageNullable?.destroy()
         chunkStorageNullable = null
-        fogManager.destroy()
+        shaderManager.destroy()
     }
 
     companion object {

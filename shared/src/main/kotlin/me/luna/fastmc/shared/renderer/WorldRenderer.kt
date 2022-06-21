@@ -29,12 +29,15 @@ abstract class WorldRenderer : IRenderer {
     final override var cameraBlockY = 0; private set
     final override var cameraBlockZ = 0; private set
 
+    final override var screenWidth = 854; private set
+    final override var screenHeight = 480; private set
+
     final override var projectionMatrix = Matrix4f()
     final override var modelViewMatrix = Matrix4f()
-    final override var invertedProjectMatrix = Matrix4f()
-    final override var invertedModelViewMatrix = Matrix4f()
+    final override var inverseProjectMatrix = Matrix4f()
+    final override var inverseModelViewMatrix = Matrix4f()
 
-    final override val globalUBO = UniformBufferObject("Global", 132)
+    final override val globalUBO = UniformBufferObject("Global", 268)
 
     final override val frustum = FrustumIntersection(projectionMatrix, false)
     final override var matrixHash = 0L
@@ -52,6 +55,11 @@ abstract class WorldRenderer : IRenderer {
         this.tileEntityRenderer = tileEntityRenderer
         this.entityRenderer = entityRenderer
         this.terrainRenderer = terrainRenderer
+    }
+
+    fun updateScreenSize(width: Int, height: Int) {
+        screenWidth = width
+        screenHeight = height
     }
 
     fun updateCameraRotation(yaw: Float, pitch: Float) {
@@ -75,16 +83,22 @@ abstract class WorldRenderer : IRenderer {
         this.renderPosZ = renderPosZ
     }
 
-    fun updateMatrix(projection: Matrix4f, modelView: Matrix4f, partialTicks: Float) {
+    fun updateMatrix(projection: Matrix4f, modelView: Matrix4f) {
         projectionMatrix = projection
         modelViewMatrix = modelView
-        invertedProjectMatrix = projection.invert(Matrix4f())
-        invertedModelViewMatrix = modelView.invert(Matrix4f())
+        inverseProjectMatrix = projection.invert(Matrix4f())
+        inverseModelViewMatrix = modelView.invert(Matrix4f())
+    }
 
+    fun updateGlobalUBO(partialTicks: Float) {
         globalUBO.update {
-            projection.get(0, it)
-            modelView.get(64, it)
-            it.skip(128)
+            projectionMatrix.get(0, it)
+            modelViewMatrix.get(64, it)
+            inverseProjectMatrix.get(128, it)
+            inverseModelViewMatrix.get(192, it)
+            it.skip(256)
+            it.putFloat(screenWidth.toFloat())
+            it.putFloat(screenHeight.toFloat())
             it.putFloat(partialTicks)
         }
     }

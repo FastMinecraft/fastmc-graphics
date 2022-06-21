@@ -1,6 +1,8 @@
 package me.luna.fastmc
 
+import me.luna.fastmc.mixin.accessor.AccessorGlStateManager
 import me.luna.fastmc.shared.opengl.IGLWrapper
+import me.luna.fastmc.shared.util.CachedBuffer
 import me.luna.fastmc.shared.util.allocateInt
 import net.minecraft.client.renderer.GlStateManager
 import org.lwjgl.PointerWrapperAbstract
@@ -16,6 +18,12 @@ class GLWrapper : IGLWrapper {
 
 
     // GL11
+    override fun glClear(mask: Int) = GL11.glClear(mask)
+    override fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float) =
+        GlStateManager.clearColor(red, green, blue, alpha)
+
+    override fun glClearDepth(depth: Double) = GlStateManager.clearDepth(depth)
+
     override fun glDeleteTextures(texture: Int) = GL11.glDeleteTextures(texture)
     override fun glBindTexture(texture: Int) = GlStateManager.bindTexture(texture)
     override fun glDrawArrays(mode: Int, first: Int, count: Int) = GL11.glDrawArrays(mode, first, count)
@@ -80,6 +88,9 @@ class GLWrapper : IGLWrapper {
     override fun glBindVertexArray(array: Int) = GL30.glBindVertexArray(array)
     override fun glGenerateMipmap(target: Int) = GL30.glGenerateMipmap(target)
     override fun glBindBufferBase(target: Int, index: Int, buffer: Int) = GL30.glBindBufferBase(target, index, buffer)
+
+    override fun glDeleteFramebuffers(framebuffer: Int) = GL30.glDeleteFramebuffers(framebuffer)
+    override fun glBindFramebuffer(target: Int, framebuffer: Int) = GL30.glBindFramebuffer(target, framebuffer)
 
     // GL31
     override fun glDrawArraysInstanced(mode: Int, first: Int, count: Int, primcount: Int) =
@@ -215,7 +226,13 @@ class GLWrapper : IGLWrapper {
 
     override fun glCreateTextures(target: Int): Int = GL45.glCreateTextures(target)
 
-    override fun glBindTextureUnit(unit: Int, texture: Int) = GL45.glBindTextureUnit(unit, texture)
+    override fun glBindTextureUnit(unit: Int, texture: Int) {
+        val textures = AccessorGlStateManager.getTextureState()
+        if (unit < textures.size) {
+            textures[unit].textureName = texture
+        }
+        GL45.glBindTextureUnit(unit, texture)
+    }
 
     override fun glTextureStorage2D(texture: Int, levels: Int, internalformat: Int, width: Int, height: Int) =
         GL45.glTextureStorage2D(texture, levels, internalformat, width, height)
@@ -237,6 +254,36 @@ class GLWrapper : IGLWrapper {
 
     override fun glTextureParameterf(texture: Int, pname: Int, param: Float) =
         GL45.glTextureParameterf(texture, pname, param)
+
+    override fun glCreateFramebuffers(): Int = GL45.glCreateFramebuffers()
+
+    override fun glCheckNamedFramebufferStatus(
+        framebuffer: Int,
+        target: Int
+    ): Int = GL45.glCheckNamedFramebufferStatus(framebuffer, target)
+
+    override fun glNamedFramebufferRenderbuffer(
+        framebuffer: Int,
+        attachment: Int,
+        renderbuffertarget: Int,
+        renderbuffer: Int
+    ) = GL45.glNamedFramebufferRenderbuffer(framebuffer, attachment, renderbuffer, renderbuffer)
+
+    private val glNamedFramebufferDrawBuffersBuffer = CachedBuffer(4)
+
+    override fun glNamedFramebufferDrawBuffers(framebuffer: Int, bufs: IntArray) {
+        val buffer = glNamedFramebufferDrawBuffersBuffer.getWithCapacityInt(bufs.size, bufs.size)
+        buffer.put(bufs)
+        buffer.flip()
+        GL45.glNamedFramebufferDrawBuffers(framebuffer, buffer)
+    }
+
+    override fun glNamedFramebufferTexture(
+        framebuffer: Int,
+        attachment: Int,
+        texture: Int,
+        level: Int
+    ) = GL45.glNamedFramebufferTexture(framebuffer, attachment, texture, level)
 
     override fun glMapNamedBuffer(
         buffer: Int,

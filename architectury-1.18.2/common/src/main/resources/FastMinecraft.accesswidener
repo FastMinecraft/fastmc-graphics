@@ -5,6 +5,8 @@ accessible class net/minecraft/client/model/ModelPart$Vertex
 
 accessible class net/minecraft/block/AbstractBlock$AbstractBlockState$ShapeCache
 
+accessible class com/mojang/blaze3d/platform/GlStateManager$Texture2DState
+
 accessible method net/minecraft/client/util/math/MatrixStack$Entry <init> (Lnet/minecraft/util/math/Matrix4f;Lnet/minecraft/util/math/Matrix3f;)V
 
 accessible method net/minecraft/util/shape/VoxelShape <init> (Lnet/minecraft/util/shape/VoxelSet;)V

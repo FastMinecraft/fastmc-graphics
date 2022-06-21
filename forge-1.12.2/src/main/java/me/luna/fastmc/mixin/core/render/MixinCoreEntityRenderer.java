@@ -3,8 +3,8 @@ package me.luna.fastmc.mixin.core.render;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.shared.FpsDisplay;
 import me.luna.fastmc.shared.renderer.WorldRenderer;
-import me.luna.fastmc.shared.terrain.TerrainFogManager;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
+import me.luna.fastmc.shared.terrain.TerrainShaderManager;
 import me.luna.fastmc.shared.util.MathUtils;
 import me.luna.fastmc.shared.util.MathUtilsKt;
 import net.minecraft.block.Block;
@@ -26,6 +26,7 @@ import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.MobEffects;
 import net.minecraft.potion.PotionEffect;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
@@ -45,23 +46,17 @@ import static org.lwjgl.opengl.GL11.*;
 
 @Mixin(value = EntityRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreEntityRenderer {
-
     @Shadow
     @Final
     private Minecraft mc;
-
     @Shadow
     private float farPlaneDistance;
-
     @Shadow
     private boolean cloudFog;
-
     @Shadow
     private float fogColorRed;
-
     @Shadow
     private float fogColorGreen;
-
     @Shadow
     private float fogColorBlue;
     @Shadow
@@ -120,6 +115,10 @@ public abstract class MixinCoreEntityRenderer {
     @Shadow
     protected abstract void renderHand(float partialTicks, int pass);
 
+    @Shadow
+    @Final
+    private ResourceLocation locationLightMap;
+
     @Inject(method = "setupCameraTransform", at = @At("RETURN"))
     private void setupCameraTransform$Inject$RETURN(float partialTicks, int pass, CallbackInfo ci) {
         org.joml.Matrix4f projection = new org.joml.Matrix4f();
@@ -128,7 +127,7 @@ public abstract class MixinCoreEntityRenderer {
         setupCameraTransform0(partialTicks, pass, projection, modelView);
 
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.updateMatrix(projection, modelView, partialTicks);
+        worldRenderer.updateMatrix(projection, modelView);
 
         Entity entity = this.mc.getRenderViewEntity();
         if (entity != null) {
@@ -155,6 +154,9 @@ public abstract class MixinCoreEntityRenderer {
 
             worldRenderer.updateCameraRotation(yaw, pitch);
         }
+
+        worldRenderer.updateScreenSize(mc.displayWidth, mc.displayHeight);
+        worldRenderer.updateGlobalUBO(partialTicks);
     }
 
     public void setupCameraTransform0(
@@ -437,7 +439,6 @@ public abstract class MixinCoreEntityRenderer {
         ParticleManager particleManager = this.mc.effectRenderer;
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
         TerrainRenderer terrainRenderer = worldRenderer.getTerrainRenderer();
-        TerrainFogManager fogManager = terrainRenderer.getFogManager();
 
         boolean drawBlockOutline = this.isDrawBlockOutline();
         Entity viewEntity = this.mc.getRenderViewEntity();
@@ -511,41 +512,9 @@ public abstract class MixinCoreEntityRenderer {
         }
 
         this.mc.profiler.endStartSection("terrain");
-        RenderHelper.disableStandardItemLighting();
+        renderTerrainPass1();
+
         this.enableLightmap();
-        ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-        GlStateManager.bindTexture(blockTexture.getGlTextureId());
-        GlStateManager.disableAlpha();
-
-        TerrainFogManager.ShaderProgram shader = fogManager.getShader();
-        shader.bind();
-
-        this.mc.profiler.startSection("solid");
-        terrainRenderer.renderLayer(0);
-
-        fogManager.alphaTest(true);
-        shader = fogManager.getShader();
-        shader.bind();
-
-        this.mc.profiler.endStartSection("cutoutMipped");
-        blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
-        terrainRenderer.renderLayer(1);
-
-        this.mc.profiler.endStartSection("cutout");
-        blockTexture.restoreLastBlurMipmap();
-        blockTexture.setBlurMipmap(false, false);
-        terrainRenderer.renderLayer(2);
-        blockTexture.restoreLastBlurMipmap();
-
-        fogManager.alphaTest(false);
-        shader = fogManager.getShader();
-
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
-        glBindVertexArray(0);
-        shader.unbind();
-        this.mc.profiler.endSection();
-
-        GlStateManager.enableAlpha();
         GlStateManager.shadeModel(7424);
         GlStateManager.alphaFunc(516, 0.1F);
 
@@ -586,6 +555,7 @@ public abstract class MixinCoreEntityRenderer {
             GlStateManager.SourceFactor.ONE,
             GlStateManager.DestFactor.ZERO
         );
+        ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
         blockTexture.setBlurMipmap(false, false);
         renderGlobal.drawBlockDamageTexture(
             Tessellator.getInstance(),
@@ -612,32 +582,12 @@ public abstract class MixinCoreEntityRenderer {
         GlStateManager.depthMask(false);
         GlStateManager.enableCull();
         this.renderRainSnow(partialTicks);
-        ;
 
         this.mc.profiler.endStartSection("worldBorder");
         renderGlobal.renderWorldBorder(viewEntity, partialTicks);
 
         this.mc.profiler.endStartSection("terrain");
-        this.mc.profiler.startSection("translucent");
-        this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-        GlStateManager.enableBlend();
-        GlStateManager.tryBlendFuncSeparate(
-            GlStateManager.SourceFactor.SRC_ALPHA,
-            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-            GlStateManager.SourceFactor.ONE,
-            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
-        );
-
-        GlStateManager.enableDepth();
-        GlStateManager.depthFunc(GL_LEQUAL);
-
-        shader.bind();
-        terrainRenderer.renderLayer(3);
-        shader.unbind();
-
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
-        glBindVertexArray(0);
-        this.mc.profiler.endSection();
+        renderTerrainPass2();
 
         if (!this.debugView) {
             RenderHelper.enableStandardItemLighting();
@@ -675,9 +625,75 @@ public abstract class MixinCoreEntityRenderer {
         }
     }
 
+    private void renderTerrainPass1() {
+        this.mc.profiler.startSection("solid");
+        TerrainRenderer terrainRenderer = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
+        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+        ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+
+        int lightMapTexture = this.mc.getTextureManager().getTexture(this.locationLightMap).getGlTextureId();
+        glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
+
+        RenderHelper.disableStandardItemLighting();
+        GlStateManager.bindTexture(blockTexture.getGlTextureId());
+        GlStateManager.disableAlpha();
+        GlStateManager.disableBlend();
+
+        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
+        shader.bind();
+
+        terrainRenderer.renderLayer(0);
+
+        this.mc.profiler.endStartSection("cutoutMipped");
+        shaderManager.alphaTest(true);
+        shader = shaderManager.getShader();
+        shader.bind();
+        blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
+        terrainRenderer.renderLayer(1);
+
+        this.mc.profiler.endStartSection("cutout");
+        blockTexture.setBlurMipmap(false, false);
+        terrainRenderer.renderLayer(2);
+        blockTexture.restoreLastBlurMipmap();
+        shaderManager.alphaTest(false);
+
+        GlStateManager.enableAlpha();
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+        glBindVertexArray(0);
+
+        this.mc.profiler.endSection();
+    }
+
+    private void renderTerrainPass2() {
+        this.mc.profiler.startSection("translucent");
+        TerrainRenderer terrainRenderer = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
+        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
+
+        this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        GlStateManager.enableBlend();
+        GlStateManager.tryBlendFuncSeparate(
+            GlStateManager.SourceFactor.SRC_ALPHA,
+            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+            GlStateManager.SourceFactor.ONE,
+            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
+        );
+
+        GlStateManager.enableDepth();
+        GlStateManager.depthFunc(GL_LEQUAL);
+
+        shader.bind();
+        terrainRenderer.renderLayer(3);
+        shader.unbind();
+
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+        glBindVertexArray(0);
+        this.mc.profiler.endSection();
+    }
+
     private void setupTerrainFog(float partialTicks) {
         EntityRenderer entityRenderer = (EntityRenderer) (Object) this;
-        TerrainFogManager fogManager = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer().getFogManager();
+        TerrainShaderManager fogManager = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer().getShaderManager();
         float red = this.fogColorRed;
         float green = this.fogColorGreen;
         float blue = this.fogColorBlue;
@@ -700,7 +716,7 @@ public abstract class MixinCoreEntityRenderer {
         );
 
         if (eventDensity >= 0.0f) {
-            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, eventDensity, red, green, blue);
+            fogManager.expFog(TerrainShaderManager.FogShape.SPHERE, eventDensity, red, green, blue);
             return;
         }
 
@@ -713,7 +729,7 @@ public abstract class MixinCoreEntityRenderer {
                     fogDistance = 5.0f + (this.farPlaneDistance - 5.0f) * (1.0f - (float) duration / 20.0f);
                 }
                 fogManager.linearFog(
-                    TerrainFogManager.FogShape.SPHERE,
+                    TerrainShaderManager.FogShape.SPHERE,
                     fogDistance * 0.25f,
                     fogDistance,
                     red,
@@ -727,7 +743,7 @@ public abstract class MixinCoreEntityRenderer {
         if (this.cloudFog) {
             GlStateManager.setFog(GlStateManager.FogMode.EXP);
             GlStateManager.setFogDensity(0.1f);
-            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, 0.1f, red, green, blue);
+            fogManager.expFog(TerrainShaderManager.FogShape.SPHERE, 0.1f, red, green, blue);
         } else if (blockState.getMaterial() == Material.WATER) {
             GlStateManager.setFog(GlStateManager.FogMode.EXP);
 
@@ -743,9 +759,9 @@ public abstract class MixinCoreEntityRenderer {
                 density = 0.1f;
             }
 
-            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, density, red, green, blue);
+            fogManager.expFog(TerrainShaderManager.FogShape.SPHERE, density, red, green, blue);
         } else if (blockState.getMaterial() == Material.LAVA) {
-            fogManager.expFog(TerrainFogManager.FogShape.SPHERE, 2.0f, red, green, blue);
+            fogManager.expFog(TerrainShaderManager.FogShape.SPHERE, 2.0f, red, green, blue);
         } else {
             float viewDistance = this.farPlaneDistance;
             float start;
@@ -760,7 +776,7 @@ public abstract class MixinCoreEntityRenderer {
                 end = viewDistance;
             }
 
-            fogManager.linearFog(TerrainFogManager.FogShape.SPHERE, start, end, red, green, blue);
+            fogManager.linearFog(TerrainShaderManager.FogShape.SPHERE, start, end, red, green, blue);
 
             ForgeHooksClient.onFogRender(
                 entityRenderer,

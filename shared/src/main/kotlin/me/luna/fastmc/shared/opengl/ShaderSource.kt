@@ -8,36 +8,44 @@ import java.nio.charset.CodingErrorAction
 import java.security.DigestInputStream
 import java.security.MessageDigest
 
-sealed class ShaderSource(val codeSrc: CharSequence) {
+sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
     private val lines by lazy { codeSrc.lines() }
     protected abstract val provider: Provider<*>
+    protected abstract val typeName: String
 
-    class Vertex private constructor(codeSrc: CharSequence) : ShaderSource(codeSrc) {
+    override fun toString(): String {
+        return "[$typeName]$name"
+    }
+
+    class Vertex private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, codeSrc) {
         override val provider: Provider<Vertex> get() = Companion
+        override val typeName = "Vertex"
 
         companion object : Provider<Vertex>("vsh") {
-            override fun newInstance(codeSrc: CharSequence): Vertex {
-                return Vertex(codeSrc)
+            override fun newInstance(name: String, codeSrc: CharSequence): Vertex {
+                return Vertex(name, codeSrc)
             }
         }
     }
 
-    class Fragment private constructor(codeSrc: CharSequence) : ShaderSource(codeSrc) {
+    class Fragment private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, codeSrc) {
         override val provider: Provider<Fragment> get() = Companion
+        override val typeName = "Fragment"
 
         companion object : Provider<Fragment>("fsh") {
-            override fun newInstance(codeSrc: CharSequence): Fragment {
-                return Fragment(codeSrc)
+            override fun newInstance(name: String, codeSrc: CharSequence): Fragment {
+                return Fragment(name, codeSrc)
             }
         }
     }
 
-    class Util private constructor(codeSrc: CharSequence) : ShaderSource(codeSrc) {
+    class Util private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, codeSrc) {
         override val provider: Provider<Util> get() = Companion
+        override val typeName = "Util"
 
         companion object : Provider<Util>("glsl") {
-            override fun newInstance(codeSrc: CharSequence): Util {
-                return Util(codeSrc)
+            override fun newInstance(name: String, codeSrc: CharSequence): Util {
+                return Util(name, codeSrc)
             }
         }
     }
@@ -46,7 +54,7 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
         private val extension = ".$extension"
         private val cacheMap = Object2ObjectOpenHashMap<String, Cache>()
 
-        protected abstract fun newInstance(codeSrc: CharSequence): T
+        protected abstract fun newInstance(name: String, codeSrc: CharSequence): T
 
         operator fun invoke(path: String): T {
             return getCache(path).instance
@@ -64,11 +72,11 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
             return if (defines.stringBuilder.isEmpty()) {
                 cache.instance
             } else {
-                buildWithDefines(cache.lines, defines)
+                buildWithDefines(cache.name, cache.lines, defines)
             }
         }
 
-        fun buildWithDefines(lines: List<CharSequence>, defines: DefineBuilder): T {
+        fun buildWithDefines(name: String, lines: List<CharSequence>, defines: DefineBuilder): T {
             val stringBuilder = StringBuilder()
 
             var inserted = false
@@ -82,7 +90,7 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
                 stringBuilder.appendLine(line)
             }
 
-            return newInstance(stringBuilder)
+            return newInstance(name, stringBuilder)
         }
 
         private fun getCache(path: String): Cache {
@@ -129,14 +137,14 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
                         }
                     }
 
-                source = Cache(lines, hash)
+                source = Cache(path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.')), lines, hash)
                 cacheMap[path] = source
             }
 
             return source
         }
 
-        private inner class Cache(val lines: List<CharSequence>, val hash: MD5Hash) {
+        private inner class Cache(val name: String, val lines: List<CharSequence>, val hash: MD5Hash) {
             val str by lazy {
                 buildString {
                     for (i in lines.indices) {
@@ -144,7 +152,7 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
                     }
                 }
             }
-            val instance by lazy { newInstance(str) }
+            val instance by lazy { newInstance(name, str) }
         }
 
         private companion object {
@@ -191,16 +199,16 @@ sealed class ShaderSource(val codeSrc: CharSequence) {
     }
 
     companion object {
-        inline operator fun <T: ShaderSource> T.invoke(crossinline block: DefineBuilder.() -> Unit): T {
+        inline operator fun <T : ShaderSource> T.invoke(crossinline block: DefineBuilder.() -> Unit): T {
             return this.withDefines(DefineBuilder().apply(block))
         }
 
-        fun <T: ShaderSource> T.withDefines(defines: DefineBuilder): T {
+        fun <T : ShaderSource> T.withDefines(defines: DefineBuilder): T {
             return if (defines.stringBuilder.isEmpty()) {
                 this
             } else {
                 @Suppress("UNCHECKED_CAST")
-                (this.provider as Provider<T>).buildWithDefines(this.lines, defines)
+                (this.provider as Provider<T>).buildWithDefines(this.name, this.lines, defines)
             }
         }
     }

@@ -56,7 +56,6 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer
         RenderSystem.disableCull()
         RenderSystem.enableDepthTest()
         RenderSystem.enableBlend()
-        RenderSystem.enableAlphaTest()
 
         super.render()
 

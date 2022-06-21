@@ -39,7 +39,7 @@ class LargeChestRenderBuilder : SmallChestRenderBuilder() {
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model
-    override val shader: ResourceEntry<ShaderProgram> get() = SmallChestRenderBuilder.shader
+    override val shader: ResourceEntry<InstancingShaderProgram> get() = SmallChestRenderBuilder.shader
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
     private companion object {

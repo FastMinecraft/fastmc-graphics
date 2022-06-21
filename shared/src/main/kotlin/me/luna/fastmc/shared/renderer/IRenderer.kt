@@ -23,10 +23,13 @@ interface IRenderer {
     val cameraBlockY: Int
     val cameraBlockZ: Int
 
+    val screenWidth: Int
+    val screenHeight: Int
+
     val projectionMatrix: Matrix4f
     val modelViewMatrix: Matrix4f
-    val invertedProjectMatrix: Matrix4f
-    val invertedModelViewMatrix: Matrix4f
+    val inverseProjectMatrix: Matrix4f
+    val inverseModelViewMatrix: Matrix4f
 
     val globalUBO: UniformBufferObject
 

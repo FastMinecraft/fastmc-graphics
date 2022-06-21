@@ -71,7 +71,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
     ) {
         lastAccess = System.currentTimeMillis()
 
-        glUseProgramForce(shader.id)
+        shader.bind()
         shader.preRender(projection, modelView, color)
 
         renderInfos.forEach {
@@ -121,7 +121,6 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
     ) {
         fun render(drawShadow: Boolean) {
             texture.bind()
-
             vao.bind()
 
             if (drawShadow) {
@@ -177,8 +176,8 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                 val iboBuffer = buildIboBuffer()
 
                 val vao = VertexArrayObject()
-                val vbo = BufferObject.Immutable(BufferObject.Target.GL_ARRAY_BUFFER)
-                val ibo = BufferObject.Immutable(BufferObject.Target.GL_ELEMENT_ARRAY_BUFFER)
+                val vbo = BufferObject.Immutable()
+                val ibo = BufferObject.Immutable()
 
                 vbo.allocate(vboBuffer, 0)
                 ibo.allocate(iboBuffer, 0)

@@ -22,7 +22,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     private val sectorSize = 1 shl sectorSizePower
     val capacity = sectorSize * sectorCapacity
 
-    private val vbo = BufferObject.Immutable(BufferObject.Target.NONE).apply {
+    private val vbo = BufferObject.Immutable().apply {
         allocate(capacity, GL_MAP_WRITE_BIT or GL_MAP_PERSISTENT_BIT or GL_MAP_COHERENT_BIT)
     }
 

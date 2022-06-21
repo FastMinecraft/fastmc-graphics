@@ -2,16 +2,12 @@ package me.luna.fastmc.shared.opengl
 
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
-import me.luna.fastmc.shared.resource.Resource
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
 open class ShaderProgram(
-    final override val resourceName: String,
     vertex: ShaderSource.Vertex,
     fragment: ShaderSource.Fragment
-) :
-    Resource,
-    IGLObject {
+) : IGLObject, IGLBinding {
     final override val id: Int
 
     private val uniformBuffers = FastObjectArrayList<UniformBufferObject>()
@@ -47,7 +43,7 @@ open class ShaderProgram(
 
         val compiled = glGetShaderi(id, GL_COMPILE_STATUS)
         if (compiled == 0) {
-            FastMcMod.logger.error(glGetShaderInfoLog(id, 1024))
+            System.err.print(glGetShaderInfoLog(id, 1024))
             glDeleteShader(id)
             throw IllegalStateException("Failed to compile shader: $source")
         }
@@ -70,10 +66,6 @@ open class ShaderProgram(
 
     override fun unbind() {
         glUseProgram(0)
-    }
-
-    fun unbindForce() {
-        glUseProgramForce(0)
     }
 
     override fun destroy() {

@@ -37,8 +37,8 @@ public class MixinActiveRenderInfo {
     @Overwrite(remap = false)
     public static void updateRenderInfo(Entity entityplayerIn, boolean p_74583_1_) {
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        Matrix4f invertedModelViewMatrix = worldRenderer.getInvertedModelViewMatrix();
-        Matrix4f invertedProjectMatrix = worldRenderer.getInvertedProjectMatrix();
+        Matrix4f invertedModelViewMatrix = worldRenderer.getInverseModelViewMatrix();
+        Matrix4f invertedProjectMatrix = worldRenderer.getInverseProjectMatrix();
         invertedModelViewMatrix.mul(invertedProjectMatrix, COMBINED_MATRIX);
 
         VECTOR.set(0.0f, 0.0f, 0.0f, 1.0f);

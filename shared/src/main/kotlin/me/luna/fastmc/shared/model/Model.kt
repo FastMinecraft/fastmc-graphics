@@ -15,7 +15,7 @@ abstract class Model(override val resourceName: String, private val textureSizeX
         val builder = ModelBuilder(0, textureSizeX, textureSizeZ)
         builder.buildModel()
 
-        vbo = BufferObject.Immutable(BufferObject.Target.GL_ARRAY_BUFFER)
+        vbo = BufferObject.Immutable()
         modelSize = builder.vertexSize
 
         vbo.allocate(builder.build(), 0)

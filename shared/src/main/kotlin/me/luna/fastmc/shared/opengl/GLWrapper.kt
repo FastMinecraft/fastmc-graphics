@@ -11,6 +11,10 @@ interface IGLWrapper {
     val lightMapUnit: Int
 
     // GL11
+    fun glClear(mask: Int)
+    fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float)
+    fun glClearDepth(depth: Double)
+
     fun glDeleteTextures(texture: Int)
     fun glBindTexture(texture: Int)
     fun glDrawArrays(mode: Int, first: Int, count: Int)
@@ -43,11 +47,16 @@ interface IGLWrapper {
     fun glUseProgram(program: Int)
     fun glGetUniformLocation(program: Int, name: CharSequence): Int
 
+
     // GL30
     fun glBindVertexArray(array: Int)
     fun glDeleteVertexArrays(array: Int)
     fun glGenerateMipmap(target: Int)
     fun glBindBufferBase(target: Int, index: Int, buffer: Int)
+
+    fun glDeleteFramebuffers(framebuffer: Int)
+    fun glBindFramebuffer(target: Int, framebuffer: Int)
+
 
     // GL20
     fun glProgramUniform1i(program: Int, location: Int, v0: Int)
@@ -131,6 +140,30 @@ interface IGLWrapper {
 
     fun glTextureParameteri(texture: Int, pname: Int, param: Int)
     fun glTextureParameterf(texture: Int, pname: Int, param: Float)
+
+    fun glCreateFramebuffers(): Int
+
+    fun glCheckNamedFramebufferStatus(
+        framebuffer: Int,
+        target: Int
+    ): Int
+
+    fun glNamedFramebufferRenderbuffer(
+        framebuffer: Int,
+        attachment: Int,
+        renderbuffertarget: Int,
+        renderbuffer: Int
+    )
+
+    fun glNamedFramebufferTexture(
+        framebuffer: Int,
+        attachment: Int,
+        texture: Int,
+        level: Int
+    )
+
+    fun glNamedFramebufferDrawBuffers(framebuffer: Int, bufs: IntArray)
+
     fun glMapNamedBuffer(
         buffer: Int,
         access: Int,
@@ -194,6 +227,16 @@ const val GL_REPEAT = 0x2901
 
 const val GL_RGBA8 = 0x8058
 
+const val GL_DEPTH_BUFFER_BIT = 0x100
+const val GL_STENCIL_BUFFER_BIT = 0x400
+const val GL_COLOR_BUFFER_BIT = 0x4000
+
+inline fun glClear(mask: Int) = glWrapper.glClear(mask)
+inline fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float) =
+    glWrapper.glClearColor(red, green, blue, alpha)
+
+inline fun glClearDepth(depth: Double) = glWrapper.glClearDepth(depth)
+
 inline fun glDeleteTextures(texture: Int) = glWrapper.glDeleteTextures(texture)
 inline fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
 inline fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArrays(mode, first, count)
@@ -253,6 +296,10 @@ const val GL_COMPRESSED_RGBA = 0x84EE
 
 // GL14
 const val GL_TEXTURE_LOD_BIAS = 0x8501
+
+const val GL_DEPTH_COMPONENT16 = 0x81A5
+const val GL_DEPTH_COMPONENT24 = 0x81A6
+const val GL_DEPTH_COMPONENT32 = 0x81A7
 
 inline fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
     glWrapper.glMultiDrawArrays(mode, first, count)
@@ -322,13 +369,92 @@ const val GL_MAP_FLUSH_EXPLICIT_BIT = 0x10
 const val GL_MAP_UNSYNCHRONIZED_BIT = 0x20
 
 const val GL_R8 = 0x8229
+const val GL_R16 = 0x822A
+const val GL_RG8 = 0x822B
+const val GL_RG16 = 0x822C
+const val GL_R16F = 0x822D
+const val GL_R32F = 0x822E
+const val GL_RG16F = 0x822F
+const val GL_RG32F = 0x8230
+const val GL_R8I = 0x8231
+const val GL_R8UI = 0x8232
+const val GL_R16I = 0x8233
+const val GL_R16UI = 0x8234
+const val GL_R32I = 0x8235
+const val GL_R32UI = 0x8236
+const val GL_RG8I = 0x8237
+const val GL_RG8UI = 0x8238
+const val GL_RG16I = 0x8239
+const val GL_RG16UI = 0x823A
+const val GL_RG32I = 0x823B
+const val GL_RG32UI = 0x823C
+
 const val GL_COMPRESSED_RED = 0x8225
 const val GL_COMPRESSED_RED_RGTC1 = 0x8DBB
 
+const val GL_FRAMEBUFFER = 0x8D40
+const val GL_READ_FRAMEBUFFER = 0x8CA8
+const val GL_DRAW_FRAMEBUFFER = 0x8CA9
+
+const val GL_FRAMEBUFFER_COMPLETE = 0x8CD5
+const val GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT = 0x8CD6
+const val GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT = 0x8CD7
+const val GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER = 0x8CDB
+const val GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER = 0x8CDC
+const val GL_FRAMEBUFFER_UNSUPPORTED = 0x8CDD
+const val GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE = 0x8D56
+const val GL_FRAMEBUFFER_UNDEFINED = 0x8219
+
+const val GL_COLOR_ATTACHMENT0 = 0x8CE0
+const val GL_COLOR_ATTACHMENT1 = 0x8CE1
+const val GL_COLOR_ATTACHMENT2 = 0x8CE2
+const val GL_COLOR_ATTACHMENT3 = 0x8CE3
+const val GL_COLOR_ATTACHMENT4 = 0x8CE4
+const val GL_COLOR_ATTACHMENT5 = 0x8CE5
+const val GL_COLOR_ATTACHMENT6 = 0x8CE6
+const val GL_COLOR_ATTACHMENT7 = 0x8CE7
+const val GL_COLOR_ATTACHMENT8 = 0x8CE8
+const val GL_COLOR_ATTACHMENT9 = 0x8CE9
+const val GL_COLOR_ATTACHMENT10 = 0x8CEA
+const val GL_COLOR_ATTACHMENT11 = 0x8CEB
+const val GL_COLOR_ATTACHMENT12 = 0x8CEC
+const val GL_COLOR_ATTACHMENT13 = 0x8CED
+const val GL_COLOR_ATTACHMENT14 = 0x8CEE
+const val GL_COLOR_ATTACHMENT15 = 0x8CEF
+const val GL_COLOR_ATTACHMENT16 = 0x8CF0
+const val GL_COLOR_ATTACHMENT17 = 0x8CF1
+const val GL_COLOR_ATTACHMENT18 = 0x8CF2
+const val GL_COLOR_ATTACHMENT19 = 0x8CF3
+const val GL_COLOR_ATTACHMENT20 = 0x8CF4
+const val GL_COLOR_ATTACHMENT21 = 0x8CF5
+const val GL_COLOR_ATTACHMENT22 = 0x8CF6
+const val GL_COLOR_ATTACHMENT23 = 0x8CF7
+const val GL_COLOR_ATTACHMENT24 = 0x8CF8
+const val GL_COLOR_ATTACHMENT25 = 0x8CF9
+const val GL_COLOR_ATTACHMENT26 = 0x8CFA
+const val GL_COLOR_ATTACHMENT27 = 0x8CFB
+const val GL_COLOR_ATTACHMENT28 = 0x8CFC
+const val GL_COLOR_ATTACHMENT29 = 0x8CFD
+const val GL_COLOR_ATTACHMENT30 = 0x8CFE
+const val GL_COLOR_ATTACHMENT31 = 0x8CFF
+
+const val GL_DEPTH_COMPONENT32F = 0x8CAC
+const val GL_DEPTH32F_STENCIL8 = 0x8CAD
+
+const val GL_DEPTH_ATTACHMENT = 0x8D00
+const val GL_STENCIL_ATTACHMENT = 0x8D20
+const val GL_DEPTH_STENCIL_ATTACHMENT = 0x821A
+
+const val GL_RENDERBUFFER = 0x8D41
+
 inline fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
+
 inline fun glDeleteVertexArrays(array: Int) = glWrapper.glDeleteVertexArrays(array)
 inline fun glBindVertexArray(array: Int) = glWrapper.glBindVertexArray(array)
 inline fun glBindBufferBase(target: Int, index: Int, buffer: Int) = glWrapper.glBindBufferBase(target, index, buffer)
+
+inline fun glDeleteFramebuffers(framebuffer: Int) = glWrapper.glDeleteFramebuffers(framebuffer)
+inline fun glBindFramebuffer(target: Int, framebuffer: Int) = glWrapper.glBindFramebuffer(target, framebuffer)
 
 
 // GL31
@@ -481,6 +607,30 @@ inline fun glTextureParameteri(texture: Int, pname: Int, param: Int) =
 
 inline fun glTextureParameterf(texture: Int, pname: Int, param: Float) =
     glWrapper.glTextureParameterf(texture, pname, param)
+
+inline fun glCreateFramebuffers(): Int = glWrapper.glCreateFramebuffers()
+
+inline fun glCheckNamedFramebufferStatus(
+    framebuffer: Int,
+    target: Int
+): Int = glWrapper.glCheckNamedFramebufferStatus(framebuffer, target)
+
+inline fun glNamedFramebufferRenderbuffer(
+    framebuffer: Int,
+    attachment: Int,
+    renderbuffertarget: Int,
+    renderbuffer: Int
+) = glWrapper.glNamedFramebufferRenderbuffer(framebuffer, attachment, renderbuffertarget, renderbuffer)
+
+inline fun glNamedFramebufferTexture(
+    framebuffer: Int,
+    attachment: Int,
+    texture: Int,
+    level: Int
+) = glWrapper.glNamedFramebufferTexture(framebuffer, attachment, texture, level)
+
+inline fun glNamedFramebufferDrawBuffers(framebuffer: Int, bufs: IntArray) =
+    glWrapper.glNamedFramebufferDrawBuffers(framebuffer, bufs)
 
 inline fun glMapNamedBuffer(
     buffer: Int,

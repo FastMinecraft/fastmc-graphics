@@ -3,13 +3,16 @@
 layout(std140) uniform Global {
     mat4 projection;
     mat4 modelView;
+    mat4 inverseProjection;
+    mat4 inverseModelView;
+    vec2 screenResolution;
     float partialTicks;
 };
 
-layout(std140) uniform TerrainParameters {
-    vec3 fogColor;
+layout(std140) uniform FogParameters {
+    vec4 fogColor;
     vec2 fogParams;
-} terrainParameters;
+} fogParameters;
 
 uniform vec3 regionOffset;
 
@@ -19,7 +22,7 @@ layout(location = 2) in vec2 lightMapUV;
 layout(location = 3) in vec3 color;
 
 out FragData {
-    vec3 color;
+    vec4 color;
     vec2 uv;
     vec2 lightMapUV;
     float fogAmount;
@@ -37,7 +40,7 @@ void main() {
     vec3 coord = fma(pos, coordConvert, ((gl_BaseInstance >> shiftVec) & 1023) + regionOffset);
     gl_Position = projection * modelView * vec4(coord, 1.0);
 
-    fragData.color = color;
+    fragData.color = vec4(color, 1.0);
     fragData.uv = uv;
     fragData.lightMapUV = lightMapUV * 0.00390625;
 
@@ -48,11 +51,11 @@ void main() {
     #endif
 
     #if FOG_TYPE == FOG_TYPE_LINEAR
-    fragData.fogAmount = clamp(fma(terrainParameters.fogParams.x, fogDistance, terrainParameters.fogParams.y), 0.0, 1.0);
+    fragData.fogAmount = clamp(fma(fogParameters.fogParams.x, fogDistance, fogParameters.fogParams.y), 0.0, 1.0);
     #elif FOG_TYPE == FOG_TYPE_EXP
-    fragData.fogAmount = pow(euler, -terrainParameters.fogParams.x * fogDistance);
+    fragData.fogAmount = pow(euler, -fogParameters.fogParams.x * fogDistance);
     #else
-    float exponent = terrainParameters.fogParams.x * fogDistance;
+    float exponent = fogParameters.fogParams.x * fogDistance;
     fragData.fogAmount = pow(euler, -(exponent * exponent));
     #endif
 }

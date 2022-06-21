@@ -31,7 +31,7 @@ abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(vertexSize: Int) 
             }
         }
 
-        fun shader(name: String): ResourceEntry<ShaderProgram> {
+        fun shader(name: String): ResourceEntry<InstancingShaderProgram> {
             return ResourceEntry("tileEntity/$name") {
                 it.entityShader
             }

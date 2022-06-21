@@ -80,7 +80,7 @@ class RenderRegion(
     }
 
     class LayerBatch {
-        private val serverBuffer = BufferObject.Immutable(BufferObject.Target.GL_ELEMENT_ARRAY_BUFFER).apply {
+        private val serverBuffer = BufferObject.Immutable().apply {
             allocate(4096 * 20, GL_DYNAMIC_STORAGE_BIT)
         }
 

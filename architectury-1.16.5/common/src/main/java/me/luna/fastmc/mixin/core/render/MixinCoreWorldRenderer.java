@@ -8,10 +8,11 @@ import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.mixin.accessor.AccessorBackgroundRenderer;
+import me.luna.fastmc.mixin.accessor.AccessorLightmapTextureManager;
 import me.luna.fastmc.shared.renderer.WorldRenderer;
 import me.luna.fastmc.shared.terrain.RenderChunk;
-import me.luna.fastmc.shared.terrain.TerrainFogManager;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
+import me.luna.fastmc.shared.terrain.TerrainShaderManager;
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
@@ -37,7 +38,9 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.tag.FluidTags;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
@@ -321,14 +324,19 @@ public abstract class MixinCoreWorldRenderer {
         double renderPosZ = cameraPos.getZ();
         Matrix4f modelView = matrices.peek().getModel();
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        worldRenderer.updateScreenSize(
+            client.getWindow().getFramebufferWidth(),
+            client.getWindow().getFramebufferHeight()
+        );
         TerrainRenderer terrainRenderer = worldRenderer.getTerrainRenderer();
         org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
         org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
-        worldRenderer.updateMatrix(projection1, modelView1, tickDelta);
+        worldRenderer.updateMatrix(projection1, modelView1);
         worldRenderer.updateCameraPos(renderPosX, renderPosY, renderPosZ);
         worldRenderer.updateRenderPos(renderPosX, renderPosY, renderPosZ);
         worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
         worldRenderer.updateFrustum();
+        worldRenderer.updateGlobalUBO(tickDelta);
 
         profiler.swap("updateTerrain");
         terrainRenderer.update();
@@ -548,14 +556,13 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.pushMatrix();
         RenderSystem.multMatrix(matrices.peek().getModel());
         if (this.client.options.getCloudRenderMode() != CloudRenderMode.OFF) {
+            profiler.swap("clouds");
             if (this.transparencyShader != null) {
                 this.cloudsFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
                 RenderPhase.CLOUDS_TARGET.startDrawing();
-                profiler.swap("clouds");
                 this.renderClouds(matrices, tickDelta, renderPosX, renderPosY, renderPosZ);
                 RenderPhase.CLOUDS_TARGET.endDrawing();
             } else {
-                profiler.swap("clouds");
                 this.renderClouds(matrices, tickDelta, renderPosX, renderPosY, renderPosZ);
             }
         }
@@ -584,57 +591,55 @@ public abstract class MixinCoreWorldRenderer {
         BackgroundRenderer.method_23792();
     }
 
-    @SuppressWarnings("deprecation")
     private void renderTerrainPass1(LightmapTextureManager lightmapTextureManager) {
-        lightmapTextureManager.enable();
+        this.client.getProfiler().push("solid");
 
-        AbstractTexture blockTexture = getTexture();
+        TerrainRenderer terrainRenderer = getTerrainRenderer();
+        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+
+        AbstractTexture blockTexture = getTexture(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
+        int lightMapTexture = getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
+        glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
+
         blockTexture.bindTexture();
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL_LEQUAL);
+        //noinspection deprecation
         RenderSystem.disableAlphaTest();
 
-        MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
-
-        TerrainRenderer terrainRenderer = getTerrainRenderer();
-        TerrainFogManager fogManager = terrainRenderer.getFogManager();
-
-        TerrainFogManager.ShaderProgram shader = fogManager.getShader();
+        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
         shader.bind();
 
         blockTexture.setFilter(false, true);
-        this.client.getProfiler().push("solid");
         terrainRenderer.renderLayer(0);
 
-        fogManager.alphaTest(true);
-        shader = fogManager.getShader();
+        shaderManager.alphaTest(true);
+        shader = shaderManager.getShader();
         shader.bind();
 
         this.client.getProfiler().swap("cutoutMipped");
         terrainRenderer.renderLayer(1);
 
-        blockTexture.setFilter(false, false);
         this.client.getProfiler().swap("cutout");
+        blockTexture.setFilter(false, false);
         terrainRenderer.renderLayer(2);
-        this.client.getProfiler().pop();
         blockTexture.setFilter(false, true);
-
-        fogManager.alphaTest(false);
+        shaderManager.alphaTest(false);
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
-        shader.unbind();
 
-        lightmapTextureManager.disable();
+        this.client.getProfiler().pop();
     }
 
     private void renderTerrainPass2(LightmapTextureManager lightmapTextureManager) {
+        this.client.getProfiler().push("translucent");
         lightmapTextureManager.enable();
 
-        AbstractTexture blockTexture = getTexture();
+        AbstractTexture blockTexture = getTexture(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
         blockTexture.bindTexture();
         RenderSystem.enableCull();
         RenderSystem.enableBlend();
@@ -658,13 +663,12 @@ public abstract class MixinCoreWorldRenderer {
         }
 
         TerrainRenderer terrainRenderer = getTerrainRenderer();
-        TerrainFogManager fogManager = terrainRenderer.getFogManager();
+        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
 
-        TerrainFogManager.ShaderProgram shader = fogManager.getShader();
+        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
         shader.bind();
 
         blockTexture.setFilter(false, true);
-        this.client.getProfiler().push("translucent");
         terrainRenderer.renderLayer(3);
 
         if (usingFbo) {
@@ -681,12 +685,11 @@ public abstract class MixinCoreWorldRenderer {
         lightmapTextureManager.disable();
     }
 
-    @SuppressWarnings("deprecation")
-    private AbstractTexture getTexture() {
-        AbstractTexture texture = textureManager.getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+    private AbstractTexture getTexture(Identifier identifier) {
+        AbstractTexture texture = textureManager.getTexture(identifier);
         if (texture == null) {
-            texture = new ResourceTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
-            textureManager.registerTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE, texture);
+            texture = new ResourceTexture(identifier);
+            textureManager.registerTexture(identifier, texture);
         }
 
         return texture;
@@ -825,7 +828,7 @@ public abstract class MixinCoreWorldRenderer {
 
         FluidState fluidState = camera.getSubmergedFluidState();
         Entity entity = camera.getFocusedEntity();
-        TerrainFogManager fogManager = getTerrainRenderer().getFogManager();
+        TerrainShaderManager fogManager = getTerrainRenderer().getShaderManager();
 
         if (fluidState.isIn(FluidTags.WATER)) {
             float density = 0.05F;
@@ -839,7 +842,7 @@ public abstract class MixinCoreWorldRenderer {
                 }
             }
 
-            fogManager.exp2Fog(TerrainFogManager.FogShape.SPHERE, density, red, green, blue);
+            fogManager.exp2Fog(TerrainShaderManager.FogShape.SPHERE, density, red, green, blue);
         } else {
             float start;
             float end;
@@ -864,7 +867,7 @@ public abstract class MixinCoreWorldRenderer {
                 end = viewDistance;
             }
 
-            fogManager.linearFog(TerrainFogManager.FogShape.SPHERE, start, end, red, green, blue);
+            fogManager.linearFog(TerrainShaderManager.FogShape.SPHERE, start, end, red, green, blue);
         }
     }
 

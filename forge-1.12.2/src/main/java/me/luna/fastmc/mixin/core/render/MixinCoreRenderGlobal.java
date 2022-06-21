@@ -40,8 +40,6 @@ import java.util.Set;
 
 @Mixin(value = RenderGlobal.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreRenderGlobal {
-    private final FastObjectArrayList<Entity> outlineRenderEntityList = new FastObjectArrayList<>();
-    private final FastObjectArrayList<Entity> multiPassRenderEntityList = new FastObjectArrayList<>();
     @Shadow
     IRenderChunkFactory renderChunkFactory;
     @Shadow
@@ -116,6 +114,9 @@ public abstract class MixinCoreRenderGlobal {
 
     @Shadow
     protected abstract void cleanupDamagedBlocks(Iterator<DestroyBlockProgress> iteratorIn);
+
+    private final FastObjectArrayList<Entity> outlineRenderEntityList = new FastObjectArrayList<>();
+    private final FastObjectArrayList<Entity> multiPassRenderEntityList = new FastObjectArrayList<>();
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void Inject$init$RETURN(Minecraft p_i1249_1_, CallbackInfo ci) {

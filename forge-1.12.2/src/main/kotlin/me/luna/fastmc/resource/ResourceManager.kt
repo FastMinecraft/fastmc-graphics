@@ -7,13 +7,11 @@ import me.luna.fastmc.shared.model.tileentity.ModelBed
 import me.luna.fastmc.shared.model.tileentity.ModelChest
 import me.luna.fastmc.shared.model.tileentity.ModelLargeChest
 import me.luna.fastmc.shared.model.tileentity.ModelShulkerBox
-import me.luna.fastmc.shared.opengl.ShaderProgram
 import me.luna.fastmc.shared.opengl.ShaderSource
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.ResourceProvider
 import me.luna.fastmc.shared.texture.ITexture
-import net.minecraft.client.Minecraft
 import net.minecraft.util.ResourceLocation
 
 class ResourceManager(resourceManager: net.minecraft.client.resources.IResourceManager) : IResourceManager {
@@ -26,43 +24,39 @@ class ResourceManager(resourceManager: net.minecraft.client.resources.IResourceM
         ModelShulkerBox().init(),
     )
 
-    override val entityShader: ResourceProvider<AbstractRenderBuilder.ShaderProgram> = ResourceProvider(
-        AbstractRenderBuilder.ShaderProgram(
+    override val entityShader: ResourceProvider<AbstractRenderBuilder.InstancingShaderProgram> = ResourceProvider(
+        AbstractRenderBuilder.InstancingShaderProgram(
             "entity/Cow",
             ShaderSource.Vertex("/assets/shaders/entity/Cow.vsh"),
             ShaderSource.Fragment("/assets/shaders/entity/Default.fsh")
         ),
 
-        AbstractRenderBuilder.ShaderProgram(
+        AbstractRenderBuilder.InstancingShaderProgram(
             "tileEntity/EnderChest",
             ShaderSource.Vertex("/assets/shaders/tileentity/EnderChest.vsh"),
             ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         ),
-        AbstractRenderBuilder.ShaderProgram(
+        AbstractRenderBuilder.InstancingShaderProgram(
             "tileEntity/Bed",
             ShaderSource.Vertex("/assets/shaders/tileentity/Bed.vsh"),
             ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         ),
-        AbstractRenderBuilder.ShaderProgram(
+        AbstractRenderBuilder.InstancingShaderProgram(
             "tileEntity/ShulkerBox",
             ShaderSource.Vertex("/assets/shaders/tileentity/ShulkerBox.vsh"),
             ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         ),
-        AbstractRenderBuilder.ShaderProgram(
+        AbstractRenderBuilder.InstancingShaderProgram(
             "tileEntity/Chest",
             ShaderSource.Vertex("/assets/shaders/tileentity/Chest.vsh"),
             ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
         )
     )
 
-    override val shaderProgram: ResourceProvider<ShaderProgram> = ResourceProvider(
-
-    )
-
     override val texture: ResourceProvider<ITexture> = ResourceProvider(
         cowTexture(resourceManager),
 
-        ResourceLocationTexture( "tileEntity/EnderChest", ResourceLocation("textures/entity/chest/ender.png")),
+        ResourceLocationTexture("tileEntity/EnderChest", ResourceLocation("textures/entity/chest/ender.png")),
         bedTexture(resourceManager),
         shulkerTexture(resourceManager),
         smallChestTexture(resourceManager),

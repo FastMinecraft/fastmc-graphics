@@ -4,8 +4,12 @@
 layout(std140) uniform Global {
     mat4 projection;
     mat4 modelView;
+    mat4 inverseProjection;
+    mat4 inverseModelView;
+    vec2 screenResolution;
     float partialTicks;
 };
+
 
 uniform vec3 offset;
 

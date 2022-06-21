@@ -2,7 +2,7 @@ package me.luna.fastmc.shared.opengl
 
 import java.nio.ByteBuffer
 
-sealed class BufferObject(val target: Target) : IGLObject {
+sealed class BufferObject : IGLObject, IGLTargetBinding {
     override val id = glCreateBuffers()
 
     var size = 0; private set
@@ -15,14 +15,6 @@ sealed class BufferObject(val target: Target) : IGLObject {
         size = buffer.remaining()
     }
 
-    override fun bind() {
-        target.bind(id)
-    }
-
-    override fun unbind() {
-        target.unbind()
-    }
-
     fun invalidate() {
         glInvalidateBufferData(id)
     }
@@ -31,7 +23,15 @@ sealed class BufferObject(val target: Target) : IGLObject {
         glDeleteBuffers(id)
     }
 
-    class Immutable(target: Target) : BufferObject(target) {
+    override fun bind(target: Int) {
+        glBindBuffer(target, id)
+    }
+
+    override fun unbind(target: Int) {
+        glBindBuffer(target, 0)
+    }
+
+    class Immutable : BufferObject() {
         override fun allocate(size: Int, flags: Int) {
             super.allocate(size, flags)
             glNamedBufferStorage(id, size.toLong(), flags)
@@ -43,7 +43,7 @@ sealed class BufferObject(val target: Target) : IGLObject {
         }
     }
 
-    class Mutable(target: Target) : BufferObject(target) {
+    class Mutable : BufferObject() {
         override fun allocate(size: Int, flags: Int) {
             super.allocate(size, flags)
             glNamedBufferData(id, size.toLong(), flags)
@@ -52,30 +52,6 @@ sealed class BufferObject(val target: Target) : IGLObject {
         override fun allocate(buffer: ByteBuffer, flags: Int) {
             super.allocate(buffer, flags)
             glNamedBufferData(id, buffer, flags)
-        }
-    }
-
-    enum class Target(val glEnum: Int) {
-        NONE(0) {
-            override fun bind(id: Int) {
-
-            }
-
-            override fun unbind() {
-
-            }
-        },
-        GL_ARRAY_BUFFER(me.luna.fastmc.shared.opengl.GL_ARRAY_BUFFER),
-        GL_ELEMENT_ARRAY_BUFFER(me.luna.fastmc.shared.opengl.GL_ELEMENT_ARRAY_BUFFER),
-        GL_UNIFORM_BUFFER(me.luna.fastmc.shared.opengl.GL_UNIFORM_BUFFER),
-        GL_DRAW_INDIRECT_BUFFER(me.luna.fastmc.shared.opengl.GL_DRAW_INDIRECT_BUFFER);
-
-        open fun bind(id: Int) {
-            glBindBuffer(glEnum, id)
-        }
-
-        open fun unbind() {
-            glBindBuffer(glEnum, 0)
         }
     }
 }
