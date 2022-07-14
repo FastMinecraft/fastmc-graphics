@@ -44,6 +44,13 @@ open class ShaderProgram(
         val compiled = glGetShaderi(id, GL_COMPILE_STATUS)
         if (compiled == 0) {
             System.err.print(glGetShaderInfoLog(id, 1024))
+            System.err.print("Shader source:\n")
+            source.codeSrc.lines().forEachIndexed { i, it ->
+                System.err.print(i + 1)
+                System.err.print('\t')
+                System.err.print(it)
+                System.err.print('\n')
+            }
             glDeleteShader(id)
             throw IllegalStateException("Failed to compile shader: $source")
         }
