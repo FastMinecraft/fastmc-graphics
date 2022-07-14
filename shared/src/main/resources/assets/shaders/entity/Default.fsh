@@ -1,7 +1,7 @@
-#version 460
+#version 460 core
 
 uniform sampler2D lightMapTexture;
-uniform sampler2D texture;
+uniform sampler2D entityTexture;
 
 in vec2 uv;
 flat in vec3 normal;
@@ -17,7 +17,7 @@ float calcDiffuse(vec3 lightPos) {
 }
 
 void main() {
-    fragColor = texture(texture, uv);
+    fragColor = texture(entityTexture, uv);
 
     vec3 lightColor = texture(lightMapTexture, lightMapUV).rgb;
     float diffuse = calcDiffuse(lightPos1) + calcDiffuse(lightPos2);

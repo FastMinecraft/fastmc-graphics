@@ -1,6 +1,6 @@
 #version 460
 
-layout(binding = 0) uniform sampler2D texture;
+layout(binding = 0) uniform sampler2D tileEntityTexture;
 layout(binding = LIGHT_MAP_UNIT) uniform sampler2D lightMapTexture;
 
 in vec2 uv;
@@ -17,7 +17,7 @@ float calcDiffuse(vec3 lightPos) {
 }
 
 void main() {
-    fragColor = texture(texture, uv);
+    fragColor = texture(tileEntityTexture, uv);
     #ifdef ALPHA_TEST
     if (fragColor.a <= 0.5) discard;
     #endif
