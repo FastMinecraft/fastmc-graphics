@@ -37,7 +37,7 @@ const vec3 coordConvert = vec3(2.51773861295491E-4);
 
 void main() {
     // gl_BaseInstance exploit
-    vec3 coord = fma(pos, coordConvert, ((gl_BaseInstance >> shiftVec) & 1023) + regionOffset);
+    vec3 coord = fma(pos, coordConvert, ((ivec3(gl_BaseInstance) >> shiftVec) & 1023) + regionOffset);
     gl_Position = projection * modelView * vec4(coord, 1.0);
 
     fragData.color = vec4(color, 1.0);

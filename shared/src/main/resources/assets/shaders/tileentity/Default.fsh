@@ -17,12 +17,12 @@ float calcDiffuse(vec3 lightPos) {
 }
 
 void main() {
-    fragColor = texture2D(texture, uv);
+    fragColor = texture(texture, uv);
     #ifdef ALPHA_TEST
     if (fragColor.a <= 0.5) discard;
     #endif
 
-    vec3 lightColor = texture2D(lightMapTexture, lightMapUV).rgb;
+    vec3 lightColor = texture(lightMapTexture, lightMapUV).rgb;
     float diffuse = calcDiffuse(lightPos1) + calcDiffuse(lightPos2);
     float lightness = min(diffuse * 0.6 + 0.4, 1.0);
 
