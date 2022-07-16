@@ -29,6 +29,14 @@ class RenderChunk(
     inline val originY get() = chunkY shl 4
     inline val originZ get() = chunkZ shl 4
 
+    inline val minX get() = originX
+    inline val minY get() = originY
+    inline val minZ get() = originZ
+
+    inline val maxX get() = originX + 16
+    inline val maxY get() = originY + 16
+    inline val maxZ get() = originZ + 16
+
     @JvmField
     val frustumCull: FrustumCull = FrustumCullImpl()
 
@@ -88,7 +96,7 @@ class RenderChunk(
     fun onUpdate() {
         isEmpty = true
         for (layer in layers) {
-            if (layer.indexCount != 0) {
+            if (layer.faceData != null) {
                 isEmpty = false
                 break
             }
@@ -119,6 +127,7 @@ class RenderChunk(
                 val layer = layers[i]
                 layer.vertexRegion = null
                 layer.indexRegion = null
+                layer.faceData = null
             }
 
             tileEntityList = null
@@ -163,38 +172,21 @@ class RenderChunk(
     class Layer {
         var vertexRegion: RenderBufferPool.Region? = null
             set(value) {
-                if (value != null) {
-                    vertexOffset = value.offset / 16
-                }
-
                 val temp = field
                 if (temp != null && temp !== value) {
                     temp.release()
                 }
-
                 field = value
             }
-
         var indexRegion: RenderBufferPool.Region? = null
             set(value) {
-                if (value != null) {
-                    indexOffset = value.offset / 4
-                    indexCount = value.length / 4
-                }
-
                 val temp = field
                 if (temp != null && temp !== value) {
                     temp.release()
                 }
-
                 field = value
             }
-
-        var vertexOffset = 0; private set
-        var indexOffset = 0; private set
-        var indexCount = 0; private set
-
-        val isEmpty get() = vertexRegion == null
+        var faceData: FaceData? = null
     }
 
     private inner class FrustumCullImpl : FrustumCull(renderer) {

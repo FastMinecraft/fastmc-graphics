@@ -21,19 +21,29 @@ abstract class ContextProvider {
     private var bufferPool0: MappedBufferPool? = null
     var rebuildContextPool: ArrayPriorityObjectPool<ChunkBuilderTask, RebuildContext>? = null; private set
     var sortContextPool: ArrayPriorityObjectPool<ChunkBuilderTask, SortContext>? = null; private set
-    var bufferContextPool: PriorityObjectPool<ChunkBuilderTask, BufferContext>? = null; private set
 
     val bufferPool get() = bufferPool0!!
+    private val objectPool = ConcurrentObjectPool { BufferContextImpl() }
+
+    private inner class BufferContextImpl : BufferContext() {
+        public override val region0: AtomicReference<MappedBufferPool.Region?>
+            get() = super.region0
+
+        public override fun release0() {
+            super.release0()
+            objectPool.put(this)
+        }
+    }
 
     protected fun postConstruct() {
         bufferPool0 = MappedBufferPool(
-            (4 * 1024).countTrailingZeroBits(),
-            max(ParallelUtils.CPU_THREADS * 1024, 4096),
-            ParallelUtils.CPU_THREADS * 128
+            (8 * 1024).countTrailingZeroBits(),
+            max(ParallelUtils.CPU_THREADS * 512, 2048),
+            ParallelUtils.CPU_THREADS * 256
         )
 
         rebuildContextPool = ArrayPriorityObjectPool(
-            ParallelUtils.CPU_THREADS * 4,
+            ParallelUtils.CPU_THREADS * 8,
             ChunkBuilderTask.unsynchronizedComparator()
         ) {
             newRebuildContext(it)
@@ -49,40 +59,6 @@ abstract class ContextProvider {
                 }
             }
         }
-
-        bufferContextPool = PriorityObjectPool(
-            object : SuspendObjectPool<BufferContext> {
-                private val objectPool = ConcurrentObjectPool { BufferContextImpl() }
-
-                override suspend fun get(): BufferContext {
-                    val context = objectPool.get()
-                    context.region0.set(bufferPool0!!.allocate())
-                    return context
-                }
-
-                override fun tryGet(): BufferContext? {
-                    val region = bufferPool0!!.tryAllocate() ?: return null
-                    val context = objectPool.get()
-                    context.region0.set(region)
-                    return context
-                }
-
-                override fun put(element: BufferContext) {
-                    objectPool.put(element as BufferContextImpl)
-                }
-
-                inner class BufferContextImpl : BufferContext() {
-                    public override val region0: AtomicReference<MappedBufferPool.Region?>
-                        get() = super.region0
-
-                    public override fun release0() {
-                        super.release0()
-                        put(this)
-                    }
-                }
-            },
-            ChunkBuilderTask.unsynchronizedComparator()
-        )
     }
 
     suspend inline fun getRebuildContext(task: ChunkBuilderTask): RebuildContext {
@@ -97,8 +73,10 @@ abstract class ContextProvider {
         return context
     }
 
-    suspend inline fun getBufferContext(task: ChunkBuilderTask): BufferContext {
-        val context = withContext(NonCancellable) { bufferContextPool!!.get(task) }
+    fun getBufferContext(task: ChunkBuilderTask): BufferContext {
+        val region = bufferPool.allocate(task)
+        val context = objectPool.get()
+        context.region0.set(region)
         context.init(task)
         return context
     }
@@ -161,12 +139,12 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     var renderPosZ = 0.0f
 
     var activeLayer = 0
-    val translucentChunkVertexBuilder = TranslucentChunkVertexBuilder()
-    val layerVertexBuilderArray = Array(layerCount) {
-        if (it == 3) translucentChunkVertexBuilder else ChunkVertexBuilder()
+    val translucentVertexBuilder = TranslucentVertexBuilder()
+    val vertexBuilderArray = Array(layerCount) {
+        if (it == 3) translucentVertexBuilder else OpaqueTerrainVertexBuilder()
     }
-    val layerVertexBuilder: ChunkVertexBuilder
-        get() = layerVertexBuilderArray[activeLayer]
+    val activeVertexBuilder: TerrainVertexBuilder
+        get() = vertexBuilderArray[activeLayer]
 
     @JvmField
     val random = Splitmix64Random(69420)
@@ -198,8 +176,8 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     abstract val worldSnapshot: WorldSnapshot112<*, *, *>
     abstract val blockRenderer: BlockRenderer<*, *>
 
-    suspend inline fun setActiveLayer(task: ChunkBuilderTask, index: Int) {
-        layerVertexBuilderArray[index].initBuffer(task, task.renderer.contextProvider)
+    inline fun setActiveLayer(task: ChunkBuilderTask, index: Int) {
+        vertexBuilderArray[index].initBuffer(task)
         activeLayer = index
     }
 
@@ -224,8 +202,8 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     }
 
     override fun release0() {
-        for (i in layerVertexBuilderArray.indices) {
-            layerVertexBuilderArray[i].clearBuffer()
+        for (i in vertexBuilderArray.indices) {
+            vertexBuilderArray[i].clearBuffer()
         }
 
         tileEntityList.clear()

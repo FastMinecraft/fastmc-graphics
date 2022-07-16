@@ -147,21 +147,21 @@ abstract class ChunkOcclusionData private constructor(private val hash: Int) {
                     var bit = 0
 
                     if (y == 0) {
-                        bit = bit or Direction.DOWN.bit
+                        bit = bit or Direction.B_DOWN
                     } else if (y == 15) {
-                        bit = bit or Direction.UP.bit
+                        bit = bit or Direction.B_UP
                     }
 
                     if (z == 0) {
-                        bit = bit or Direction.NORTH.bit
+                        bit = bit or Direction.B_NORTH
                     } else if (z == 15) {
-                        bit = bit or Direction.SOUTH.bit
+                        bit = bit or Direction.B_SOUTH
                     }
 
                     if (x == 0) {
-                        bit = bit or Direction.WEST.bit
+                        bit = bit or Direction.B_WEST
                     } else if (x == 15) {
-                        bit = bit or Direction.EAST.bit
+                        bit = bit or Direction.B_EAST
                     }
 
                     EDGE_DIRECTION_BIT[i] = bit.toByte()

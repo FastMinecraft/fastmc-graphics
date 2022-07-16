@@ -12,6 +12,7 @@ subprojects {
         compileKotlin {
             source(sharedProject.kotlin.sourceSets["main"].kotlin)
         }
+        sharedProject.tasks.classes.get().dependsOn(classes)
     }
 }
 

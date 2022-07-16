@@ -2,6 +2,7 @@ package me.luna.fastmc.shared.terrain
 
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
+import me.luna.fastmc.shared.util.SoftReferenceObjectPool
 import me.luna.fastmc.shared.util.allocateByte
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import org.joml.FrustumIntersection
@@ -33,6 +34,9 @@ class RenderRegion(
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(storage.regionChunkCount), 0)
 
     @JvmField
+    val tempVisibleBits = IntArray(storage.regionChunkCount)
+
+    @JvmField
     val vertexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())
 
     @JvmField
@@ -42,7 +46,7 @@ class RenderRegion(
     private var ibo = indexBufferPool.bufferObject
 
     @JvmField
-    val vao = VertexArrayObject().apply {
+    var vao = VertexArrayObject().apply {
         attachVbo(vbo, TerrainRenderer.VERTEX_ATTRIBUTE)
         attachIbo(ibo)
     }
@@ -51,10 +55,14 @@ class RenderRegion(
         val newVbo = vertexBufferPool.bufferObject
         val newIbo = indexBufferPool.bufferObject
         if (vbo !== newVbo || ibo !== newIbo) {
-            vao.clear()
-            vao.attachVbo(newVbo, TerrainRenderer.VERTEX_ATTRIBUTE)
-            vao.attachIbo(newIbo)
             vbo = newVbo
+            ibo = newIbo
+
+            vao.destroyVao()
+            vao = VertexArrayObject().apply {
+                attachVbo(newVbo, TerrainRenderer.VERTEX_ATTRIBUTE)
+                attachIbo(newIbo)
+            }
         }
     }
 
@@ -81,11 +89,10 @@ class RenderRegion(
 
     class LayerBatch {
         private val serverBuffer = BufferObject.Immutable().apply {
-            allocate(4096 * 20, GL_DYNAMIC_STORAGE_BIT)
+            allocate(4096 * 63 * 20, GL_DYNAMIC_STORAGE_BIT)
         }
 
-        private val clientBuffer = allocateByte(serverBuffer.size)
-        private val clientBufferAddress = clientBuffer.address
+        private val clientBuffer by lazy { clientBufferPool.get() }
         private var index = 0
         private var isDirty = false
 
@@ -100,12 +107,12 @@ class RenderRegion(
         }
 
         fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
-            val address = clientBufferAddress + index
+            val address = clientBuffer.address + index
 
-            UNSAFE.putInt(address, indexCount)
+            UNSAFE.putInt(address, indexCount / 4)
             UNSAFE.putInt(address + 4L, 1)
-            UNSAFE.putInt(address + 8L, indexOffset)
-            UNSAFE.putInt(address + 12L, vertexOffset)
+            UNSAFE.putInt(address + 8L, indexOffset / 4)
+            UNSAFE.putInt(address + 12L, vertexOffset / 16)
             UNSAFE.putInt(address + 16L, baseInstance)
 
             index += 20
@@ -123,9 +130,12 @@ class RenderRegion(
 
         fun destroy() {
             serverBuffer.destroy()
+            clientBufferPool.put(clientBuffer)
         }
 
         private companion object {
+            private val clientBufferPool = SoftReferenceObjectPool { allocateByte(4096 * 63 * 20) }
+
             @JvmField
             val UNSAFE = run {
                 val field = Unsafe::class.java.getDeclaredField("theUnsafe")

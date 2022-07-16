@@ -16,6 +16,7 @@
     "render.MixinActiveRenderInfo",
     "render.MixinBlockRenderLayer",
     "render.MixinClippingHelperImpl",
+    "render.MixinPatchBakedQuad",
     "world.MixinBlock",
     "world.MixinChunk",
     "world.MixinWorld",

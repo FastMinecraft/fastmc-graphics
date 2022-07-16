@@ -13,6 +13,8 @@
     "MixinUtil",
     "MixinVoxelShape",
     "render.MixinPatchBackgroundRenderer",
+    "render.MixinPatchBakedQuad",
+    "render.MixinPatchBasicBakedModel",
     "render.MixinPatchBillboardParticle",
     "render.MixinPatchEmitterParticle",
     "render.MixinPatchMatrix3f",

@@ -6,7 +6,6 @@ import me.luna.fastmc.shared.util.ConcurrentObjectPool
 import me.luna.fastmc.shared.util.collection.AtomicByteArray
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import me.luna.fastmc.shared.util.pollEach
-import me.luna.fastmc.shared.util.resume
 import sun.misc.Unsafe
 import java.nio.Buffer
 import java.nio.ByteBuffer
@@ -15,8 +14,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
-import kotlin.coroutines.Continuation
-import kotlin.coroutines.suspendCoroutine
 
 class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, val maxRegions: Int) {
     private val sectorSize = 1 shl sectorSizePower
@@ -41,7 +38,6 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
 
     private val lock = ReentrantLock()
     private val condition = lock.newCondition()
-    private val notifyQueue = ConcurrentLinkedQueue<Continuation<Unit>>()
 
     private val pendingRelease = ConcurrentLinkedQueue<Region>()
     private val releaseTaskQueue = java.util.ArrayDeque<ReleaseTask>()
@@ -56,11 +52,14 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
             doNotify()
         }
 
-        if (pendingRelease.isNotEmpty()) {
-            val releaseTask = ReleaseTask()
-            pendingRelease.pollEach {
-                releaseTask.list.add(it)
+        var releaseTask: ReleaseTask? = null
+        pendingRelease.pollEach {
+            if (releaseTask == null) {
+                releaseTask = ReleaseTask()
             }
+            releaseTask!!.list.add(it)
+        }
+        if (releaseTask != null) {
             releaseTaskQueue.offerLast(releaseTask)
         }
     }
@@ -69,42 +68,11 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         lock.withLock {
             condition.signalAll()
         }
-        val pollSize = notifyQueue.size
-        for (i in 0 until pollSize) {
-            val continuation = notifyQueue.poll() ?: break
-            continuation.resume()
-        }
     }
 
-    fun tryAllocate(): Region? {
-        if (checkCounter()) {
-            if (sectorState.compareAndSet(0, FALSE, TRUE)) {
-                usedSectorCount0.incrementAndGet()
-                return regionPool.get().init(0)
-            }
-
-            var block = sectorCapacity shr 1
-            while (block > 0) {
-                var i = block
-                while (i < sectorCapacity) {
-                    if (sectorState.compareAndSet(i, FALSE, TRUE)) {
-                        usedSectorCount0.incrementAndGet()
-                        return regionPool.get().init(i)
-                    }
-                    i += block
-                }
-                block = block shr 1
-            }
-        }
-
-        return null
-    }
-
-    suspend fun allocate(): Region {
+    fun allocate(task: ChunkBuilderTask): Region {
         while (!checkCounter()) {
-            suspendCoroutine<Unit> {
-                notifyQueue.add(it)
-            }
+            //
         }
 
         if (sectorState.compareAndSet(0, FALSE, TRUE)) {
@@ -125,8 +93,9 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                 }
                 block /= 2
             }
-            suspendCoroutine<Unit> {
-                notifyQueue.add(it)
+
+            if (lock.withLock { condition.awaitNanos(5_000_000L) } <= 0) {
+                task.checkCancelled()
             }
         }
     }
@@ -219,8 +188,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                             var allocated = 0
                             while (true) {
                                 if (sectorState.compareAndSet(i + allocated, FALSE, TRUE)) {
-                                    allocated++
-                                    if (allocated > sectorLength) {
+                                    if (++allocated > sectorLength) {
                                         swapBuffer.address = buffer.address
                                         swapBuffer.position = 0
                                         swapBuffer.limit = buffer.position
@@ -238,6 +206,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                                         for (i1 in sectorOffset until sectorEnd) {
                                             sectorState.set(i1, FALSE)
                                         }
+                                        doNotify()
 
                                         sectorOffset = i
                                         sectorLength = allocated
@@ -252,6 +221,10 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                                     doNotify()
                                     return@label
                                 }
+
+                                if (lock.withLock { condition.awaitNanos(1_000_000L) } <= 0) {
+                                    task.checkCancelled()
+                                }
                             }
                         }
 
@@ -260,7 +233,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                     block /= 2
                 }
 
-                if (lock.withLock { condition.awaitNanos(5_000_000L) } <= 0) {
+                if (lock.withLock { condition.awaitNanos(1_000_000L) } <= 0) {
                     task.checkCancelled()
                 }
             }

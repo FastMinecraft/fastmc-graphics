@@ -22,6 +22,13 @@ enum class Direction(val idOpposite: Int, val offsetX: Int, val offsetY: Int, va
         const val I_WEST = 4
         const val I_EAST = 5
 
+        const val B_DOWN = 1 shl I_DOWN
+        const val B_UP = 1 shl I_UP
+        const val B_NORTH = 1 shl I_NORTH
+        const val B_SOUTH = 1 shl I_SOUTH
+        const val B_WEST = 1 shl I_WEST
+        const val B_EAST = 1 shl I_EAST
+
         @JvmField
         val VALUES = arrayOf(DOWN, UP, NORTH, SOUTH, WEST, EAST)
 

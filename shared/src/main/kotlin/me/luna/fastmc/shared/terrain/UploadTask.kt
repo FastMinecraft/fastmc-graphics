@@ -79,12 +79,12 @@ internal class UploadTask(
             modifyTranslucentData = true
         }
 
-        fun updateLayer(index: Int, vertexBuffer: BufferContext?, indexBuffer: BufferContext?) {
+        fun updateLayer(index: Int, vertexBuffer: BufferContext?, indexBuffer: BufferContext?, faceData: FaceData?) {
             if (indexBuffer != null) {
                 if (vertexBuffer != null) {
-                    updates[index] = LayerUpdate.UpdateAll(vertexBuffer, indexBuffer)
+                    updates[index] = LayerUpdate.UpdateAll(vertexBuffer, indexBuffer, faceData)
                 } else {
-                    updates[index] = LayerUpdate.UpdateIndex(indexBuffer)
+                    updates[index] = LayerUpdate.UpdateIndex(indexBuffer, faceData)
                 }
             } else {
                 updates[index] = LayerUpdate.Clear
@@ -132,7 +132,7 @@ internal class UploadTask(
             override fun update(task: ChunkBuilderTask, index: Int) {}
         }
 
-        open class UpdateIndex(private val indexBuffer: BufferContext) : LayerUpdate() {
+        open class UpdateIndex(private val indexBuffer: BufferContext, private val faceData: FaceData?) : LayerUpdate() {
             override fun clear(task: ChunkBuilderTask, index: Int): Long {
                 val layer = task.renderChunk.layers[index]
                 val region = layer.indexRegion
@@ -170,13 +170,17 @@ internal class UploadTask(
                     updateSize.toLong()
                 )
 
+                if (faceData != null) {
+                    layer.faceData = faceData
+                }
+
                 indexBuffer.release(task)
             }
         }
 
 
-        class UpdateAll(private val vertexBuffer: BufferContext, indexBuffer: BufferContext) :
-            UpdateIndex(indexBuffer) {
+        class UpdateAll(private val vertexBuffer: BufferContext, indexBuffer: BufferContext, faceData: FaceData?) :
+            UpdateIndex(indexBuffer, faceData) {
             override fun clear(task: ChunkBuilderTask, index: Int): Long {
                 val layer = task.renderChunk.layers[index]
                 val region = layer.vertexRegion

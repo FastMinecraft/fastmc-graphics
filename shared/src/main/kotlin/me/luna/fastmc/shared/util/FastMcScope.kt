@@ -22,7 +22,7 @@ private val corePool = ScheduledThreadPoolExecutor(
 
         override fun newThread(r: Runnable): Thread {
             return Thread(group, r, "FastMinecraft-Core-${counter.incrementAndGet()}").apply {
-                priority = 8
+                priority = 6
             }
         }
     }

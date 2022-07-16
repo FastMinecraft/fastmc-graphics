@@ -490,6 +490,10 @@ abstract class TerrainRenderer(
                             if (!updated) return@launch
                         }
 
+                        for (i in 0 until size) {
+                            region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i])
+                        }
+
                         for (layerIndex in 0 until layerCount) {
                             val layerBatch = region.getLayer(layerIndex)
                             layerBatch.update()
@@ -497,11 +501,13 @@ abstract class TerrainRenderer(
                             for (i in 0 until size) {
                                 val renderChunk = array[i]
                                 val layer = renderChunk.layers[layerIndex]
-                                if (layer.isEmpty) continue
-                                layerBatch.put(
-                                    layer.vertexOffset,
-                                    layer.indexOffset,
-                                    layer.indexCount,
+                                val vertexRegion = layer.vertexRegion ?: continue
+                                val indexRegion = layer.indexRegion ?: continue
+                                layer.faceData?.addToBatch(
+                                    layerBatch,
+                                    vertexRegion.offset,
+                                    indexRegion.offset,
+                                    region.tempVisibleBits[i],
                                     (renderChunk.originX and 255 shl 20)
                                         or ((renderChunk.chunkY - chunkStorage.minY) shl 14)
                                         or (renderChunk.originZ and 255)
@@ -512,6 +518,29 @@ abstract class TerrainRenderer(
                 }
             }
         }
+    }
+
+    private fun calculateVisibleFaceBit(renderChunk: RenderChunk): Int {
+        var bits = 0
+        if (cameraX > renderChunk.minX) {
+            bits = bits or Direction.B_EAST
+        }
+        if (cameraX < renderChunk.maxX) {
+            bits = bits or Direction.B_WEST
+        }
+        if (cameraY > renderChunk.minY) {
+            bits = bits or Direction.B_UP
+        }
+        if (cameraY < renderChunk.maxY) {
+            bits = bits or Direction.B_DOWN
+        }
+        if (cameraZ > renderChunk.minZ) {
+            bits = bits or Direction.B_SOUTH
+        }
+        if (cameraZ < renderChunk.maxZ) {
+            bits = bits or Direction.B_NORTH
+        }
+        return bits
     }
 
     private fun updateDebugInfo() {

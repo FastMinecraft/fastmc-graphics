@@ -123,7 +123,7 @@ class RenderChunkStorage(
             updateRegions()
             markCaveCullingDirty()
             if (lastSortingJob.isDoneOrNull) {
-                lastSortingJob = FastMcExtendScope.pool.submit { updateChunkIndices() }
+                lastSortingJob = FastMcExtendScope.pool.submit(updateChunkIndicesRunnable)
             }
         }
     }
@@ -181,7 +181,7 @@ class RenderChunkStorage(
         }
     }
 
-    private fun updateChunkIndices() {
+   private val updateChunkIndicesRunnable = Runnable {
         val newChunkIndices = sortedChunkIndices.copyOf()
         newChunkIndices.copyInto(chunkSortSuppArray)
 
@@ -272,7 +272,7 @@ class RenderChunkStorage(
                     val renderChunk = renderChunkArray[i * sizeY]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue
                     newCullingBitSet.addFast(renderChunk.index)
-                    caveCullingQueue.enqueue(renderChunk.index or (Direction.I_DOWN shl 17) or (Direction.DOWN.bit shl 20))
+                    caveCullingQueue.enqueue(renderChunk.index or (Direction.I_DOWN shl 17) or (Direction.B_DOWN shl 20))
                 }
             } else {
                 val offset = sizeY - 1
@@ -280,7 +280,7 @@ class RenderChunkStorage(
                     val renderChunk = renderChunkArray[i * sizeY + offset]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue
                     newCullingBitSet.addFast(renderChunk.index)
-                    caveCullingQueue.enqueue(renderChunk.index or (Direction.I_UP shl 17) or (Direction.UP.bit shl 20))
+                    caveCullingQueue.enqueue(renderChunk.index or (Direction.I_UP shl 17) or (Direction.B_UP shl 20))
                 }
             }
         }

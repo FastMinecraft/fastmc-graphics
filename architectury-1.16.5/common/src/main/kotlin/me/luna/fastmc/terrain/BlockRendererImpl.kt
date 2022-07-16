@@ -1,5 +1,6 @@
 package me.luna.fastmc.terrain
 
+import me.luna.fastmc.shared.mixin.IPatchedBakedQuad
 import me.luna.fastmc.shared.terrain.BlockRenderer
 import me.luna.fastmc.util.Minecraft
 import net.minecraft.block.AbstractBlock.OffsetType
@@ -162,85 +163,15 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         quads: List<BakedQuad>
     ) {
         for (i in quads.indices) {
-            val bakedQuad = quads[i]
-            val vertexData = bakedQuad.vertexData
-            val face = bakedQuad.face
-
-            getQuadDimensions(face.ordinal, state, vertexData, 8)
-            context.calculateAO(context.blockX, context.blockY, context.blockZ, face, bakedQuad.hasShade())
-            var rMul: Int
-            var gMul: Int
-            var bMul: Int
-
-            if (bakedQuad.hasColor()) {
-                val color = context.worldSnapshot.getBlockColor(
-                    context.blockX,
-                    context.blockY,
-                    context.blockZ,
-                    state
-                )
-                rMul = color shr 16 and 255
-                gMul = color shr 8 and 255
-                bMul = color and 255
-            } else {
-                rMul = 255
-                gMul = 255
-                bMul = 255
-            }
-
-            var color = vertexData[3]
-            var brightness = context.brightnessArray[0]
-            context.layerVertexBuilder.putVertex(
-                Float.fromBits(vertexData[0]) + context.renderPosX,
-                Float.fromBits(vertexData[1]) + context.renderPosY,
-                Float.fromBits(vertexData[2]) + context.renderPosZ,
-                (color shr 16 and 255) * rMul * brightness shr 16,
-                (color shr 8 and 255) * gMul * brightness shr 16,
-                (color and 255) * bMul * brightness shr 16,
-                Float.fromBits(vertexData[4]),
-                Float.fromBits(vertexData[5]),
-                context.lightMapUVArray[0]
+            renderQuadSmooth(
+                state,
+                quads[i].vertexData,
+                8,
+                quads[i].face.ordinal,
+                (quads[i] as IPatchedBakedQuad).faceBit,
+                quads[i].hasShade(),
+                quads[i].hasColor()
             )
-            color = vertexData[11]
-            brightness = context.brightnessArray[1]
-            context.layerVertexBuilder.putVertex(
-                Float.fromBits(vertexData[8]) + context.renderPosX,
-                Float.fromBits(vertexData[9]) + context.renderPosY,
-                Float.fromBits(vertexData[10]) + context.renderPosZ,
-                (color shr 16 and 255) * rMul * brightness shr 16,
-                (color shr 8 and 255) * gMul * brightness shr 16,
-                (color and 255) * bMul * brightness shr 16,
-                Float.fromBits(vertexData[12]),
-                Float.fromBits(vertexData[13]),
-                context.lightMapUVArray[1]
-            )
-            color = vertexData[19]
-            brightness = context.brightnessArray[2]
-            context.layerVertexBuilder.putVertex(
-                Float.fromBits(vertexData[16]) + context.renderPosX,
-                Float.fromBits(vertexData[17]) + context.renderPosY,
-                Float.fromBits(vertexData[18]) + context.renderPosZ,
-                (color shr 16 and 255) * rMul * brightness shr 16,
-                (color shr 8 and 255) * gMul * brightness shr 16,
-                (color and 255) * bMul * brightness shr 16,
-                Float.fromBits(vertexData[20]),
-                Float.fromBits(vertexData[21]),
-                context.lightMapUVArray[2]
-            )
-            color = vertexData[27]
-            brightness = context.brightnessArray[3]
-            context.layerVertexBuilder.putVertex(
-                Float.fromBits(vertexData[24]) + context.renderPosX,
-                Float.fromBits(vertexData[25]) + context.renderPosY,
-                Float.fromBits(vertexData[26]) + context.renderPosZ,
-                (color shr 16 and 255) * rMul * brightness shr 16,
-                (color shr 8 and 255) * gMul * brightness shr 16,
-                (color and 255) * bMul * brightness shr 16,
-                Float.fromBits(vertexData[28]),
-                Float.fromBits(vertexData[29]),
-                context.lightMapUVArray[3]
-            )
-            context.layerVertexBuilder.putQuad()
         }
     }
 
@@ -249,73 +180,16 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         quad: BakedQuad,
         light: Int
     ) {
-        val brightness = context.worldSnapshot.getWorldBrightness(quad.face.ordinal, quad.hasShade())
-        val rMul: Int
-        val gMul: Int
-        val bMul: Int
-
-        if (quad.hasColor()) {
-            val color = context.worldSnapshot.getBlockColor(context.blockX, context.blockY, context.blockZ, state)
-            rMul = color shr 16 and 255
-            gMul = color shr 8 and 255
-            bMul = color and 255
-        } else {
-            rMul = 255
-            gMul = 255
-            bMul = 255
-        }
-
-        val vertexData = quad.vertexData
-
-        var color = vertexData[3]
-        context.layerVertexBuilder.putVertex(
-            Float.fromBits(vertexData[0]) + context.renderPosX,
-            Float.fromBits(vertexData[1]) + context.renderPosY,
-            Float.fromBits(vertexData[2]) + context.renderPosZ,
-            (color shr 16 and 255) * rMul * brightness shr 16,
-            (color shr 8 and 255) * gMul * brightness shr 16,
-            (color and 255) * bMul * brightness shr 16,
-            Float.fromBits(vertexData[4]),
-            Float.fromBits(vertexData[5]),
+        renderQuadFlat(
+            state,
+            quad.vertexData,
+            8,
+            quad.face.ordinal,
+            (quad as IPatchedBakedQuad).faceBit,
+            quad.hasShade(),
+            quad.hasColor(),
             light
         )
-        color = vertexData[11]
-        context.layerVertexBuilder.putVertex(
-            Float.fromBits(vertexData[8]) + context.renderPosX,
-            Float.fromBits(vertexData[9]) + context.renderPosY,
-            Float.fromBits(vertexData[10]) + context.renderPosZ,
-            (color shr 16 and 255) * rMul * brightness shr 16,
-            (color shr 8 and 255) * gMul * brightness shr 16,
-            (color and 255) * bMul * brightness shr 16,
-            Float.fromBits(vertexData[12]),
-            Float.fromBits(vertexData[13]),
-            light
-        )
-        color = vertexData[19]
-        context.layerVertexBuilder.putVertex(
-            Float.fromBits(vertexData[16]) + context.renderPosX,
-            Float.fromBits(vertexData[17]) + context.renderPosY,
-            Float.fromBits(vertexData[18]) + context.renderPosZ,
-            (color shr 16 and 255) * rMul * brightness shr 16,
-            (color shr 8 and 255) * gMul * brightness shr 16,
-            (color and 255) * bMul * brightness shr 16,
-            Float.fromBits(vertexData[20]),
-            Float.fromBits(vertexData[21]),
-            light
-        )
-        color = vertexData[27]
-        context.layerVertexBuilder.putVertex(
-            Float.fromBits(vertexData[24]) + context.renderPosX,
-            Float.fromBits(vertexData[25]) + context.renderPosY,
-            Float.fromBits(vertexData[26]) + context.renderPosZ,
-            (color shr 16 and 255) * rMul * brightness shr 16,
-            (color shr 8 and 255) * gMul * brightness shr 16,
-            (color and 255) * bMul * brightness shr 16,
-            Float.fromBits(vertexData[28]),
-            Float.fromBits(vertexData[29]),
-            light
-        )
-        context.layerVertexBuilder.putQuad()
     }
 
     override fun isFullCube(state: BlockState): Boolean {
@@ -442,7 +316,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             val lightMapUV = getLight(context.blockX, context.blockY, context.blockZ)
 
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX + 0.0f,
                 context.renderPosY + fluidHeightNW,
                 context.renderPosZ + 0.0f,
@@ -451,9 +325,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 uNW,
                 vNW,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX + 0.0f,
                 context.renderPosY + fluidHeightSW,
                 context.renderPosZ + 1.0f,
@@ -462,9 +337,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 uSW,
                 vSW,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
                 context.renderPosY + fluidHeightSE,
                 context.renderPosZ + 1.0f,
@@ -473,9 +349,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 uSE,
                 vSE,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
                 context.renderPosY + fluidHeightNE,
                 context.renderPosZ + 0.0f,
@@ -484,12 +361,13 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 uNE,
                 vNE,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putQuad()
+            context.activeVertexBuilder.putQuad(0b11_11_11)
 
             if (isTopClear(context.blockX, context.blockY + 1, context.blockZ, state)) {
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + 0.0f,
                     context.renderPosY + fluidHeightNW,
                     context.renderPosZ + 0.0f,
@@ -498,9 +376,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uNW,
                     vNW,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + 1.0f,
                     context.renderPosY + fluidHeightNE,
                     context.renderPosZ + 0.0f,
@@ -509,9 +388,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uNE,
                     vNE,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + 1.0f,
                     context.renderPosY + fluidHeightSE,
                     context.renderPosZ + 1.0f,
@@ -520,9 +400,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uSE,
                     vSE,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + 0.0f,
                     context.renderPosY + fluidHeightSW,
                     context.renderPosZ + 1.0f,
@@ -531,9 +412,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uSW,
                     vSW,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putQuad()
+                context.activeVertexBuilder.putQuad(                    0b11_11_11)
             }
         }
 
@@ -550,7 +432,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             val lightMapUV = getLight(context.blockX, context.blockY - 1, context.blockZ)
 
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX,
                 context.renderPosY + yDown,
                 context.renderPosZ + 1.0f,
@@ -559,9 +441,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 u1,
                 v2,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX,
                 context.renderPosY + yDown,
                 context.renderPosZ,
@@ -570,9 +453,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 u1,
                 v1,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
                 context.renderPosY + yDown,
                 context.renderPosZ,
@@ -581,9 +465,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 u2,
                 v1,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putVertex(
+            context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
                 context.renderPosY + yDown,
                 context.renderPosZ + 1.0f,
@@ -592,9 +477,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                 blue,
                 u2,
                 v2,
-                lightMapUV
+                lightMapUV,
+                0b11_11_11
             )
-            context.layerVertexBuilder.putQuad()
+            context.activeVertexBuilder.putQuad(0b11_11_11)
         }
 
         for (i in 0..3) {
@@ -683,7 +569,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
                 val lightMapUV = getLight(context.blockX, context.blockY, context.blockZ)
 
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + x1,
                     context.renderPosY + y11,
                     context.renderPosZ + z1,
@@ -692,9 +578,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uN,
                     vFrom1,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + x2,
                     context.renderPosY + y12,
                     context.renderPosZ + z2,
@@ -703,9 +590,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uS,
                     vFrom2,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + x2,
                     context.renderPosY + yDown,
                     context.renderPosZ + z2,
@@ -714,9 +602,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uS,
                     vTo,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putVertex(
+                context.activeVertexBuilder.putVertex(
                     context.renderPosX + x1,
                     context.renderPosY + yDown,
                     context.renderPosZ + z1,
@@ -725,12 +614,13 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     blue,
                     uN,
                     vTo,
-                    lightMapUV
+                    lightMapUV,
+                    0b11_11_11
                 )
-                context.layerVertexBuilder.putQuad()
+                context.activeVertexBuilder.putQuad(0b11_11_11)
 
                 if (sideSprites !== waterOverlaySprite) {
-                    context.layerVertexBuilder.putVertex(
+                    context.activeVertexBuilder.putVertex(
                         context.renderPosX + x1,
                         context.renderPosY + yDown,
                         context.renderPosZ + z1,
@@ -739,9 +629,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                         blue,
                         uN,
                         vTo,
-                        lightMapUV
+                        lightMapUV,
+                        0b11_11_11
                     )
-                    context.layerVertexBuilder.putVertex(
+                    context.activeVertexBuilder.putVertex(
                         context.renderPosX + x2,
                         context.renderPosY + yDown,
                         context.renderPosZ + z2,
@@ -750,9 +641,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                         blue,
                         uS,
                         vTo,
-                        lightMapUV
+                        lightMapUV,
+                        0b11_11_11
                     )
-                    context.layerVertexBuilder.putVertex(
+                    context.activeVertexBuilder.putVertex(
                         context.renderPosX + x2,
                         context.renderPosY + y12,
                         context.renderPosZ + z2,
@@ -761,9 +653,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                         blue,
                         uS,
                         vFrom2,
-                        lightMapUV
+                        lightMapUV,
+                        0b11_11_11
                     )
-                    context.layerVertexBuilder.putVertex(
+                    context.activeVertexBuilder.putVertex(
                         context.renderPosX + x1,
                         context.renderPosY + y11,
                         context.renderPosZ + z1,
@@ -772,9 +665,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                         blue,
                         uN,
                         vFrom1,
-                        lightMapUV
+                        lightMapUV,
+                        0b11_11_11
                     )
-                    context.layerVertexBuilder.putQuad()
+                    context.activeVertexBuilder.putQuad(0b11_11_11)
                 }
             }
         }

@@ -10,7 +10,188 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
     abstract fun renderBlock(state: T_BlockState)
     abstract fun renderFluid(state: T_FluidState, blockState: T_BlockState)
 
-    fun getQuadDimensions(
+    @Suppress("UNCHECKED_CAST")
+    protected fun renderQuadSmooth(
+        state: T_BlockState,
+        vertexData: IntArray,
+        vertexSize: Int,
+        face: Int,
+        faceBit: Int,
+        diffuseLighting: Boolean,
+        hasColor: Boolean
+    ) {
+        getQuadDimensions(face, state, vertexData, vertexSize)
+        context.calculateAO(context.blockX, context.blockY, context.blockZ, face, diffuseLighting)
+
+        val rMul: Int
+        val gMul: Int
+        val bMul: Int
+
+        if (hasColor) {
+            val color = (context.worldSnapshot as WorldSnapshot112<*, T_BlockState, *>).getBlockColor(
+                context.blockX,
+                context.blockY,
+                context.blockZ,
+                state
+            )
+            rMul = color shr 16 and 255
+            gMul = color shr 8 and 255
+            bMul = color and 255
+        } else {
+            rMul = 255
+            gMul = 255
+            bMul = 255
+        }
+
+        var color = vertexData[3]
+        var brightness = context.brightnessArray[0]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0]) + context.renderPosX,
+            Float.fromBits(vertexData[1]) + context.renderPosY,
+            Float.fromBits(vertexData[2]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4]),
+            Float.fromBits(vertexData[5]),
+            context.lightMapUVArray[0],
+            faceBit
+        )
+
+        color = vertexData[3 + vertexSize]
+        brightness = context.brightnessArray[1]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0 + vertexSize]) + context.renderPosX,
+            Float.fromBits(vertexData[1 + vertexSize]) + context.renderPosY,
+            Float.fromBits(vertexData[2 + vertexSize]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4 + vertexSize]),
+            Float.fromBits(vertexData[5 + vertexSize]),
+            context.lightMapUVArray[1],
+            faceBit
+        )
+
+        color = vertexData[3 + vertexSize * 2]
+        brightness = context.brightnessArray[2]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0 + vertexSize * 2]) + context.renderPosX,
+            Float.fromBits(vertexData[1 + vertexSize * 2]) + context.renderPosY,
+            Float.fromBits(vertexData[2 + vertexSize * 2]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4 + vertexSize * 2]),
+            Float.fromBits(vertexData[5 + vertexSize * 2]),
+            context.lightMapUVArray[2],
+            faceBit
+        )
+
+        color = vertexData[3 + vertexSize * 3]
+        brightness = context.brightnessArray[3]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0 + vertexSize * 3]) + context.renderPosX,
+            Float.fromBits(vertexData[1 + vertexSize * 3]) + context.renderPosY,
+            Float.fromBits(vertexData[2 + vertexSize * 3]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4 + vertexSize * 3]),
+            Float.fromBits(vertexData[5 + vertexSize * 3]),
+            context.lightMapUVArray[3],
+            faceBit
+        )
+        context.activeVertexBuilder.putQuad(faceBit)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    protected fun renderQuadFlat(
+        state: T_BlockState,
+        vertexData: IntArray,
+        vertexSize: Int,
+        face: Int,
+        faceBit: Int,
+        diffuseLighting: Boolean,
+        hasColor: Boolean,
+        light: Int
+    ) {
+        val brightness = context.worldSnapshot.getWorldBrightness(face, diffuseLighting)
+        val rMul: Int
+        val gMul: Int
+        val bMul: Int
+
+        if (hasColor) {
+            val color = (context.worldSnapshot as WorldSnapshot112<*, T_BlockState, *>).getBlockColor(context.blockX, context.blockY, context.blockZ, state)
+            rMul = color shr 16 and 255
+            gMul = color shr 8 and 255
+            bMul = color and 255
+        } else {
+            rMul = 255
+            gMul = 255
+            bMul = 255
+        }
+
+        var color = vertexData[3]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0]) + context.renderPosX,
+            Float.fromBits(vertexData[1]) + context.renderPosY,
+            Float.fromBits(vertexData[2]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4]),
+            Float.fromBits(vertexData[5]),
+            light,
+            faceBit
+        )
+
+        color = vertexData[3 + vertexSize]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0 + vertexSize]) + context.renderPosX,
+            Float.fromBits(vertexData[1 + vertexSize]) + context.renderPosY,
+            Float.fromBits(vertexData[2 + vertexSize]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4 + vertexSize]),
+            Float.fromBits(vertexData[5 + vertexSize]),
+            light,
+            faceBit
+        )
+
+        color = vertexData[3 + vertexSize * 2]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0 + vertexSize * 2]) + context.renderPosX,
+            Float.fromBits(vertexData[1 + vertexSize * 2]) + context.renderPosY,
+            Float.fromBits(vertexData[2 + vertexSize * 2]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4 + vertexSize * 2]),
+            Float.fromBits(vertexData[5 + vertexSize * 2]),
+            light,
+            faceBit
+        )
+
+        color = vertexData[3 + vertexSize * 3]
+        context.activeVertexBuilder.putVertex(
+            Float.fromBits(vertexData[0 + vertexSize * 3]) + context.renderPosX,
+            Float.fromBits(vertexData[1 + vertexSize * 3]) + context.renderPosY,
+            Float.fromBits(vertexData[2 + vertexSize * 3]) + context.renderPosZ,
+            (color shr 16 and 255) * rMul * brightness shr 16,
+            (color shr 8 and 255) * gMul * brightness shr 16,
+            (color and 255) * bMul * brightness shr 16,
+            Float.fromBits(vertexData[4 + vertexSize * 3]),
+            Float.fromBits(vertexData[5 + vertexSize * 3]),
+            light,
+            faceBit
+        )
+
+        context.activeVertexBuilder.putQuad(faceBit)
+    }
+
+    protected fun getQuadDimensions(
         face: Int,
         state: T_BlockState,
         vertexData: IntArray,
