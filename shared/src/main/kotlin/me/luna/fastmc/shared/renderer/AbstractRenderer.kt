@@ -141,7 +141,7 @@ abstract class AbstractRenderer<ET : Any>(
                 }
             } else {
                 dirty = false
-                val builder = builderClass.newInstance()
+                val builder = builderClass.getDeclaredConstructor().newInstance()
 
                 builder.init(this@AbstractRenderer, entities.size)
                 builder.addAll(entities as List<T>)

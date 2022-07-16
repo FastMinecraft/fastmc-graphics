@@ -25,9 +25,6 @@ class FontRendererWrapper(resourceManager: ResourceManager) : IFontRendererWrapp
         }
 
         val glyphWidths = ByteArray(65536)
-        val bytes = resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin")).use {
-            it.inputStream.readBytes()
-        }
         resourceManager.getResource(ResourceLocation("font/glyph_sizes.bin")).use {
             it.inputStream.read(glyphWidths)
         }
