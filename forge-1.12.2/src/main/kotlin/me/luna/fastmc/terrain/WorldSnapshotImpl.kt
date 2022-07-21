@@ -4,6 +4,7 @@ package me.luna.fastmc.terrain
 
 import me.luna.fastmc.mixin.IPatchedIBlockAccess
 import me.luna.fastmc.shared.terrain.WorldSnapshot112
+import net.minecraft.block.material.Material
 import net.minecraft.block.state.IBlockState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.WorldClient
@@ -163,7 +164,7 @@ class WorldSnapshotImpl(override val context: RebuildContextImpl) :
     }
 
     override fun isAirBlock(pos: BlockPos): Boolean {
-        throw UnsupportedOperationException()
+        return getBlockState(pos).material === Material.AIR
     }
 
     override fun getBiome(pos: BlockPos): Biome {
