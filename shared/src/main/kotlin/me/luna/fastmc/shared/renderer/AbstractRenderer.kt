@@ -4,8 +4,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.luna.fastmc.shared.renderbuilder.IInfo
+import me.luna.fastmc.shared.instancing.AbstractInstancingBuilder
+import me.luna.fastmc.shared.instancing.IInfo
 import me.luna.fastmc.shared.util.ClassIDRegistry
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
@@ -20,7 +20,7 @@ abstract class AbstractRenderer<ET : Any>(
     protected val renderEntryMap = FastIntMap<AbstractRenderEntry<ET, *>>()
     protected val renderEntryList = ArrayList<AbstractRenderEntry<ET, *>>()
 
-    protected inline fun <reified E : ET, reified B : AbstractRenderBuilder<out IInfo<*>>> register() {
+    protected inline fun <reified E : ET, reified B : AbstractInstancingBuilder<out IInfo<*>>> register() {
         val entityClass = E::class.java
         @Suppress("UNCHECKED_CAST")
         if (!renderEntryMap.containsKey((registry as ClassIDRegistry<E>).get(entityClass))) {
@@ -96,9 +96,9 @@ abstract class AbstractRenderer<ET : Any>(
     }
 
     protected inner class RenderEntry<E : ET, T : IInfo<E>>(
-        private val builderClass: Class<out AbstractRenderBuilder<in T>>,
+        private val builderClass: Class<out AbstractInstancingBuilder<in T>>,
     ) : AbstractRenderEntry<E, T>() {
-        private var renderer: AbstractRenderBuilder.Renderer? = null
+        private var renderer: AbstractInstancingBuilder.Renderer? = null
         private val entities = ArrayList<E>()
         private var dirty = false
 

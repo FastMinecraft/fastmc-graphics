@@ -1,6 +1,6 @@
 package me.luna.fastmc.entity
 
-import me.luna.fastmc.shared.renderbuilder.entity.info.IEntityInfo
+import me.luna.fastmc.shared.instancing.entity.info.IEntityInfo
 import net.minecraft.entity.Entity
 
 interface EntityInfo<E : Entity> : IEntityInfo<E> {

@@ -5,7 +5,7 @@ import me.luna.fastmc.mixin.IPatchedRenderLayer.Companion.index
 import me.luna.fastmc.mixin.IPatchedVoxelShape
 import me.luna.fastmc.mixin.accessor.AccessorVoxelShape
 import me.luna.fastmc.renderer.TileEntityRendererImpl
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkZ
 import me.luna.fastmc.shared.terrain.*

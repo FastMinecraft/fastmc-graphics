@@ -1,6 +1,6 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.util.TileEntity
 import me.luna.fastmc.util.blockState
 import net.minecraft.block.BlockState

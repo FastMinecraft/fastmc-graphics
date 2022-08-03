@@ -1,15 +1,15 @@
-package me.luna.fastmc.shared.renderbuilder.entity
+package me.luna.fastmc.shared.instancing.entity
 
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.GLDataType
 import me.luna.fastmc.shared.opengl.impl.VertexAttribute
-import me.luna.fastmc.shared.renderbuilder.entity.info.ICowInfo
+import me.luna.fastmc.shared.instancing.entity.info.ICowInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.skip
 import java.nio.ByteBuffer
 
-class CowRenderBuilder : EntityRenderBuilder<ICowInfo<*>>(68) {
+class CowInstancingBuilder : EntityInstancingBuilder<ICowInfo<*>>(68) {
     override fun add(buffer: ByteBuffer, info: ICowInfo<*>) {
         buffer.putFloat((info.prevX - builtPosX).toFloat())
         buffer.putFloat((info.prevY - builtPosY).toFloat())

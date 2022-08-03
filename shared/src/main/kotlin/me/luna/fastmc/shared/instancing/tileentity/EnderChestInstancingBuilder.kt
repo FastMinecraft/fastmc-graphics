@@ -1,15 +1,15 @@
-package me.luna.fastmc.shared.renderbuilder.tileentity
+package me.luna.fastmc.shared.instancing.tileentity
 
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.GLDataType
 import me.luna.fastmc.shared.opengl.impl.VertexAttribute
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.IEnderChestInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.IEnderChestInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.skip
 import java.nio.ByteBuffer
 
-class EnderChestRenderBuilder : TileEntityRenderBuilder<IEnderChestInfo<*>>(20) {
+class EnderChestInstancingBuilder : TileEntityInstancingBuilder<IEnderChestInfo<*>>(20) {
     override fun add(buffer: ByteBuffer, info: IEnderChestInfo<*>) {
         buffer.putPos(info)
         buffer.putLightMapUV(info)

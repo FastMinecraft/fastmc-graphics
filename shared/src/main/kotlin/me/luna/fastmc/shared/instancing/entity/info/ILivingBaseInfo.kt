@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.renderbuilder.entity.info
+package me.luna.fastmc.shared.instancing.entity.info
 
 interface ILivingBaseInfo<E : Any> : IEntityInfo<E> {
     val deathTime: Int

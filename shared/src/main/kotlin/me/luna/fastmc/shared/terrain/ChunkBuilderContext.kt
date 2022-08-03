@@ -10,7 +10,7 @@ import it.unimi.dsi.fastutil.ints.IntComparator
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.opengl.impl.MappedBufferPool
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import java.util.concurrent.atomic.AtomicInteger

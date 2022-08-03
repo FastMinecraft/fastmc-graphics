@@ -1,7 +1,7 @@
 package me.luna.fastmc.shared.terrain
 
 import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
 internal class UploadTask(

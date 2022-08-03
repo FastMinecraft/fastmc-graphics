@@ -5,7 +5,7 @@ package me.luna.fastmc.shared.terrain
 import it.unimi.dsi.fastutil.objects.ObjectCollections
 import kotlinx.coroutines.*
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkY
 import me.luna.fastmc.shared.renderer.cameraChunkZ

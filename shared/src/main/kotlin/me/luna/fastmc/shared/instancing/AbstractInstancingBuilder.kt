@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.renderbuilder
+package me.luna.fastmc.shared.instancing
 
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -19,7 +19,7 @@ import me.luna.fastmc.shared.util.allocateByte
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-abstract class AbstractRenderBuilder<T : IInfo<*>>(private val vertexSize: Int) {
+abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: Int) {
     private var resourceManager0: IResourceManager? = null
     private var builtPosX0 = Double.NaN
     private var builtPosY0 = Double.NaN

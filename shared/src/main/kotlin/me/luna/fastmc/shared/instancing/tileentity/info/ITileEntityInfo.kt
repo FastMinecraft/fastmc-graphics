@@ -1,6 +1,6 @@
-package me.luna.fastmc.shared.renderbuilder.tileentity.info
+package me.luna.fastmc.shared.instancing.tileentity.info
 
-import me.luna.fastmc.shared.renderbuilder.IInfo
+import me.luna.fastmc.shared.instancing.IInfo
 import me.luna.fastmc.shared.util.ClassIDRegistry
 import me.luna.fastmc.shared.util.ITypeID
 

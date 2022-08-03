@@ -5,9 +5,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.luna.fastmc.shared.renderbuilder.tileentity.*
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
+import me.luna.fastmc.shared.instancing.AbstractInstancingBuilder
+import me.luna.fastmc.shared.instancing.tileentity.*
+import me.luna.fastmc.shared.instancing.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.renderer.TileEntityRenderer
 import me.luna.fastmc.shared.renderer.IRenderer
 import me.luna.fastmc.shared.renderer.WorldRenderer
@@ -22,9 +22,9 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
     TileEntityRenderer<TileEntity>(worldRenderer) {
 
     init {
-        register<TileEntityBed, BedRenderBuilder>()
-        register<TileEntityShulkerBox, ShulkerBoxRenderBuilder>()
-        register<TileEntityEnderChest, EnderChestRenderBuilder>()
+        register<TileEntityBed, BedInstancingBuilder>()
+        register<TileEntityShulkerBox, ShulkerBoxInstancingBuilder>()
+        register<TileEntityEnderChest, EnderChestInstancingBuilder>()
 
         register(ChestRenderEntry())
     }
@@ -63,8 +63,8 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
     }
 
     private inner class ChestRenderEntry : AbstractRenderEntry<TileEntityChest, ChestInfo>() {
-        private var smallChestRenderer: AbstractRenderBuilder.Renderer? = null
-        private var largeChestRenderer: AbstractRenderBuilder.Renderer? = null
+        private var smallChestRenderer: AbstractInstancingBuilder.Renderer? = null
+        private var largeChestRenderer: AbstractInstancingBuilder.Renderer? = null
 
         private val smallChest = ArrayList<TileEntityChest>()
         private val largeChest = ArrayList<TileEntityChest>()
@@ -147,7 +147,7 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
                         }
                     } else {
                         launch(FastMcCoreScope.context) {
-                            val builder = SmallChestRenderBuilder()
+                            val builder = SmallChestInstancingBuilder()
                             builder.init(this@TileEntityRendererImpl, smallChest.size)
                             @Suppress("UNCHECKED_CAST")
                             builder.addAll(smallChest as List<IChestInfo<*>>)
@@ -167,7 +167,7 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
                         }
                     } else {
                         launch(FastMcCoreScope.context) {
-                            val builder = LargeChestRenderBuilder()
+                            val builder = LargeChestInstancingBuilder()
                             builder.init(this@TileEntityRendererImpl, largeChest.size)
                             @Suppress("UNCHECKED_CAST")
                             builder.addAll(largeChest as List<IChestInfo<*>>)

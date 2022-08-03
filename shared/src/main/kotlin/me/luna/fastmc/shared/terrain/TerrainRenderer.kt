@@ -9,7 +9,7 @@ import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.FpsDisplay
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.*
 import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList

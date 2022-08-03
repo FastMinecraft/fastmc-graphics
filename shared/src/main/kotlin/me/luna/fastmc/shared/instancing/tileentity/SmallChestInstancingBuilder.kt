@@ -1,15 +1,15 @@
-package me.luna.fastmc.shared.renderbuilder.tileentity
+package me.luna.fastmc.shared.instancing.tileentity
 
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.GLDataType
 import me.luna.fastmc.shared.opengl.impl.VertexAttribute
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import java.nio.ByteBuffer
 import java.util.*
 
-open class SmallChestRenderBuilder : TileEntityRenderBuilder<IChestInfo<*>>(20) {
+open class SmallChestInstancingBuilder : TileEntityInstancingBuilder<IChestInfo<*>>(20) {
     override fun add(buffer: ByteBuffer, info: IChestInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()

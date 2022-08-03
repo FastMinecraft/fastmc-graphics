@@ -1,7 +1,7 @@
 package me.luna.fastmc.shared.terrain
 
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkY
 import me.luna.fastmc.shared.renderer.cameraChunkZ

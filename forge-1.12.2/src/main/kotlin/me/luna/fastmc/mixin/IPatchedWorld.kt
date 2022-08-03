@@ -2,7 +2,7 @@ package me.luna.fastmc.mixin
 
 import it.unimi.dsi.fastutil.ints.IntSet
 import kotlinx.coroutines.*
-import me.luna.fastmc.shared.renderbuilder.IParallelUpdate
+import me.luna.fastmc.shared.instancing.IParallelUpdate
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ParallelUtils
 import me.luna.fastmc.shared.util.collection.FastIntMap

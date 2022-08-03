@@ -1,6 +1,6 @@
 package me.luna.fastmc.entity
 
-import me.luna.fastmc.shared.renderbuilder.entity.info.ILivingBaseInfo
+import me.luna.fastmc.shared.instancing.entity.info.ILivingBaseInfo
 import net.minecraft.entity.EntityLivingBase
 
 interface LivingBaseInfo<E : EntityLivingBase> : EntityInfo<E>, ILivingBaseInfo<E> {

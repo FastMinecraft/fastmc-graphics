@@ -17,7 +17,7 @@ import kotlin.coroutines.CoroutineContext
 class EntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
     EntityRenderer<Entity>(worldRenderer) {
     init {
-//        register<EntityCow, CowRenderBuilder>()
+//        register<EntityCow, CowInstancingBuilder>()
     }
 
     override fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope) {

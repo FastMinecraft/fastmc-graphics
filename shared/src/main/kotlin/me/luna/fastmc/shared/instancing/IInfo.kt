@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.renderbuilder
+package me.luna.fastmc.shared.instancing
 
 interface IInfo<E : Any> {
     val entity: E

@@ -1,13 +1,13 @@
-package me.luna.fastmc.shared.renderbuilder.tileentity
+package me.luna.fastmc.shared.instancing.tileentity
 
 import me.luna.fastmc.shared.model.Model
-import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.instancing.AbstractInstancingBuilder
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import java.nio.ByteBuffer
 
-abstract class TileEntityRenderBuilder<T : ITileEntityInfo<*>>(vertexSize: Int) : AbstractRenderBuilder<T>(vertexSize) {
+abstract class TileEntityInstancingBuilder<T : ITileEntityInfo<*>>(vertexSize: Int) : AbstractInstancingBuilder<T>(vertexSize) {
     protected fun ByteBuffer.putPos(info: T) {
         putFloat((info.posX + 0.5 - builtPosX).toFloat())
         putFloat((info.posY - builtPosY).toFloat())

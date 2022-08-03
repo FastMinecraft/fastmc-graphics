@@ -1,6 +1,6 @@
 package me.luna.fastmc.tileentity
 
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.IDirectionalTileEntityInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.IDirectionalTileEntityInfo
 import me.luna.fastmc.util.getPropertyOrDefault
 import net.minecraft.block.properties.PropertyEnum
 import net.minecraft.tileentity.TileEntity

@@ -1,11 +1,11 @@
-package me.luna.fastmc.shared.renderbuilder.entity
+package me.luna.fastmc.shared.instancing.entity
 
 import me.luna.fastmc.shared.model.Model
-import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
+import me.luna.fastmc.shared.instancing.AbstractInstancingBuilder
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 
-abstract class LayerRenderBuilder {
+abstract class LayerInstancingBuilder {
     protected companion object {
         fun model(name: String): ResourceEntry<Model> {
             return ResourceEntry("entity/$name") {
@@ -13,7 +13,7 @@ abstract class LayerRenderBuilder {
             }
         }
 
-        fun shader(name: String): ResourceEntry<AbstractRenderBuilder.InstancingShaderProgram> {
+        fun shader(name: String): ResourceEntry<AbstractInstancingBuilder.InstancingShaderProgram> {
             return ResourceEntry("entity/$name") {
                 it.entityShader
             }

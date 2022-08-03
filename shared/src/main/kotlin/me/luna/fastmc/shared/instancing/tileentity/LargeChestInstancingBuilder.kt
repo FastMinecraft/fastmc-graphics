@@ -1,13 +1,13 @@
-package me.luna.fastmc.shared.renderbuilder.tileentity
+package me.luna.fastmc.shared.instancing.tileentity
 
 import me.luna.fastmc.shared.model.Model
-import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
+import me.luna.fastmc.shared.instancing.tileentity.info.IChestInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
 import me.luna.fastmc.shared.util.isOdd
 import java.nio.ByteBuffer
 
-class LargeChestRenderBuilder : SmallChestRenderBuilder() {
+class LargeChestInstancingBuilder : SmallChestInstancingBuilder() {
     override fun add(buffer: ByteBuffer, info: IChestInfo<*>) {
         var posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
@@ -39,7 +39,7 @@ class LargeChestRenderBuilder : SmallChestRenderBuilder() {
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model
-    override val shader: ResourceEntry<InstancingShaderProgram> get() = SmallChestRenderBuilder.shader
+    override val shader: ResourceEntry<InstancingShaderProgram> get() = SmallChestInstancingBuilder.shader
     override val texture: ResourceEntry<ITexture> get() = Companion.texture
 
     private companion object {

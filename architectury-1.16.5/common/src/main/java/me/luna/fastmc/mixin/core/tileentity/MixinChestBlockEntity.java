@@ -1,6 +1,6 @@
 package me.luna.fastmc.mixin.core.tileentity;
 
-import me.luna.fastmc.shared.renderbuilder.IParallelUpdate;
+import me.luna.fastmc.shared.instancing.IParallelUpdate;
 import me.luna.fastmc.tileentity.ChestInfo;
 import net.minecraft.block.entity.ChestBlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
