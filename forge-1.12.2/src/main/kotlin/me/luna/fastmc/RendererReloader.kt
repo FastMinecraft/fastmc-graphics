@@ -1,9 +1,9 @@
 package me.luna.fastmc
 
-import me.luna.fastmc.renderer.EntityRenderer
+import me.luna.fastmc.renderer.EntityRendererImpl
 import me.luna.fastmc.renderer.FontRendererWrapper
-import me.luna.fastmc.renderer.TileEntityRenderer
-import me.luna.fastmc.renderer.WorldRenderer
+import me.luna.fastmc.renderer.TileEntityRendererImpl
+import me.luna.fastmc.renderer.WorldRendererImpl
 import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.terrain.TerrainRendererImpl
 import net.minecraft.client.Minecraft
@@ -28,10 +28,10 @@ object RendererReloader : ISelectiveResourceReloadListener {
             FastMcMod.logger.info("Font Renderer initialized")
             fontRenderer.wrapped.unicode = mc.gameSettings.forceUnicodeFont
 
-            val worldRenderer = WorldRenderer(mc, resourceManager1)
+            val worldRenderer = WorldRendererImpl(mc, resourceManager1)
             worldRenderer.init(
-                TileEntityRenderer(mc, worldRenderer),
-                EntityRenderer(mc, worldRenderer),
+                TileEntityRendererImpl(mc, worldRenderer),
+                EntityRendererImpl(mc, worldRenderer),
                 TerrainRendererImpl(worldRenderer)
             )
             if (mc.world != null) {

@@ -7,7 +7,7 @@ import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.renderbuilder.AbstractRenderBuilder
 import me.luna.fastmc.shared.renderbuilder.tileentity.*
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.IChestInfo
-import me.luna.fastmc.shared.renderer.AbstractTileEntityRenderer
+import me.luna.fastmc.shared.renderer.TileEntityRenderer
 import me.luna.fastmc.shared.renderer.IRenderer
 import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.util.FastMcCoreScope
@@ -19,8 +19,8 @@ import net.minecraft.tileentity.*
 import org.lwjgl.opengl.GL11.*
 import kotlin.coroutines.CoroutineContext
 
-class TileEntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer) :
-    AbstractTileEntityRenderer<TileEntity>(worldRenderer) {
+class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
+    TileEntityRenderer<TileEntity>(worldRenderer) {
     init {
         register<TileEntityBed, BedRenderBuilder>()
         register<TileEntityShulkerBox, ShulkerBoxRenderBuilder>()
@@ -163,7 +163,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer
                             }
 
                             val builder = SmallChestRenderBuilder()
-                            builder.init(this@TileEntityRenderer, smallChest.size)
+                            builder.init(this@TileEntityRendererImpl, smallChest.size)
                             @Suppress("UNCHECKED_CAST")
                             builder.addAll(smallChest as List<IChestInfo<*>>)
                             withContext(mainThreadContext) {
@@ -187,7 +187,7 @@ class TileEntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer
                             }
 
                             val builder = LargeChestRenderBuilder()
-                            builder.init(this@TileEntityRenderer, largeChest.size)
+                            builder.init(this@TileEntityRendererImpl, largeChest.size)
                             @Suppress("UNCHECKED_CAST")
                             builder.addAll(largeChest as List<IChestInfo<*>>)
                             withContext(mainThreadContext) {

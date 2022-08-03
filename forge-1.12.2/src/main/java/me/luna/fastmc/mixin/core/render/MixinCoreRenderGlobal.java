@@ -3,7 +3,7 @@ package me.luna.fastmc.mixin.core.render;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
 import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.renderer.EntityRenderer;
+import me.luna.fastmc.renderer.EntityRendererImpl;
 import me.luna.fastmc.shared.renderer.WorldRenderer;
 import me.luna.fastmc.shared.terrain.RenderChunkStorage;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
@@ -318,7 +318,7 @@ public abstract class MixinCoreRenderGlobal {
 
             this.world.profiler.endStartSection("vanilla");
             WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-            EntityRenderer entityRenderer = (EntityRenderer) worldRenderer.getEntityRenderer();
+            EntityRendererImpl entityRenderer = (EntityRendererImpl) worldRenderer.getEntityRenderer();
             BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
             List<Entity> loadedEntityList = this.world.loadedEntityList;
             boolean renderOutline = pass == 0 && this.isRenderEntityOutlines();

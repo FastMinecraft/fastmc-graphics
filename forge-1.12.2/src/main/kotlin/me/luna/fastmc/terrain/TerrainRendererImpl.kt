@@ -1,7 +1,7 @@
 package me.luna.fastmc.terrain
 
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.renderer.TileEntityRenderer
+import me.luna.fastmc.renderer.TileEntityRendererImpl
 import me.luna.fastmc.shared.renderbuilder.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkZ
@@ -122,7 +122,7 @@ abstract class RebuildContextImpl : RebuildContext(BlockRenderLayer.values().siz
         val endZ = startZ + 15
 
         val blockRenderer = blockRenderer
-        val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityRenderer
+        val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityRendererImpl
 
         for (y in startY..endY) {
             task.checkCancelled()

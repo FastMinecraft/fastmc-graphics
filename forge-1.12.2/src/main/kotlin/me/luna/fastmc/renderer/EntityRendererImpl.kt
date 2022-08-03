@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.luna.fastmc.shared.renderer.AbstractEntityRenderer
+import me.luna.fastmc.shared.renderer.EntityRenderer
 import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.shared.util.ITypeID
@@ -12,8 +12,8 @@ import net.minecraft.client.Minecraft
 import net.minecraft.entity.Entity
 import kotlin.coroutines.CoroutineContext
 
-class EntityRenderer(private val mc: Minecraft, worldRenderer: WorldRenderer) :
-    AbstractEntityRenderer<Entity>(worldRenderer) {
+class EntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
+    EntityRenderer<Entity>(worldRenderer) {
     init {
 //        register<EntityCow, CowRenderBuilder>()
     }

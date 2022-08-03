@@ -398,7 +398,7 @@ abstract class TerrainRenderer(
             launch {
                 @Suppress("UNCHECKED_CAST")
                 val tileEntityRenderer =
-                    FastMcMod.worldRenderer.tileEntityRenderer as AbstractTileEntityRenderer<ITileEntityInfo<*>>
+                    FastMcMod.worldRenderer.tileEntityRenderer as TileEntityRenderer<ITileEntityInfo<*>>
                 tileEntityRenderer.clear()
                 for (result in tileEntityResults) {
                     renderTileEntityList0.addAll(result.tileEntityList)
