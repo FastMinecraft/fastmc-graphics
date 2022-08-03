@@ -9,7 +9,7 @@ buildscript {
 
     dependencies {
         classpath("net.minecraftforge.gradle:ForgeGradle:5.+")
-        classpath("org.spongepowered:mixingradle:0.7-SNAPSHOT")
+        classpath("org.spongepowered:mixingradle:0.7.+")
     }
 }
 
@@ -41,11 +41,11 @@ dependencies {
     compileOnly(project(":shared"))
     libraryImplementation(project(":shared:java8"))
 
-    libraryImplementation("org.spongepowered:mixin:0.7.11-SNAPSHOT") {
+    libraryImplementation("org.spongepowered:mixin:0.8.+") {
         isTransitive = false
     }
 
-    annotationProcessor("org.spongepowered:mixin:0.8.4:processor") {
+    annotationProcessor("org.spongepowered:mixin:0.8.+:processor") {
         isTransitive = false
     }
 }

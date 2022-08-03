@@ -1,8 +1,6 @@
 rootProject.name = "FastMinecraft"
 
 pluginManagement {
-    val kotlinVersion: String by settings
-
     repositories {
         maven("https://maven.fabricmc.net/")
         maven("https://maven.architectury.dev/")
@@ -10,8 +8,14 @@ pluginManagement {
         gradlePluginPortal()
     }
 
+    val kotlinVersion: String by settings
+    val architecturyPluginVersion: String by settings
+    val architecturyLoomVersion: String by settings
+
     plugins {
         id("org.jetbrains.kotlin.jvm").version(kotlinVersion)
+        id("architectury-plugin").version(architecturyPluginVersion)
+        id("dev.architectury.loom").version(architecturyLoomVersion)
     }
 }
 
