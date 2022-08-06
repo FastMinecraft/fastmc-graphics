@@ -8,7 +8,7 @@
     "entity.MixinEntity",
     "entity.MixinEntityCow",
     "render.MixinCoreWorldRenderer",
-    "render.MixinInGameHud",
+    "render.MixinGameRenderer",
     "tileentity.MixinBedBlockEntity",
     "tileentity.MixinBlockEntity",
     "tileentity.MixinChestBlockEntity",

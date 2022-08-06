@@ -139,4 +139,18 @@ tasks {
     assemble {
         finalizedBy(collectJars)
     }
+
+    val clearRuns by register<Task>("clearRuns") {
+        doLast {
+            val regex =
+                "Minecraft_(Server|Client)___architectury.+?(fabric|forge)__architectury-.+?(fabric|forge).xml".toRegex()
+            File(rootProject.projectDir.absoluteFile, ".idea/runConfigurations").listFiles()?.let { files ->
+                files.asSequence()
+                    .filter { it.name.matches(regex) }
+                    .forEach { it.delete() }
+            }
+        }
+    }
+
+    getByPath(":forge-1.12.2:createMcpToSrg").finalizedBy(clearRuns)
 }
