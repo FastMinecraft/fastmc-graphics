@@ -11,6 +11,6 @@ public class MixinPatchMinecraftServer {
 
     @Inject(method = "runServer", at = @At("HEAD"))
     private void Inject$runServer$HEAD(CallbackInfo ci) {
-        Thread.currentThread().setPriority(3);
+        Thread.currentThread().setPriority(1);
     }
 }

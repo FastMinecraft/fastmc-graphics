@@ -56,3 +56,5 @@ accessible field net/minecraft/util/math/Matrix4f a32 F
 accessible field net/minecraft/util/math/Matrix4f a33 F
 
 accessible field net/minecraft/block/AbstractBlock$AbstractBlockState shapeCache Lnet/minecraft/block/AbstractBlock$AbstractBlockState$ShapeCache;
+
+accessible field net/minecraft/util/Util LOGGER Lorg/slf4j/Logger;
