@@ -6,7 +6,6 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
 import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.mixin.accessor.AccessorBackgroundRenderer;
 import me.luna.fastmc.mixin.accessor.AccessorLightmapTextureManager;
 import me.luna.fastmc.shared.renderer.WorldRenderer;
 import me.luna.fastmc.shared.terrain.RenderChunk;
@@ -34,7 +33,6 @@ import net.minecraft.client.util.math.Vector3d;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -43,8 +41,6 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
-import net.minecraft.util.registry.RegistryEntry;
-import net.minecraft.world.biome.Biome;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
@@ -58,6 +54,7 @@ import java.util.SortedSet;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
+@SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreWorldRenderer {
     @Shadow
@@ -206,7 +203,13 @@ public abstract class MixinCoreWorldRenderer {
     );
 
     @Inject(method = "<init>", at = @At("RETURN"))
-    private void Inject$init$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
+    private void Inject$init$RETURN(
+        MinecraftClient client,
+        EntityRenderDispatcher entityRenderDispatcher,
+        BlockEntityRenderDispatcher blockEntityRenderDispatcher,
+        BufferBuilderStorage bufferBuilders,
+        CallbackInfo ci
+    ) {
         this.chunks = null;
         this.chunkBuilder = null;
         this.noCullingBlockEntities = ObjectSets.emptySet();
@@ -236,12 +239,12 @@ public abstract class MixinCoreWorldRenderer {
             RenderLayers.setFancyGraphicsOrBetter(MinecraftClient.isFancyGraphicsOrBetter());
 
             this.cloudsDirty = true;
-            this.viewDistance = this.client.options.viewDistance;
+            this.viewDistance = this.client.options.getViewDistance().getValue();
             this.world.reloadColor();
 
             TerrainRenderer terrainRenderer = getTerrainRenderer();
             terrainRenderer.clear();
-            terrainRenderer.updateChunkStorage(this.client.options.viewDistance);
+            terrainRenderer.updateChunkStorage(this.client.options.getViewDistance().getValue());
             terrainRenderer.reload();
         }
     }
@@ -382,7 +385,7 @@ public abstract class MixinCoreWorldRenderer {
             camera,
             tickDelta,
             this.client.world,
-            this.client.options.viewDistance,
+            this.client.options.getViewDistance().getValue(),
             gameRenderer.getSkyDarkness(tickDelta)
         );
         RenderSystem.clear(16640, MinecraftClient.IS_SYSTEM_MAC);
@@ -400,7 +403,7 @@ public abstract class MixinCoreWorldRenderer {
             tickDelta,
             camera,
             thickFog,
-            () -> BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, viewDistance, thickFog)
+            () -> BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, viewDistance, thickFog, tickDelta)
         );
 
         profiler.swap("fog");
@@ -409,9 +412,9 @@ public abstract class MixinCoreWorldRenderer {
             camera,
             BackgroundRenderer.FogType.FOG_TERRAIN,
             viewDistance,
-            thickFog
+            thickFog,
+            tickDelta
         );
-        setupTerrainFog(camera, fogDistance, thickFog);
 
         profiler.swap("terrain");
         renderTerrainPass1(lightmapTextureManager);
@@ -586,7 +589,7 @@ public abstract class MixinCoreWorldRenderer {
         matrixStack.push();
         matrixStack.multiplyPositionMatrix(matrices.peek().getPositionMatrix());
         RenderSystem.applyModelViewMatrix();
-        if (this.client.options.getCloudRenderMode() != CloudRenderMode.OFF) {
+        if (this.client.options.getCloudRenderMode().getValue() != CloudRenderMode.OFF) {
             profiler.swap("clouds");
             if (this.transparencyShader != null) {
                 assert this.cloudsFramebuffer != null;
@@ -853,75 +856,6 @@ public abstract class MixinCoreWorldRenderer {
         immediate.draw(TexturedRenderLayers.getShulkerBoxes());
         immediate.draw(TexturedRenderLayers.getSign());
         immediate.draw(TexturedRenderLayers.getChest());
-    }
-
-    @SuppressWarnings("deprecation")
-    private static void setupTerrainFog(
-        Camera camera,
-        float viewDistance,
-        boolean thickFog
-    ) {
-        float end;
-        float start;
-        CameraSubmersionType cameraSubmersionType = camera.getSubmersionType();
-        Entity entity = camera.getFocusedEntity();
-        TerrainShaderManager.FogShape fogShape = TerrainShaderManager.FogShape.SPHERE;
-        if (cameraSubmersionType == CameraSubmersionType.LAVA) {
-            if (entity.isSpectator()) {
-                start = -8.0f;
-                end = viewDistance * 0.5f;
-            } else if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.FIRE_RESISTANCE)) {
-                start = 0.0f;
-                end = 3.0f;
-            } else {
-                start = 0.25f;
-                end = 1.0f;
-            }
-        } else if (cameraSubmersionType == CameraSubmersionType.POWDER_SNOW) {
-            if (entity.isSpectator()) {
-                start = -8.0f;
-                end = viewDistance * 0.5f;
-            } else {
-                start = 0.0f;
-                end = 2.0f;
-            }
-        } else if (entity instanceof LivingEntity && ((LivingEntity) entity).hasStatusEffect(StatusEffects.BLINDNESS)) {
-            @SuppressWarnings("ConstantConditions")
-            int i = ((LivingEntity) entity).getStatusEffect(StatusEffects.BLINDNESS).getDuration();
-            float h = MathHelper.lerp(Math.min(1.0f, (float) i / 20.0f), viewDistance, 5.0f);
-            start = cameraSubmersionType == CameraSubmersionType.WATER ? -4.0f : h * 0.25f;
-            end = h;
-        } else if (cameraSubmersionType == CameraSubmersionType.WATER) {
-            start = -8.0f;
-            end = 96.0f;
-            if (entity instanceof ClientPlayerEntity clientPlayerEntity) {
-                end *= Math.max(0.25f, clientPlayerEntity.getUnderwaterVisibility());
-                RegistryEntry<Biome> registryEntry = clientPlayerEntity.world.getBiome(clientPlayerEntity.getBlockPos());
-                if (Biome.getCategory(registryEntry) == Biome.Category.SWAMP) {
-                    end *= 0.85f;
-                }
-            }
-            if (end > viewDistance) {
-                end = viewDistance;
-                fogShape = TerrainShaderManager.FogShape.CYLINDER;
-            }
-        } else if (thickFog) {
-            start = viewDistance * 0.05f;
-            end = Math.min(viewDistance * 0.5f, 96.0f);
-        } else {
-            start = viewDistance - MathHelper.clamp(viewDistance / 10.0f, 4.0f, 64.0f);
-            end = viewDistance;
-            fogShape = TerrainShaderManager.FogShape.CYLINDER;
-        }
-
-        FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer().getShaderManager().linearFog(
-            fogShape,
-            start,
-            end,
-            AccessorBackgroundRenderer.getRed(),
-            AccessorBackgroundRenderer.getGreen(),
-            AccessorBackgroundRenderer.getBlue()
-        );
     }
 
     @NotNull

@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "compatibilityLevel": "JAVA_17",
+  "package": "me.luna.fastmc.mixin.core",
+  "client": [
+    "MixinCoreMinecraftClient",
+    "entity.MixinEntity",
+    "entity.MixinEntityCow",
+    "render.MixinCoreBackgroundRenderer",
+    "render.MixinCoreWorldRenderer",
+    "render.MixinGameRenderer",
+    "tileentity.MixinBedBlockEntity",
+    "tileentity.MixinBlockEntity",
+    "tileentity.MixinChestBlockEntity",
+    "tileentity.MixinEnderChestBlockEntity",
+    "tileentity.MixinShulkerBoxBlockEntity",
+    "tileentity.MixinTrappedChestBlockEntity"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

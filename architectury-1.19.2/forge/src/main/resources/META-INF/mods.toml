@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[43,)"
+issueTrackerURL = "https://github.com/Luna5ama/FastMinecraft/issues"
+license = "MIT"
+
+[[mods]]
+modId = "fastmc"
+version = "${version}"
+displayName = "Fast Minecraft"
+authors = "Luna"
+description = '''
+Aggressive optimization mod
+'''
+#logoFile = ""
+
+[[dependencies.fastmc]]
+modId = "forge"
+mandatory = true
+versionRange = "[43,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.fastmc]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.19.2,)"
+ordering = "NONE"
+side = "BOTH"

@@ -38,7 +38,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.fluid.FluidState;
-import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.tag.FluidTags;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
@@ -62,6 +61,7 @@ import java.util.SortedSet;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
+@SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreWorldRenderer {
     @Shadow
@@ -597,7 +597,7 @@ public abstract class MixinCoreWorldRenderer {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
 
-        AbstractTexture blockTexture = getTexture(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
+        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         int lightMapTexture = getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
         glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
 
@@ -639,7 +639,7 @@ public abstract class MixinCoreWorldRenderer {
         this.client.getProfiler().push("translucent");
         lightmapTextureManager.enable();
 
-        AbstractTexture blockTexture = getTexture(PlayerScreenHandler.BLOCK_ATLAS_TEXTURE);
+        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         blockTexture.bindTexture();
         RenderSystem.enableCull();
         RenderSystem.enableBlend();
