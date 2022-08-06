@@ -1,7 +1,6 @@
 package me.luna.fastmc.mixin.core;
 
-import com.mojang.authlib.minecraft.UserApiService;
-import com.mojang.authlib.yggdrasil.YggdrasilAuthenticationService;
+import com.mojang.blaze3d.systems.RenderSystem;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.GLWrapper;
 import me.luna.fastmc.RendererReloader;
@@ -10,7 +9,7 @@ import me.luna.fastmc.shared.terrain.ChunkBuilderTask;
 import me.luna.fastmc.shared.util.FastMcCoreScope;
 import me.luna.fastmc.shared.util.FastMcExtendScope;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.RunArgs;
+import net.minecraft.client.gui.screen.SplashOverlay;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.resource.ReloadableResourceManagerImpl;
 import net.minecraft.util.profiler.Profiler;
@@ -18,15 +17,15 @@ import net.minecraft.util.thread.ReentrantThreadExecutor;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.concurrent.TimeUnit;
 
-@SuppressWarnings("InjectIntoConstructor")
+@SuppressWarnings("ConstantConditions")
 @Mixin(MinecraftClient.class)
 public abstract class MixinCoreMinecraftClient extends ReentrantThreadExecutor<Runnable> {
     @Shadow
@@ -40,17 +39,20 @@ public abstract class MixinCoreMinecraftClient extends ReentrantThreadExecutor<R
     @Shadow
     public abstract Profiler getProfiler();
 
-    @Shadow @Final private ReloadableResourceManagerImpl resourceManager;
+    @Shadow
+    @Final
+    private ReloadableResourceManagerImpl resourceManager;
 
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer(IZ)V", shift = At.Shift.AFTER))
-    public void init$Inject$INVOKE$initializeTextures(CallbackInfo ci) {
+    @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer(IZ)V"))
+    public void Redirect$init$INVOKE$RenderSystem$initRenderer(int debugVerbosity, boolean debugSync) {
+        RenderSystem.initRenderer(debugVerbosity, debugSync);
         FastMcMod.INSTANCE.initGLWrapper(new GLWrapper());
-        //noinspection ConstantConditions
         FastMcMod.INSTANCE.initProfiler(new me.luna.fastmc.mixin.Profiler((MinecraftClient) (Object) this));
     }
 
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/hud/InGameHud;<init>(Lnet/minecraft/client/MinecraftClient;)V"))
-    public void Inject$init$INVOKE$MinecraftClient$setOverlay(CallbackInfo ci) {
+    @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/screen/SplashOverlay;init(Lnet/minecraft/client/MinecraftClient;)V"))
+    public void Redirect$init$INVOKE$SplashScreen$init(MinecraftClient minecraft) {
+        SplashOverlay.init(minecraft);
         this.resourceManager.registerReloader(RendererReloader.INSTANCE);
     }
 

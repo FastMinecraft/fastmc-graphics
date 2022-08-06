@@ -2,7 +2,7 @@ val minecraftVersion: String by project
 val fabricLoaderVersion: String by project
 
 architectury {
-    common("fabric")
+    common("fabric", "forge")
 }
 
 dependencies {

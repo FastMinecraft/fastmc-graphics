@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[36,)"
+loaderVersion = "[40,)"
 issueTrackerURL = "https://github.com/Luna5ama/FastMinecraft/issues"
 license = "MIT"
 
@@ -16,13 +16,13 @@ Aggressive optimization mod
 [[dependencies.fastmc]]
 modId = "forge"
 mandatory = true
-versionRange = "[36,)"
+versionRange = "[40,)"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.fastmc]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.16.5,)"
+versionRange = "[1.18.2,)"
 ordering = "NONE"
 side = "BOTH"

@@ -10,19 +10,19 @@ public class MixinWeightedBakedModel {
 //    @Final
 //    private int totalWeight;
 //
-//    private WeightedBakedModel.Entry[] modelArray;
+//    private BakedModel[] modelArray;
 //
 //    @Inject(method = "<init>", at = @At("RETURN"))
-//    private void init$Inject$RETURN(List<WeightedBakedModel.Entry> models, CallbackInfo ci) {
-//        modelArray = new WeightedBakedModel.Entry[totalWeight];
+//    private void init$Inject$RETURN(List<Weighted.Present<BakedModel>> models, CallbackInfo ci) {
+//        modelArray = new BakedModel[totalWeight];
 //
 //        int weight = 0;
 //        for (int i = 0; i < models.size(); i++) {
-//            WeightedBakedModel.Entry entry = models.get(i);
+//            Weighted.Present<BakedModel> entry = models.get(i);
 //            int start = weight;
-//            weight += entry.weight;
+//            weight += entry.getWeight().getValue();
 //            for (int j = start; j < weight; j++) {
-//                modelArray[j] = entry;
+//                modelArray[j] = entry.getData();
 //            }
 //        }
 //    }
@@ -33,7 +33,7 @@ public class MixinWeightedBakedModel {
 //     */
 //    @Overwrite
 //    public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction face, Random random) {
-//        return modelArray[(random.nextInt() & 0x7FFFFFFF) % this.totalWeight].model.getQuads(state, face, random);
+//        return modelArray[(random.nextInt() & 0x7FFFFFFF) % this.totalWeight].getQuads(state, face, random);
 //    }
 //
 }
