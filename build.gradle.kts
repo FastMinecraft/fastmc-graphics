@@ -1,9 +1,40 @@
+import kotlin.math.max
+
 val disableTask: (TaskProvider<*>) -> Unit = {
     it.get().enabled = false
 }
 
 ext {
     set("disableTask", disableTask)
+
+    val threads = Runtime.getRuntime().availableProcessors()
+    set(
+        "runVmOptions", listOf(
+            "-Xms2G",
+            "-Xmx2G",
+            "-XX:+UnlockExperimentalVMOptions",
+            "-XX:+AlwaysPreTouch",
+            "-XX:+ExplicitGCInvokesConcurrent",
+            "-XX:+ParallelRefProcEnabled",
+            "-XX:+UseG1GC",
+            "-XX:+UseStringDeduplication",
+            "-XX:MaxGCPauseMillis=1",
+            "-XX:G1NewSizePercent=2",
+            "-XX:G1MaxNewSizePercent=10",
+            "-XX:G1HeapRegionSize=1M",
+            "-XX:G1ReservePercent=15",
+            "-XX:G1HeapWastePercent=10",
+            "-XX:G1MixedGCCountTarget=16",
+            "-XX:InitiatingHeapOccupancyPercent=50",
+            "-XX:G1MixedGCLiveThresholdPercent=50",
+            "-XX:G1RSetUpdatingPauseTimePercent=25",
+            "-XX:G1OldCSetRegionThresholdPercent=5",
+            "-XX:SurvivorRatio=5",
+            "-XX:ParallelGCThreads=$threads",
+            "-XX:ConcGCThreads=${max(threads / 4, 1)}",
+            "-XX:FlightRecorderOptions=stackdepth=512"
+        )
+    )
 }
 
 plugins {
@@ -93,16 +124,16 @@ subprojects {
             "-XX:+ParallelRefProcEnabled",
             "-XX:+UseG1GC",
             "-XX:+UseStringDeduplication",
-            "-XX:MaxGCPauseMillis=100",
-            "-XX:G1NewSizePercent=5",
-            "-XX:G1MaxNewSizePercent=20",
+            "-XX:MaxGCPauseMillis=200",
+            "-XX:G1NewSizePercent=10",
+            "-XX:G1MaxNewSizePercent=25",
             "-XX:G1HeapRegionSize=1M",
             "-XX:G1ReservePercent=10",
-            "-XX:G1HeapWastePercent=5",
+            "-XX:G1HeapWastePercent=10",
             "-XX:G1MixedGCCountTarget=8",
             "-XX:InitiatingHeapOccupancyPercent=75",
-            "-XX:G1MixedGCLiveThresholdPercent=75",
-            "-XX:G1RSetUpdatingPauseTimePercent=25",
+            "-XX:G1MixedGCLiveThresholdPercent=60",
+            "-XX:G1RSetUpdatingPauseTimePercent=30",
             "-XX:G1OldCSetRegionThresholdPercent=25",
             "-XX:SurvivorRatio=8"
         )
@@ -178,5 +209,9 @@ tasks {
         }
     }
 
-    getByPath(":forge-1.12.2:createMcpToSrg").finalizedBy(clearRuns)
+    subprojects.forEach {
+        it.afterEvaluate {
+            tasks.findByName("ideaSyncTask")?.finalizedBy(clearRuns)
+        }
+    }
 }

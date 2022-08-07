@@ -54,31 +54,8 @@ tasks {
         group = "ide"
         doLast {
             File(rootDir, ".idea/runConfigurations/${project.name}-${minecraftVersion}_runClient.xml").writer().use {
-                val threads = Runtime.getRuntime().availableProcessors()
-                val vmParameters = listOf(
-                    "-Xms2G",
-                    "-Xmx2G",
-                    "-XX:+UnlockExperimentalVMOptions",
-                    "-XX:+AlwaysPreTouch",
-                    "-XX:+DisableExplicitGC",
-                    "-XX:+ParallelRefProcEnabled",
-                    "-XX:+UseG1GC",
-                    "-XX:+UseStringDeduplication",
-                    "-XX:MaxGCPauseMillis=1",
-                    "-XX:G1NewSizePercent=2",
-                    "-XX:G1MaxNewSizePercent=10",
-                    "-XX:G1HeapRegionSize=1M",
-                    "-XX:G1ReservePercent=20",
-                    "-XX:G1HeapWastePercent=5",
-                    "-XX:G1MixedGCCountTarget=16",
-                    "-XX:InitiatingHeapOccupancyPercent=60",
-                    "-XX:G1MixedGCLiveThresholdPercent=90",
-                    "-XX:G1RSetUpdatingPauseTimePercent=10",
-                    "-XX:G1OldCSetRegionThresholdPercent=5",
-                    "-XX:SurvivorRatio=5",
-                    "-XX:ParallelGCThreads=$threads",
-                    "-XX:ConcGCThreads=${threads / 4}",
-                    "-XX:FlightRecorderOptions=stackdepth=512",
+                @Suppress("UNCHECKED_CAST")
+                val vmOptions = ((rootProject.ext["runVmOptions"] as List<String>) + listOf(
                     "-Dfabric.dli.config=${project.projectDir.absolutePath}/.gradle/loom-cache/launch.cfg",
                     "-Dfabric.dli.env=client",
                     "-Dfabric.dli.main=net.fabricmc.loader.launch.knot.KnotClient",
@@ -87,7 +64,7 @@ tasks {
                     "-Darchitectury.properties=${project.projectDir.absolutePath}/.gradle/architectury/.properties",
                     "-Djdk.attach.allowAttachSelf=true",
                     "-javaagent:${rootProject.projectDir.absolutePath}/.gradle/architectury/architectury-transformer-agent.jar"
-                ).joinToString(" ")
+                )).joinToString(" ")
 
                 it.write(
                     """
@@ -96,7 +73,7 @@ tasks {
                             <option name="MAIN_CLASS_NAME" value="dev.architectury.transformer.TransformerRuntime" />
                             <module name="${rootProject.name}.architectury-${minecraftVersion}.${project.name}.main" />
                             <option name="PROGRAM_PARAMETERS" value="--width 1280 --height 720 --username TEST" />
-                            <option name="VM_PARAMETERS" value="$vmParameters" />
+                            <option name="VM_PARAMETERS" value="$vmOptions" />
                             <option name="WORKING_DIRECTORY" value="${rootProject.projectDir.absolutePath}/architectury-${minecraftVersion}/run" />
                             <method v="2">
                               <option name="Make" enabled="true" />
