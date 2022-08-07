@@ -58,6 +58,7 @@ import java.util.SortedSet;
 import static me.luna.fastmc.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
+@SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreWorldRenderer {
     @Shadow

@@ -2,7 +2,6 @@ val disableTask: (TaskProvider<*>) -> Unit by rootProject.ext
 
 plugins {
     id("architectury-plugin")
-    id("dev.architectury.loom").apply(false)
 }
 
 val minecraftVersion: String by project
