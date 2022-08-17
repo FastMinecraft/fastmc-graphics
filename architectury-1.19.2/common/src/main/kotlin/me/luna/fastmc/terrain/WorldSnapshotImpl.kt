@@ -177,7 +177,7 @@ class WorldSnapshotImpl(override val context: RebuildContextImpl) :
     }
 
     override fun getBlockState(pos: BlockPos): BlockState {
-        return getBlockState(pos.x, pos.y, pos.z)
+        return getBlockState0(pos.x, pos.y, pos.z)
     }
 
     override fun getFluidState(pos: BlockPos): FluidState {

@@ -19,7 +19,7 @@ import net.minecraftforge.fml.common.FMLLog
 import net.minecraftforge.server.timings.TimeTracker
 import kotlin.coroutines.CoroutineContext
 
-interface IPatchedWorld {
+interface IPatchedWorld : IPatchedIBlockAccess {
     val world: World; get() = this as World
 
     var processingLoadedTiles: Boolean
@@ -211,6 +211,5 @@ interface IPatchedWorld {
     fun isOutsideBuildHeight(y: Int): Boolean
     fun isBlockLoaded(x: Int, z: Int): Boolean
     fun isBlockLoaded(x: Int, z: Int, allowEmpty: Boolean): Boolean
-    fun getBlockState(x: Int, y: Int, z: Int): IBlockState
     fun isAreaLoaded(x: Int, y: Int, z: Int, radius: Int, allowEmpty: Boolean): Boolean
 }

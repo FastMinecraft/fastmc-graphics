@@ -46,7 +46,7 @@ abstract class WorldSnapshot112<T_Chunk, T_BlockState, T_ColorResolver>(
         return chunkArray[(x - (context.chunkX - 1)) * 3 + (z - (context.chunkZ - 1))]
     }
 
-    fun getBlockState(x: Int, y: Int, z: Int): T_BlockState {
+    fun getBlockState0(x: Int, y: Int, z: Int): T_BlockState {
         return blockStateArray[(x - ((context.chunkX shl 4) - 2)) * 400 + (z - ((context.chunkZ shl 4) - 2)) * 20 + (y - ((context.chunkY shl 4) - 2))]
     }
 
@@ -69,7 +69,7 @@ abstract class WorldSnapshot112<T_Chunk, T_BlockState, T_ColorResolver>(
     }
 
     inline fun getBlockColor(x: Int, y: Int, z: Int): Int {
-        return getBlockColor(x, y, z, getBlockState(x, y, z))
+        return getBlockColor(x, y, z, getBlockState0(x, y, z))
     }
 
     fun getBlockColor(x: Int, y: Int, z: Int, blockState: T_BlockState): Int {

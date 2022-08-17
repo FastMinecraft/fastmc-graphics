@@ -168,7 +168,7 @@ abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().
             for (z in startZ..endZ) {
                 for (x in startX..endX) {
                     renderBlockPos.set(x, y, z)
-                    val blockState = worldSnapshot.getBlockState(x, y, z)
+                    val blockState = worldSnapshot.getBlockState0(x, y, z)
                     if (blockState.isAir) continue
 
                     blockX = x
@@ -312,7 +312,7 @@ abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().
                 val otherY = blockY + direction.offsetY
                 val otherZ = blockZ + direction.offsetZ
 
-                val other = worldSnapshot.getBlockState(otherX, otherY, otherZ)
+                val other = worldSnapshot.getBlockState0(otherX, otherY, otherZ)
                 val otherDirection = direction.opposite
                 var selfShape: VoxelShape? = null
                 var otherShape: VoxelShape? = null

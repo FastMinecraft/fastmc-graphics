@@ -547,7 +547,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             ) {
                 var sideSprites = sprites[1]
                 if (!isLava) {
-                    val block = worldSnapshot.getBlockState(
+                    val block = worldSnapshot.getBlockState0(
                         context.blockX + direction.offsetX,
                         context.blockY + direction.offsetY,
                         context.blockZ + direction.offsetZ
@@ -698,7 +698,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
                 val fluidState = worldSnapshot.getFluidState(x1, y, z1)
                 if (!fluidState.fluid.matchesType(fluid)
-                    && !worldSnapshot.getBlockState(x1, y, z1)
+                    && !worldSnapshot.getBlockState0(x1, y, z1)
                         .isOpaqueFullCube(worldSnapshot, tempPos15756.set(x1, y, z1))
                 ) {
                     return true
@@ -728,7 +728,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         val x1 = x + direction.offsetX
         val y1 = y + direction.offsetY
         val z1 = z + direction.offsetZ
-        return isSideCovered(x1, y1, z1, direction, worldSnapshot.getBlockState(x1, y1, z1), maxDeviation)
+        return isSideCovered(x1, y1, z1, direction, worldSnapshot.getBlockState0(x1, y1, z1), maxDeviation)
     }
 
     private val tempPosIsSideCovered = BlockPos.Mutable()
@@ -790,7 +790,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     sum += fluidHeight
                     ++count
                 }
-            } else if (!worldSnapshot.getBlockState(x1, y, z1).material.isSolid) {
+            } else if (!worldSnapshot.getBlockState0(x1, y, z1).material.isSolid) {
                 ++count
             }
         }

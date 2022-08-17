@@ -9,6 +9,7 @@
     "MixinPatchMinecraft",
     "MixinPatchMinecraftServer",
     "MixinTextFormatting",
+    "block.MixinPatchBlock",
     "entity.MixinEntityDataManager",
     "gui.MixinGuiInventory",
     "optifine.MixinConfig",

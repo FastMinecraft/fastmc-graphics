@@ -18,7 +18,6 @@ import kotlin.math.max
 
 @Suppress("DuplicatedCode")
 class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRenderer<IBlockState, IBlockState>() {
-    @Suppress("UNCHECKED_CAST")
     override val worldSnapshot = context.worldSnapshot
 
     override fun renderBlock(state: IBlockState) {
@@ -268,10 +267,10 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         val material = state.material
 
         val yDown = if (renderD) 0.005f else 0.0f
-        var fluidHeightNW = getFluidHeight(context.renderBlockPos, material)
-        var fluidHeightSW = getFluidHeight(context.renderBlockPos.south(), material)
-        var fluidHeightNE = getFluidHeight(context.renderBlockPos.east(), material)
-        var fluidHeightSE = getFluidHeight(context.renderBlockPos.east().south(), material)
+        var fluidHeightNW = getFluidHeight(context.blockX, context.blockY, context.blockZ, material)
+        var fluidHeightSW = getFluidHeight(context.blockX, context.blockY, context.blockZ + 1, material)
+        var fluidHeightNE = getFluidHeight(context.blockX + 1, context.blockY, context.blockZ, material)
+        var fluidHeightSE = getFluidHeight(context.blockX + 1, context.blockY, context.blockZ + 1, material)
 
         if (renderU) {
             fluidHeightNW -= 0.005f
@@ -375,7 +374,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             )
             context.activeVertexBuilder.putQuad(0b11_11_11)
 
-            if ((state.block as BlockLiquid).shouldRenderSides(worldSnapshot, context.renderBlockPos.up())) {
+            if ((state.block as BlockLiquid).shouldRenderSides(worldSnapshot, tempPos.setPos(context.blockX, context.blockY + 1, context.blockZ))) {
                 context.activeVertexBuilder.putVertex(
                     context.renderPosX + 0.0f,
                     context.renderPosY + fluidHeightNW,
@@ -690,15 +689,17 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             max(lightThis and 255, lightUp and 255)
     }
 
-    private fun getFluidHeight(pos: BlockPos, blockMaterial: Material): Float {
+    private fun getFluidHeight(x: Int, y: Int, z: Int, blockMaterial: Material): Float {
         var i = 0
         var f = 0.0f
         for (j in 0..3) {
-            val blockpos = pos.add(-(j and 1), 0, -(j shr 1 and 1))
-            if (worldSnapshot.getBlockState(blockpos.up()).material === blockMaterial) {
+            val x1 = x -(j and 1)
+            val y1 = y
+            val z1 = z - (j shr 1 and 1)
+            if (worldSnapshot.getBlockState(x1, y1 + 1, z1).material === blockMaterial) {
                 return 1.0f
             }
-            val state = worldSnapshot.getBlockState(blockpos)
+            val state = worldSnapshot.getBlockState(x1, y1, z1)
             val material = state.material
             if (material !== blockMaterial) {
                 if (!material.isSolid) {

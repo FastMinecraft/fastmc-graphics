@@ -159,6 +159,10 @@ class WorldSnapshotImpl(override val context: RebuildContextImpl) :
         throw UnsupportedOperationException()
     }
 
+    override fun getBlockState(x: Int, y: Int, z: Int): IBlockState {
+        return getBlockState0(x, y, z)
+    }
+
     override fun getBlockState(pos: BlockPos): IBlockState {
         return getBlockState(pos.x, pos.y, pos.z)
     }
