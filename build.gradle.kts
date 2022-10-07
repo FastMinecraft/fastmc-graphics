@@ -1,3 +1,4 @@
+import me.luna.jaroptimizer.JarOptimizerPluginExtension
 import kotlin.math.max
 
 val disableTask: (TaskProvider<*>) -> Unit = {
@@ -43,6 +44,7 @@ plugins {
     idea
     id("architectury-plugin").apply(false)
     id("dev.architectury.loom").apply(false)
+    id("me.luna.jaroptimizer").version("1.1")
 }
 
 idea {
@@ -173,6 +175,8 @@ tasks {
     disableTask(jar)
 
     val collectJars by register<Copy>("collectJars") {
+        finalizedBy("optimizeJars")
+
         group = "build"
 
         subprojects.asSequence()
@@ -196,6 +200,10 @@ tasks {
         }
 
         into(file("$buildDir/libs"))
+    }
+
+    configure<JarOptimizerPluginExtension> {
+        add(collectJars, "me.luna.fastmc", "org.spongepowered")
     }
 
     assemble {
