@@ -81,6 +81,14 @@ tasks {
             it.name.contains("devfix", true)
         }
 
+        archiveBaseName.set(rootProject.name)
+        archiveAppendix.set(project.name)
+    }
+
+    val releaseJar = register<Jar>("releaseJar") {
+        group = "build"
+        dependsOn("reobfJar")
+
         manifest {
             attributes(
                 "Manifest-Version" to 1.0,
@@ -92,6 +100,21 @@ tasks {
             )
         }
 
+        val excludeDirs = listOf("META-INF/com.android.tools", "META-INF/maven", "META-INF/proguard", "META-INF/versions")
+        val excludeNames = hashSetOf("module-info", "MUMFREY", "LICENSE", "kotlinx_coroutines_core")
+
+        from(
+            jar.get().outputs.files.map {
+                if (it.isDirectory) it else zipTree(it)
+            }
+        )
+
+        exclude { file ->
+            file.name.endsWith("kotlin_module")
+                || excludeNames.contains(file.file.nameWithoutExtension)
+                || excludeDirs.any { file.path.contains(it) }
+        }
+
         from(
             configurations["library"].map {
                 if (it.isDirectory) it else zipTree(it)
@@ -101,6 +124,10 @@ tasks {
         archiveBaseName.set(rootProject.name)
         archiveAppendix.set(project.name)
         archiveClassifier.set("release")
+    }
+
+    afterEvaluate {
+        getByName("reobfJar").finalizedBy(releaseJar)
     }
 
     clean {
