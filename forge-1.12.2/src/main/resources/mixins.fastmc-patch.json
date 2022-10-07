@@ -9,7 +9,6 @@
     "MixinPatchMinecraft",
     "MixinPatchMinecraftServer",
     "MixinTextFormatting",
-    "block.MixinPatchBlock",
     "entity.MixinEntityDataManager",
     "gui.MixinGuiInventory",
     "optifine.MixinConfig",
@@ -18,8 +17,8 @@
     "render.MixinBlockRenderLayer",
     "render.MixinClippingHelperImpl",
     "render.MixinPatchBakedQuad",
-    "world.MixinBlock",
     "world.MixinChunk",
+    "world.MixinPatchBlock",
     "world.MixinWorld",
     "world.MixinWorldClient",
     "world.MixinWorldServer"
