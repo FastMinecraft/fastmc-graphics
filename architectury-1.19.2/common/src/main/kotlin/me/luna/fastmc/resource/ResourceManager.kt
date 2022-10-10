@@ -27,29 +27,29 @@ class ResourceManager(resourceManager: net.minecraft.resource.ResourceManager) :
     override val entityShader: ResourceProvider<AbstractInstancingBuilder.InstancingShaderProgram> = ResourceProvider(
         AbstractInstancingBuilder.InstancingShaderProgram(
             "entity/Cow",
-            ShaderSource.Vertex("/assets/shaders/entity/Cow.vsh"),
-            ShaderSource.Fragment("/assets/shaders/entity/Default.fsh")
+            ShaderSource.Vertex("/assets/shaders/entity/Cow.vert"),
+            ShaderSource.Fragment("/assets/shaders/entity/Default.frag")
         ),
 
         AbstractInstancingBuilder.InstancingShaderProgram(
             "tileEntity/EnderChest",
-            ShaderSource.Vertex("/assets/shaders/tileentity/EnderChest.vsh"),
-            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
+            ShaderSource.Vertex("/assets/shaders/tileentity/EnderChest.vert"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.frag")
         ),
         AbstractInstancingBuilder.InstancingShaderProgram(
             "tileEntity/Bed",
-            ShaderSource.Vertex("/assets/shaders/tileentity/Bed.vsh"),
-            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
+            ShaderSource.Vertex("/assets/shaders/tileentity/Bed.vert"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.frag")
         ),
         AbstractInstancingBuilder.InstancingShaderProgram(
             "tileEntity/ShulkerBox",
-            ShaderSource.Vertex("/assets/shaders/tileentity/ShulkerBox.vsh"),
-            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
+            ShaderSource.Vertex("/assets/shaders/tileentity/ShulkerBox.vert"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.frag")
         ),
         AbstractInstancingBuilder.InstancingShaderProgram(
             "tileEntity/Chest",
-            ShaderSource.Vertex("/assets/shaders/tileentity/Chest.vsh"),
-            ShaderSource.Fragment("/assets/shaders/tileentity/Default.fsh")
+            ShaderSource.Vertex("/assets/shaders/tileentity/Chest.vert"),
+            ShaderSource.Fragment("/assets/shaders/tileentity/Default.frag")
         )
     )
 

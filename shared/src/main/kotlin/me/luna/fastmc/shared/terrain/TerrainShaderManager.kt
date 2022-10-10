@@ -67,7 +67,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         fogType: FogType
     ): AlphaTestShaderGroup<DrawShaderProgram> {
         return shaderMap.getOrPut(fogShape, ::EnumMap).getOrPut(fogType) {
-            val vertex = ShaderSource.Vertex("/assets/shaders/terrain/Terrain.vsh") {
+            val vertex = ShaderSource.Vertex("/assets/shaders/terrain/Terrain.vert") {
                 FogShape.values().forEach {
                     define(it.toString(), it.ordinal)
                 }
@@ -77,7 +77,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
                 define("FOG_SHAPE", fogShape)
                 define("FOG_TYPE", fogType)
             }
-            val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.fsh")
+            val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.frag")
             AlphaTestShaderGroup(
                 DrawShaderProgram(vertex, fragment, false),
                 DrawShaderProgram(vertex, fragment, true)

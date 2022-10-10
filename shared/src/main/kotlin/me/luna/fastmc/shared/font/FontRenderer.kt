@@ -349,8 +349,8 @@ class FontRenderer(
     }
 
     class ShaderProgram : DrawShaderProgram(
-        ShaderSource.Vertex("/assets/shaders/FontRenderer.vsh"),
-        ShaderSource.Fragment("/assets/shaders/FontRenderer.fsh")
+        ShaderSource.Vertex("/assets/shaders/FontRenderer.vert"),
+        ShaderSource.Fragment("/assets/shaders/FontRenderer.frag")
     ) {
         private val defaultColorUniform = glGetUniformLocation(id, "defaultColor")
         private var lastColor = ColorARGB(0)

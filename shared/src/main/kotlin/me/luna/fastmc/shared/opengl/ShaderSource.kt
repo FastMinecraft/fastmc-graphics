@@ -21,7 +21,7 @@ sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
         override val provider: Provider<Vertex> get() = Companion
         override val typeName = "Vertex"
 
-        companion object : Provider<Vertex>("vsh") {
+        companion object : Provider<Vertex>("vert") {
             override fun newInstance(name: String, codeSrc: CharSequence): Vertex {
                 return Vertex(name, codeSrc)
             }
@@ -32,7 +32,7 @@ sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
         override val provider: Provider<Fragment> get() = Companion
         override val typeName = "Fragment"
 
-        companion object : Provider<Fragment>("fsh") {
+        companion object : Provider<Fragment>("frag") {
             override fun newInstance(name: String, codeSrc: CharSequence): Fragment {
                 return Fragment(name, codeSrc)
             }
