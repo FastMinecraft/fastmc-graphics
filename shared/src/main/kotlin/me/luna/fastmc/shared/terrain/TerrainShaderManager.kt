@@ -1,14 +1,11 @@
 package me.luna.fastmc.shared.terrain
 
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.opengl.ShaderProgram
-import me.luna.fastmc.shared.opengl.ShaderSource
+import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.ShaderSource.Companion.invoke
-import me.luna.fastmc.shared.opengl.glGetUniformLocation
-import me.luna.fastmc.shared.opengl.glProgramUniform3f
-import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
 import me.luna.fastmc.shared.terrain.TerrainShaderManager.AlphaTestShaderGroup.Companion.update
 import me.luna.fastmc.shared.util.EnumMap
+import me.luna.fastmc.shared.util.MemoryStack
 import me.luna.fastmc.shared.util.ceilToInt
 import me.luna.fastmc.shared.util.sq
 import java.util.*
@@ -20,7 +17,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
     var fogRangeSq = Int.MAX_VALUE; private set
 
-    private val fogParametersUBO = UniformBufferObject("FogParameters", 24)
+    private val fogParametersUBO = BufferObject.Immutable().allocate(24, GL_DYNAMIC_STORAGE_BIT)
 
     private val shaderMap = EnumMap<FogShape, EnumMap<FogType, AlphaTestShaderGroup<DrawShaderProgram>>>()
     private var activeFogShape = FogShape.SPHERE
@@ -82,8 +79,8 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
                 DrawShaderProgram(vertex, fragment, false),
                 DrawShaderProgram(vertex, fragment, true)
             ).update {
-                attachUBO(renderer.globalUBO)
-                attachUBO(fogParametersUBO)
+                attachBufferBinding(GL_UNIFORM_BUFFER, renderer.globalUBO, "Global")
+                attachBufferBinding(GL_UNIFORM_BUFFER, fogParametersUBO, "FogParameters")
             }
         }
     }
@@ -95,13 +92,18 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         green: Float,
         blue: Float
     ) {
-        fogParametersUBO.update {
-            it.putFloat(red)
-            it.putFloat(green)
-            it.putFloat(blue)
-            it.putFloat(1.0f)
-            it.putFloat(densityOrM)
-            it.putFloat(b)
+        MemoryStack.use {
+            withMalloc(fogParametersUBO.size) {
+                it.putFloat(red)
+                it.putFloat(green)
+                it.putFloat(blue)
+                it.putFloat(1.0f)
+                it.putFloat(densityOrM)
+                it.putFloat(b)
+                it.flip()
+                fogParametersUBO.invalidate()
+                glNamedBufferSubData(fogParametersUBO.id, 0, it)
+            }
         }
     }
 

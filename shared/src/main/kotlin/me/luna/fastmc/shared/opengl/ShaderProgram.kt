@@ -1,7 +1,6 @@
 package me.luna.fastmc.shared.opengl
 
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 
 open class ShaderProgram(
@@ -10,7 +9,7 @@ open class ShaderProgram(
 ) : IGLObject, IGLBinding {
     final override val id: Int
 
-    private val uniformBuffers = FastObjectArrayList<UniformBufferObject>()
+    private val bufferBindings = FastObjectArrayList<BufferBinding>()
 
     init {
         val vertexShaderID = createShader(vertex, GL_VERTEX_SHADER)
@@ -58,16 +57,36 @@ open class ShaderProgram(
         return id
     }
 
-    fun attachUBO(ubo: UniformBufferObject) {
-        val index = glGetUniformBlockIndex(id, ubo.blockName)
-        glUniformBlockBinding(id, index, uniformBuffers.size)
-        uniformBuffers.add(ubo)
+    fun attachBufferBinding(target: Int, buffer: BufferObject, blockName: String) {
+        attachBufferBinding(target, buffer, blockName, -1, -1)
+    }
+
+
+    fun attachBufferBinding(target: Int, buffer: BufferObject, blockName: String, offset: Int, size: Int) {
+        when (target) {
+            GL_UNIFORM_BUFFER -> {
+                val index = glGetUniformBlockIndex(id, blockName)
+                glUniformBlockBinding(id, index, bufferBindings.size)
+                bufferBindings.add(BufferBinding(target, buffer, offset, size))
+            }
+            GL_SHADER_STORAGE_BUFFER -> {
+                val index = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, blockName)
+                glShaderStorageBlockBinding(id, index, bufferBindings.size)
+                bufferBindings.add(BufferBinding(target, buffer, offset, size))
+            }
+            else -> throw IllegalArgumentException("Unsupported buffer binding target: $target")
+        }
     }
 
     override fun bind() {
         glUseProgram(id)
-        for (i in uniformBuffers.indices) {
-            glBindBufferBase(GL_UNIFORM_BUFFER, i, uniformBuffers[i].id)
+        for (i in bufferBindings.indices) {
+            val binding = bufferBindings[i]
+            if (binding.offset == -1 || binding.size == -1) {
+                glBindBufferBase(binding.target, i, binding.buffer.id)
+            } else {
+                glBindBufferRange(binding.target, i, binding.buffer.id, binding.offset.toLong(), binding.size.toLong())
+            }
         }
     }
 
@@ -78,4 +97,6 @@ open class ShaderProgram(
     override fun destroy() {
         glDeleteProgram(id)
     }
+
+    data class BufferBinding(val target: Int, val buffer: BufferObject, val offset: Int, val size: Int)
 }

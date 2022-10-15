@@ -2,6 +2,7 @@ package me.luna.fastmc.shared.texture
 
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.util.allocateByte
+import me.luna.fastmc.shared.util.free
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer
 import java.nio.ByteBuffer
@@ -18,6 +19,7 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
         buffer.flip()
         glTextureStorage2D(id, 1, GL_RGBA8, width, height)
         glTextureSubImage2D(id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer)
+        buffer.free()
 
         glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTextureParameteri(id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)

@@ -2,13 +2,9 @@ package me.luna.fastmc.shared.terrain
 
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
-import me.luna.fastmc.shared.util.SoftReferenceObjectPool
-import me.luna.fastmc.shared.util.allocateByte
+import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import org.joml.FrustumIntersection
-import sun.misc.Unsafe
-import java.nio.Buffer
-import java.nio.ByteBuffer
 
 @Suppress("NOTHING_TO_INLINE")
 class RenderRegion(
@@ -24,12 +20,11 @@ class RenderRegion(
     val frustumCull: FrustumCull = FrustumCullImpl()
 
     @JvmField
-    val layerBatchArray = Array(renderer.layerCount) { LayerBatch() }
+    val layerBatchArray = Array(renderer.layerCount) { LayerBatch(storage.regionChunkCount) }
 
     @JvmField
     val sortSuppArray = arrayOfNulls<RenderChunk>(storage.regionChunkCount)
 
-    @Suppress("UNCHECKED_CAST")
     @JvmField
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(storage.regionChunkCount), 0)
 
@@ -87,12 +82,9 @@ class RenderRegion(
         }
     }
 
-    class LayerBatch {
-        private val serverBuffer = BufferObject.Immutable().apply {
-            allocate(4096 * 63 * 20, GL_DYNAMIC_STORAGE_BIT)
-        }
-
-        private val clientBuffer by lazy { clientBufferPool.get() }
+    class LayerBatch(regionChunkCount: Int) {
+        private val serverBuffer = BufferObject.Immutable().allocate(regionChunkCount * 63 * 20, GL_DYNAMIC_STORAGE_BIT)
+        private val clientBuffer = allocateByte(serverBuffer.size)
         private var index = 0
         private var isDirty = false
 
@@ -130,24 +122,7 @@ class RenderRegion(
 
         fun destroy() {
             serverBuffer.destroy()
-            clientBufferPool.put(clientBuffer)
-        }
-
-        private companion object {
-            private val clientBufferPool = SoftReferenceObjectPool { allocateByte(4096 * 63 * 20) }
-
-            @JvmField
-            val UNSAFE = run {
-                val field = Unsafe::class.java.getDeclaredField("theUnsafe")
-                field.isAccessible = true
-                field.get(null) as Unsafe
-            }
-
-            @JvmField
-            val ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("address"))
-
-            inline val ByteBuffer.address
-                get() = UNSAFE.getLong(this, ADDRESS_OFFSET)
+            clientBuffer.free()
         }
     }
 

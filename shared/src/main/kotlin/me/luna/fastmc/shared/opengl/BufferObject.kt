@@ -7,12 +7,14 @@ sealed class BufferObject : IGLObject, IGLTargetBinding {
 
     var size = 0; private set
 
-    open fun allocate(size: Int, flags: Int) {
+    open fun allocate(size: Int, flags: Int): BufferObject {
         this.size = size
+        return this
     }
 
-    open fun allocate(buffer: ByteBuffer, flags: Int) {
+    open fun allocate(buffer: ByteBuffer, flags: Int): BufferObject {
         size = buffer.remaining()
+        return this
     }
 
     fun invalidate() {
@@ -32,26 +34,30 @@ sealed class BufferObject : IGLObject, IGLTargetBinding {
     }
 
     class Immutable : BufferObject() {
-        override fun allocate(size: Int, flags: Int) {
+        override fun allocate(size: Int, flags: Int): Immutable {
             super.allocate(size, flags)
             glNamedBufferStorage(id, size.toLong(), flags)
+            return this
         }
 
-        override fun allocate(buffer: ByteBuffer, flags: Int) {
+        override fun allocate(buffer: ByteBuffer, flags: Int): Immutable {
             super.allocate(buffer, flags)
             glNamedBufferStorage(id, buffer, flags)
+            return this
         }
     }
 
     class Mutable : BufferObject() {
-        override fun allocate(size: Int, flags: Int) {
+        override fun allocate(size: Int, flags: Int): Mutable {
             super.allocate(size, flags)
             glNamedBufferData(id, size.toLong(), flags)
+            return this
         }
 
-        override fun allocate(buffer: ByteBuffer, flags: Int) {
+        override fun allocate(buffer: ByteBuffer, flags: Int): Mutable {
             super.allocate(buffer, flags)
             glNamedBufferData(id, buffer, flags)
+            return this
         }
     }
 }

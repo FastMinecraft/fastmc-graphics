@@ -4,7 +4,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.function.Supplier
 
 class ConcurrentObjectPool<T>(private val newInstance: Supplier<T>) {
-    private val lock = Any()
     private val stack = ConcurrentLinkedQueue<T>()
 
     fun get(): T {

@@ -97,8 +97,7 @@ class RenderBufferPool(private val growPower: Int) {
             } else {
                 capacity
             }
-            val newBufferObject = BufferObject.Mutable()
-            newBufferObject.allocate(newSize, GL_DYNAMIC_DRAW)
+            val newBufferObject = BufferObject.Mutable().allocate(newSize, GL_DYNAMIC_DRAW)
             allocated = 0
 
             current = regionHead
@@ -137,8 +136,7 @@ class RenderBufferPool(private val growPower: Int) {
             val tail = regionTail
             val lastUnused = if (!tail.used) tail.offset else capacity
             val newSize = (lastUnused + newLength + growAmount - 1) shr growPower shl growPower
-            val newBufferObject = BufferObject.Mutable()
-            newBufferObject.allocate(newSize, GL_DYNAMIC_DRAW)
+            val newBufferObject = BufferObject.Mutable().allocate(newSize, GL_DYNAMIC_DRAW)
 
             glCopyNamedBufferSubData(bufferObject.id, newBufferObject.id, 0L, 0L, lastUnused.toLong())
             bufferObject.destroy()

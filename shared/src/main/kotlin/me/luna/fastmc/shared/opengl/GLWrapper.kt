@@ -53,6 +53,7 @@ interface IGLWrapper {
     fun glDeleteVertexArrays(array: Int)
     fun glGenerateMipmap(target: Int)
     fun glBindBufferBase(target: Int, index: Int, buffer: Int)
+    fun glBindBufferRange(target: Int, index: Int, buffer: Int, offset: Long, size: Long)
 
     fun glDeleteFramebuffers(framebuffer: Int)
     fun glBindFramebuffer(target: Int, framebuffer: Int)
@@ -95,6 +96,9 @@ interface IGLWrapper {
         primcount: Int,
         stride: Int
     )
+
+    fun glShaderStorageBlockBinding(program: Int, storageBlockIndex: Int, storageBlockBinding: Int)
+    fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int
 
 
     // GL45
@@ -447,11 +451,15 @@ const val GL_DEPTH_STENCIL_ATTACHMENT = 0x821A
 
 const val GL_RENDERBUFFER = 0x8D41
 
+const val GL_TRANSFORM_FEEDBACK_BUFFER = 0x8C8E
+
 inline fun glGenerateMipmap(target: Int) = glWrapper.glGenerateMipmap(target)
 
 inline fun glDeleteVertexArrays(array: Int) = glWrapper.glDeleteVertexArrays(array)
 inline fun glBindVertexArray(array: Int) = glWrapper.glBindVertexArray(array)
 inline fun glBindBufferBase(target: Int, index: Int, buffer: Int) = glWrapper.glBindBufferBase(target, index, buffer)
+inline fun glBindBufferRange(target: Int, index: Int, buffer: Int, offset: Long, size: Long) =
+    glWrapper.glBindBufferRange(target, index, buffer, offset, size)
 
 inline fun glDeleteFramebuffers(framebuffer: Int) = glWrapper.glDeleteFramebuffers(framebuffer)
 inline fun glBindFramebuffer(target: Int, framebuffer: Int) = glWrapper.glBindFramebuffer(target, framebuffer)
@@ -504,7 +512,32 @@ inline fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boo
     glWrapper.glProgramUniformMatrix4fv(program, location, transpose, matrices)
 
 
+// GL42
+const val GL_ATOMIC_COUNTER_BUFFER = 0x92C0
+
 // GL43
+const val GL_SHADER_STORAGE_BUFFER = 0x90D2
+
+const val GL_UNIFORM = 0x92E1
+const val GL_UNIFORM_BLOCK = 0x92E2
+const val GL_PROGRAM_INPUT = 0x92E3
+const val GL_PROGRAM_OUTPUT = 0x92E4
+const val GL_BUFFER_VARIABLE = 0x92E5
+const val GL_SHADER_STORAGE_BLOCK = 0x92E6
+const val GL_VERTEX_SUBROUTINE = 0x92E8
+const val GL_TESS_CONTROL_SUBROUTINE = 0x92E9
+const val GL_TESS_EVALUATION_SUBROUTINE = 0x92EA
+const val GL_GEOMETRY_SUBROUTINE = 0x92EB
+const val GL_FRAGMENT_SUBROUTINE = 0x92EC
+const val GL_COMPUTE_SUBROUTINE = 0x92ED
+const val GL_VERTEX_SUBROUTINE_UNIFORM = 0x92EE
+const val GL_TESS_CONTROL_SUBROUTINE_UNIFORM = 0x92EF
+const val GL_TESS_EVALUATION_SUBROUTINE_UNIFORM = 0x92F0
+const val GL_GEOMETRY_SUBROUTINE_UNIFORM = 0x92F1
+const val GL_FRAGMENT_SUBROUTINE_UNIFORM = 0x92F2
+const val GL_COMPUTE_SUBROUTINE_UNIFORM = 0x92F3
+const val GL_TRANSFORM_FEEDBACK_VARYING = 0x92F4
+
 inline fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long) =
     glWrapper.glInvalidateBufferSubData(buffer, offset, length)
 
@@ -524,6 +557,12 @@ inline fun glMultiDrawElementsIndirect(
     primcount: Int,
     stride: Int
 ) = glWrapper.glMultiDrawElementsIndirect(mode, type, indirect, primcount, stride)
+
+inline fun glShaderStorageBlockBinding(program: Int, storageBlockIndex: Int, storageBlockBinding: Int) =
+    glWrapper.glShaderStorageBlockBinding(program, storageBlockIndex, storageBlockBinding)
+
+inline fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int =
+    glWrapper.glGetProgramResourceIndex(program, programInterface, name)
 
 
 // GL44

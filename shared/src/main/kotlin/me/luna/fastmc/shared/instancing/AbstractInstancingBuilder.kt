@@ -198,7 +198,7 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
 
         override fun bind() {
             if (!attached) {
-                attachUBO(FastMcMod.worldRenderer.globalUBO)
+                attachBufferBinding(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.globalUBO, "Global")
                 attached = true
             }
             super.bind()

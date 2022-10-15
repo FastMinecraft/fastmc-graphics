@@ -2,13 +2,9 @@ package me.luna.fastmc.shared.opengl.impl
 
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.terrain.ChunkBuilderTask
-import me.luna.fastmc.shared.util.ConcurrentObjectPool
+import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.collection.AtomicByteArray
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
-import me.luna.fastmc.shared.util.pollEach
-import sun.misc.Unsafe
-import java.nio.Buffer
-import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -19,9 +15,8 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     private val sectorSize = 1 shl sectorSizePower
     val capacity = sectorSize * sectorCapacity
 
-    private val vbo = BufferObject.Immutable().apply {
-        allocate(capacity, GL_MAP_WRITE_BIT or GL_MAP_PERSISTENT_BIT or GL_MAP_COHERENT_BIT)
-    }
+    private val vbo = BufferObject.Immutable()
+        .allocate(capacity, GL_MAP_WRITE_BIT or GL_MAP_PERSISTENT_BIT or GL_MAP_COHERENT_BIT)
 
     private val baseBuffer = glMapNamedBufferRange(
         vbo.id,
@@ -60,7 +55,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
             releaseTask!!.list.add(it)
         }
         if (releaseTask != null) {
-            releaseTaskQueue.offerLast(releaseTask)
+            releaseTaskQueue.offerLast(releaseTask!!)
         }
     }
 
@@ -264,48 +259,5 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     private companion object {
         const val FALSE: Byte = 0
         const val TRUE: Byte = 1
-
-        @JvmField
-        val UNSAFE = run {
-            val field = Unsafe::class.java.getDeclaredField("theUnsafe")
-            field.isAccessible = true
-            field.get(null) as Unsafe
-        }
-
-        @JvmField
-        val ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("address"))
-
-        @JvmField
-        val POSITION_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("position"))
-
-        @JvmField
-        val LIMIT_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("limit"))
-
-        @JvmField
-        val CAPACITY_OFFSET = UNSAFE.objectFieldOffset(Buffer::class.java.getDeclaredField("capacity"))
-
-        inline var ByteBuffer.address
-            get() = UNSAFE.getLong(this, ADDRESS_OFFSET)
-            set(value) {
-                UNSAFE.putLong(this, ADDRESS_OFFSET, value)
-            }
-
-        inline var ByteBuffer.position
-            get() = position()
-            set(value) {
-                UNSAFE.putInt(this, POSITION_OFFSET, value)
-            }
-
-        inline var ByteBuffer.limit
-            get() = position()
-            set(value) {
-                UNSAFE.putInt(this, LIMIT_OFFSET, value)
-            }
-
-        inline var ByteBuffer.capacity
-            get() = capacity()
-            set(value) {
-                UNSAFE.putInt(this, CAPACITY_OFFSET, value)
-            }
     }
 }

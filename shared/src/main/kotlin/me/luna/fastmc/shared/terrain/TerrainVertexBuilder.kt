@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.terrain
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList
+import me.luna.fastmc.shared.util.UNSAFE
 import me.luna.fastmc.shared.util.skip
-import sun.misc.Unsafe
 
 abstract class TerrainVertexBuilder {
     @Volatile
@@ -153,15 +153,6 @@ abstract class TerrainVertexBuilder {
                     vertexBuffers[i] = null
                 }
             }
-        }
-    }
-
-    private companion object {
-        @JvmField
-        val UNSAFE = run {
-            val field = Unsafe::class.java.getDeclaredField("theUnsafe")
-            field.isAccessible = true
-            field.get(null) as Unsafe
         }
     }
 }

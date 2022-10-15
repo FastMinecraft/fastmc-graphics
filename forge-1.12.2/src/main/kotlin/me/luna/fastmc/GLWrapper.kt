@@ -88,6 +88,9 @@ class GLWrapper : IGLWrapper {
     override fun glBindVertexArray(array: Int) = GL30.glBindVertexArray(array)
     override fun glGenerateMipmap(target: Int) = GL30.glGenerateMipmap(target)
     override fun glBindBufferBase(target: Int, index: Int, buffer: Int) = GL30.glBindBufferBase(target, index, buffer)
+    override fun glBindBufferRange(target: Int, index: Int, buffer: Int, offset: Long, size: Long) =
+        GL30.glBindBufferRange(target, index, buffer, offset, size)
+
 
     override fun glDeleteFramebuffers(framebuffer: Int) = GL30.glDeleteFramebuffers(framebuffer)
     override fun glBindFramebuffer(target: Int, framebuffer: Int) = GL30.glBindFramebuffer(target, framebuffer)
@@ -173,6 +176,13 @@ class GLWrapper : IGLWrapper {
         primcount: Int,
         stride: Int
     ) = GL43.glMultiDrawElementsIndirect(mode, type, indirect, primcount, stride)
+
+    override fun glShaderStorageBlockBinding(program: Int, storageBlockIndex: Int, storageBlockBinding: Int) =
+        GL43.glShaderStorageBlockBinding(program, storageBlockIndex, storageBlockBinding)
+
+    override fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int =
+        GL43.glGetProgramResourceIndex(program, programInterface, name)
+
 
     // GL45
     override fun glCreateVertexArrays(): Int = GL45.glCreateVertexArrays()

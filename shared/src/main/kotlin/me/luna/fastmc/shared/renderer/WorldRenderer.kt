@@ -1,8 +1,11 @@
 package me.luna.fastmc.shared.renderer
 
 import kotlinx.coroutines.CoroutineScope
-import me.luna.fastmc.shared.opengl.impl.UniformBufferObject
+import me.luna.fastmc.shared.opengl.BufferObject
+import me.luna.fastmc.shared.opengl.GL_DYNAMIC_STORAGE_BIT
+import me.luna.fastmc.shared.opengl.glNamedBufferSubData
 import me.luna.fastmc.shared.terrain.TerrainRenderer
+import me.luna.fastmc.shared.util.MemoryStack
 import me.luna.fastmc.shared.util.fastFloor
 import me.luna.fastmc.shared.util.skip
 import org.joml.FrustumIntersection
@@ -37,7 +40,7 @@ abstract class WorldRenderer : IRenderer {
     final override var inverseProjectMatrix = Matrix4f()
     final override var inverseModelViewMatrix = Matrix4f()
 
-    final override val globalUBO = UniformBufferObject("Global", 268)
+    final override val globalUBO = BufferObject.Immutable().allocate(268, GL_DYNAMIC_STORAGE_BIT)
 
     final override val frustum = FrustumIntersection(projectionMatrix, false)
     final override var matrixHash = 0L
@@ -91,15 +94,20 @@ abstract class WorldRenderer : IRenderer {
     }
 
     fun updateGlobalUBO(partialTicks: Float) {
-        globalUBO.update {
-            projectionMatrix.get(0, it)
-            modelViewMatrix.get(64, it)
-            inverseProjectMatrix.get(128, it)
-            inverseModelViewMatrix.get(192, it)
-            it.skip(256)
-            it.putFloat(screenWidth.toFloat())
-            it.putFloat(screenHeight.toFloat())
-            it.putFloat(partialTicks)
+        MemoryStack.use {
+            withMalloc(globalUBO.size) {
+                projectionMatrix.get(0, it)
+                modelViewMatrix.get(64, it)
+                inverseProjectMatrix.get(128, it)
+                inverseModelViewMatrix.get(192, it)
+                it.skip(256)
+                it.putFloat(screenWidth.toFloat())
+                it.putFloat(screenHeight.toFloat())
+                it.putFloat(partialTicks)
+                it.flip()
+                globalUBO.invalidate()
+                glNamedBufferSubData(globalUBO.id, 0, it)
+            }
         }
     }
 
