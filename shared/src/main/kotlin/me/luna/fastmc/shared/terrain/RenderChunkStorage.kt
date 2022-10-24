@@ -20,12 +20,12 @@ class RenderChunkStorage(
     viewDistance: Int,
 ) {
     @JvmField
-    val minY = renderer.minChunkY
+    val minChunkY = renderer.minChunkY
 
     @JvmField
-    val maxY = renderer.maxChunkY
+    val maxChunkY = renderer.maxChunkY
 
-    val sizeY get() = maxY - minY
+    val sizeY get() = maxChunkY - minChunkY
 
     @JvmField
     val sizeXZ = viewDistance * 2 + 1
@@ -39,7 +39,7 @@ class RenderChunkStorage(
     @JvmField
     val totalRegion = regionSizeXZ * regionSizeXZ
 
-    val regionChunkCount get() = 16 * (maxY - minY) * 16
+    val regionChunkCount get() = 16 * (maxChunkY - minChunkY) * 16
 
     @JvmField
     val regionArray = Array(totalRegion) {
@@ -101,7 +101,7 @@ class RenderChunkStorage(
         updateCaveCulling()
         cameraChunk = getRenderChunkByChunk0(
             renderer.cameraChunkX,
-            renderer.cameraChunkY.coerceIn(minY, maxY - 1),
+            renderer.cameraChunkY.coerceIn(minChunkY, maxChunkY - 1),
             renderer.cameraChunkZ
         )
 
@@ -156,7 +156,7 @@ class RenderChunkStorage(
 
                     for (x in startX until endX) {
                         for (z in startZ until endZ) {
-                            for (y in minY until maxY) {
+                            for (y in minChunkY until maxChunkY) {
                                 val renderChunk = getRenderChunkByChunk0(x, y, z)
                                 renderChunk.setPos(x, y, z)
                                 renderChunk.renderRegion = region
@@ -181,7 +181,7 @@ class RenderChunkStorage(
         }
     }
 
-   private val updateChunkIndicesRunnable = Runnable {
+    private val updateChunkIndicesRunnable = Runnable {
         val newChunkIndices = sortedChunkIndices.copyOf()
         newChunkIndices.copyInto(chunkSortSuppArray)
 
@@ -267,7 +267,7 @@ class RenderChunkStorage(
                 caveCullingQueue.enqueue(nextRenderChunk.index or (nextDirection.idOpposite shl 17) or (nextDirection.bitOpposite shl 20))
             }
         } else {
-            if (renderer.cameraChunkY < minY) {
+            if (renderer.cameraChunkY < minChunkY) {
                 for (i in 0 until sizeXZ * sizeXZ) {
                     val renderChunk = renderChunkArray[i * sizeY]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue
@@ -334,7 +334,7 @@ class RenderChunkStorage(
 
     @Suppress("ConvertTwoComparisonsToRangeCheck")
     fun getRenderChunkByChunk(chunkX: Int, chunkY: Int, chunkZ: Int): RenderChunk? {
-        return if (chunkY >= minY && chunkY < maxY) {
+        return if (chunkY >= minChunkY && chunkY < maxChunkY) {
             getRenderChunkByChunk0(chunkX, chunkY, chunkZ)
         } else {
             null
@@ -354,7 +354,7 @@ class RenderChunkStorage(
     }
 
     inline fun chunkPos2Index(x: Int, y: Int, z: Int): Int {
-        return (y - minY) + (x + z * sizeXZ) * sizeY
+        return (y - minChunkY) + (x + z * sizeXZ) * sizeY
     }
 
     inline fun regionPos2Index(x: Int, z: Int): Int {

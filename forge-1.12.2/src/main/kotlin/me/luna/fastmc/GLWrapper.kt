@@ -4,6 +4,7 @@ import me.luna.fastmc.mixin.accessor.AccessorGlStateManager
 import me.luna.fastmc.shared.opengl.IGLWrapper
 import me.luna.fastmc.shared.util.CachedBuffer
 import me.luna.fastmc.shared.util.allocateInt
+import me.luna.fastmc.shared.util.wrapDirectByteBuffer
 import net.minecraft.client.renderer.GlStateManager
 import org.lwjgl.PointerWrapperAbstract
 import org.lwjgl.opengl.*
@@ -155,6 +156,10 @@ class GLWrapper : IGLWrapper {
 
     override fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boolean, matrices: FloatBuffer) =
         GL41.glProgramUniformMatrix4(program, location, transpose, matrices)
+
+
+    // GL42
+    override fun glMemoryBarrier(barriers: Int) = GL42.glMemoryBarrier(barriers)
 
 
     // GL43
@@ -316,4 +321,9 @@ class GLWrapper : IGLWrapper {
 
     override fun glFlushMappedNamedBufferRange(buffer: Int, offset: Long, length: Long) =
         GL45.glFlushMappedNamedBufferRange(buffer, offset, length)
+
+    private val dummyByteBuffer = wrapDirectByteBuffer(0L, 1)
+
+    override fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?) =
+        GL45.glClearNamedBufferData(buffer, internalformat, format, type, data ?: dummyByteBuffer)
 }

@@ -117,6 +117,10 @@ class GLWrapper : IGLWrapper {
         GL41C.glProgramUniformMatrix4fv(program, location, transpose, matrices)
 
 
+    // GL42
+    override fun glMemoryBarrier(barriers: Int) = GL42C.glMemoryBarrier(barriers)
+
+
     // GL43
     override fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long) =
         GL43C.glInvalidateBufferSubData(buffer, offset, length)
@@ -270,4 +274,6 @@ class GLWrapper : IGLWrapper {
 
     override fun glFlushMappedNamedBufferRange(buffer: Int, offset: Long, length: Long) =
         GL45C.glFlushMappedNamedBufferRange(buffer, offset, length)
+
+    override fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?) = GL45C.glClearNamedBufferData(buffer, internalformat, format, type, data)
 }

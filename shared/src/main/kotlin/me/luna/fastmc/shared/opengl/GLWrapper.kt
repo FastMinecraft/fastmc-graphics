@@ -79,6 +79,10 @@ interface IGLWrapper {
     fun glGetSynciv(sync: Long, pname: Int): Int
 
 
+    // GL42
+    fun glMemoryBarrier(barriers: Int)
+
+
     // GL43
     fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long)
     fun glInvalidateBufferData(buffer: Int)
@@ -190,6 +194,8 @@ interface IGLWrapper {
         offset: Long,
         length: Long
     )
+
+    fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?)
 }
 
 // GL11
@@ -393,6 +399,15 @@ const val GL_RG16UI = 0x823A
 const val GL_RG32I = 0x823B
 const val GL_RG32UI = 0x823C
 
+const val GL_RED_INTEGER = 0x8D94
+const val GL_GREEN_INTEGER = 0x8D95
+const val GL_BLUE_INTEGER = 0x8D96
+const val GL_ALPHA_INTEGER = 0x8D97
+const val GL_RGB_INTEGER = 0x8D98
+const val GL_RGBA_INTEGER = 0x8D99
+const val GL_BGR_INTEGER = 0x8D9A
+const val GL_BGRA_INTEGER = 0x8D9B
+
 const val GL_COMPRESSED_RED = 0x8225
 const val GL_COMPRESSED_RED_RGTC1 = 0x8DBB
 
@@ -515,6 +530,24 @@ inline fun glProgramUniformMatrix4fv(program: Int, location: Int, transpose: Boo
 // GL42
 const val GL_ATOMIC_COUNTER_BUFFER = 0x92C0
 
+// GL42
+const val GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT = 0x1
+const val GL_ELEMENT_ARRAY_BARRIER_BIT = 0x2
+const val GL_UNIFORM_BARRIER_BIT = 0x4
+const val GL_TEXTURE_FETCH_BARRIER_BIT = 0x8
+const val GL_SHADER_IMAGE_ACCESS_BARRIER_BIT = 0x20
+const val GL_COMMAND_BARRIER_BIT = 0x40
+const val GL_PIXEL_BUFFER_BARRIER_BIT = 0x80
+const val GL_TEXTURE_UPDATE_BARRIER_BIT = 0x100
+const val GL_BUFFER_UPDATE_BARRIER_BIT = 0x200
+const val GL_FRAMEBUFFER_BARRIER_BIT = 0x400
+const val GL_TRANSFORM_FEEDBACK_BARRIER_BIT = 0x800
+const val GL_ATOMIC_COUNTER_BARRIER_BIT = 0x1000
+const val GL_ALL_BARRIER_BITS = -0x1
+
+inline fun glMemoryBarrier(barriers: Int) = glWrapper.glMemoryBarrier(barriers)
+
+
 // GL43
 const val GL_SHADER_STORAGE_BUFFER = 0x90D2
 
@@ -537,6 +570,8 @@ const val GL_GEOMETRY_SUBROUTINE_UNIFORM = 0x92F1
 const val GL_FRAGMENT_SUBROUTINE_UNIFORM = 0x92F2
 const val GL_COMPUTE_SUBROUTINE_UNIFORM = 0x92F3
 const val GL_TRANSFORM_FEEDBACK_VARYING = 0x92F4
+
+const val GL_SHADER_STORAGE_BARRIER_BIT = 0x2000
 
 inline fun glInvalidateBufferSubData(buffer: Int, offset: Long, length: Long) =
     glWrapper.glInvalidateBufferSubData(buffer, offset, length)
@@ -695,3 +730,6 @@ inline fun glFlushMappedNamedBufferRange(
     offset: Long,
     length: Long
 ) = glWrapper.glFlushMappedNamedBufferRange(buffer, offset, length)
+
+inline fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?) =
+    glWrapper.glClearNamedBufferData(buffer, internalformat, format, type, data)

@@ -13,7 +13,7 @@ class RenderRegion(
     @JvmField val index: Int
 ) {
     var originX = 0; private set
-    val originY get() = storage.minY shl 4
+    val originY get() = storage.minChunkY shl 4
     var originZ = 0; private set
 
     @JvmField

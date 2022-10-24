@@ -7,13 +7,15 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.FpsDisplay
+import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
-import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.*
 import me.luna.fastmc.shared.util.*
 import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import java.util.*
 import java.util.concurrent.Future
+import kotlin.Comparator
 
 @Suppress("NOTHING_TO_INLINE")
 abstract class TerrainRenderer(
@@ -51,7 +53,7 @@ abstract class TerrainRenderer(
     private var lastSortScheduleTask: Future<*>? = null
     private var lastRebuildScheduleTask: Future<*>? = null
 
-    private var chunkCullingResults = emptyArray<Array<FastObjectArrayList<RenderChunk>>>()
+    private var chunkCullingResults = emptyArray<Array<CullingResult>>()
     private var tileEntityResults = emptyArray<TileEntityResult>()
 
     protected var lastViewDistance = Int.MIN_VALUE
@@ -104,7 +106,7 @@ abstract class TerrainRenderer(
                 val indicesUpdate = chunkStorage.checkChunkIndicesUpdate()
                 val viewUpdate =
                     cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0
-                        || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
+                            || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
                 val frustumUpdate = lastMatrixHash != matrixHash
                 val forceUpdate = forceUpdateTimer.tickAndReset(1000L) || !chunkStorage.cameraChunk.isBuilt
 
@@ -210,7 +212,7 @@ abstract class TerrainRenderer(
     fun reload() {
         chunkCullingResults = Array(chunkStorage.totalRegion) {
             Array(FastMcCoreScope.threadCount) {
-                FastObjectArrayList.wrap(arrayOfNulls(chunkStorage.regionChunkCount), 0)
+                CullingResult()
             }
         }
         tileEntityResults = Array(FastMcCoreScope.threadCount) {
@@ -342,13 +344,15 @@ abstract class TerrainRenderer(
                                     if (!renderChunk.frustumCull.isInFrustum()) continue
 
                                     renderChunk.isVisible = true
-                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 } else {
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache))
                                         continue
                                     renderChunk.isVisible = true
-                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 }
                             }
@@ -378,13 +382,15 @@ abstract class TerrainRenderer(
                                     if (!renderChunk.frustumCull.isInFrustum()) continue
 
                                     renderChunk.isVisible = true
-                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 } else {
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache))
                                         continue
                                     renderChunk.isVisible = true
-                                    results[renderChunk.renderRegion.index][jobID].add(renderChunk)
+                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 }
                             }
@@ -416,10 +422,11 @@ abstract class TerrainRenderer(
 
                     val listArray = list.elements()
                     var size = 0
-                    for (sublist in array) {
-                        System.arraycopy(sublist.elements(), 0, listArray, size, sublist.size)
-                        size += sublist.size
-                        sublist.clearFast()
+                    for (result in array) {
+                        System.arraycopy(result.array, 0, listArray, size, result.size)
+                        size += result.size
+                        Arrays.fill(result.array, 0, result.size, null)
+                        result.size = 0
                     }
                     list.setSize(size)
                 }
@@ -432,11 +439,11 @@ abstract class TerrainRenderer(
 
     private inline fun RenderChunk.checkAnyAdjBuilt(): Boolean {
         return checkAdjacentBuilt(Direction.I_DOWN)
-            || checkAdjacentBuilt(Direction.I_UP)
-            || checkAdjacentBuilt(Direction.I_NORTH)
-            || checkAdjacentBuilt(Direction.I_SOUTH)
-            || checkAdjacentBuilt(Direction.I_WEST)
-            || checkAdjacentBuilt(Direction.I_EAST)
+                || checkAdjacentBuilt(Direction.I_UP)
+                || checkAdjacentBuilt(Direction.I_NORTH)
+                || checkAdjacentBuilt(Direction.I_SOUTH)
+                || checkAdjacentBuilt(Direction.I_WEST)
+                || checkAdjacentBuilt(Direction.I_EAST)
     }
 
     private inline fun RenderChunk.checkAdjacentBuilt(index: Int): Boolean {
@@ -446,9 +453,9 @@ abstract class TerrainRenderer(
 
     private inline fun RenderChunk.checkAdjChunkLoaded(statusCache: ChunkLoadingStatusCache): Boolean {
         return statusCache.isChunkLoaded(chunkX, chunkZ + 1)
-            && statusCache.isChunkLoaded(chunkX - 1, chunkZ)
-            && statusCache.isChunkLoaded(chunkX, chunkZ - 1)
-            && statusCache.isChunkLoaded(chunkX + 1, chunkZ)
+                && statusCache.isChunkLoaded(chunkX - 1, chunkZ)
+                && statusCache.isChunkLoaded(chunkX, chunkZ - 1)
+                && statusCache.isChunkLoaded(chunkX + 1, chunkZ)
     }
 
     private suspend fun updateRegionCulling(resort: Boolean, refresh: Boolean) {
@@ -509,7 +516,7 @@ abstract class TerrainRenderer(
                                     indexRegion.offset,
                                     region.tempVisibleBits[i],
                                     (renderChunk.originX and 255 shl 20)
-                                        or ((renderChunk.chunkY - chunkStorage.minY) shl 14)
+                                        or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
                                         or (renderChunk.originZ and 255)
                                 )
                             }
@@ -521,26 +528,12 @@ abstract class TerrainRenderer(
     }
 
     private fun calculateVisibleFaceBit(renderChunk: RenderChunk): Int {
-        var bits = 0
-        if (cameraX > renderChunk.minX) {
-            bits = bits or Direction.B_EAST
-        }
-        if (cameraX < renderChunk.maxX) {
-            bits = bits or Direction.B_WEST
-        }
-        if (cameraY > renderChunk.minY) {
-            bits = bits or Direction.B_UP
-        }
-        if (cameraY < renderChunk.maxY) {
-            bits = bits or Direction.B_DOWN
-        }
-        if (cameraZ > renderChunk.minZ) {
-            bits = bits or Direction.B_SOUTH
-        }
-        if (cameraZ < renderChunk.maxZ) {
-            bits = bits or Direction.B_NORTH
-        }
-        return bits
+        return (Direction.B_EAST * ((renderChunk.minX - cameraX).fastFloor() ushr 31)) or
+                (Direction.B_WEST * ((cameraX - renderChunk.maxX).fastFloor() ushr 31)) or
+                (Direction.B_UP * ((renderChunk.minY - cameraY).fastFloor() ushr 31)) or
+                (Direction.B_DOWN * ((cameraY - renderChunk.maxY).fastFloor() ushr 31)) or
+                (Direction.B_SOUTH * ((renderChunk.minZ - cameraZ).fastFloor() ushr 31)) or
+                (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).fastFloor() ushr 31))
     }
 
     private fun updateDebugInfo() {
@@ -628,7 +621,6 @@ abstract class TerrainRenderer(
         val instancingTileEntityList = FastObjectArrayList<ITileEntityInfo<*>>()
         val globalTileEntityList = FastObjectArrayList<ITileEntityInfo<*>>()
 
-        @Suppress("UNCHECKED_CAST")
         fun add(renderChunk: RenderChunk) {
             if (renderChunk.isVisible) {
                 renderChunk.tileEntityList?.let {
@@ -678,6 +670,11 @@ abstract class TerrainRenderer(
         chunkStorageNullable?.destroy()
         chunkStorageNullable = null
         shaderManager.destroy()
+    }
+
+    private inner class CullingResult {
+        var size = 0
+        val array = arrayOfNulls<RenderChunk>(chunkStorage.regionChunkCount)
     }
 
     companion object {

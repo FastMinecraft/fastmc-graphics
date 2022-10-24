@@ -3,7 +3,6 @@ package me.luna.fastmc.shared.terrain
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.ShaderSource.Companion.invoke
-import me.luna.fastmc.shared.terrain.TerrainShaderManager.AlphaTestShaderGroup.Companion.update
 import me.luna.fastmc.shared.util.EnumMap
 import me.luna.fastmc.shared.util.MemoryStack
 import me.luna.fastmc.shared.util.ceilToInt
@@ -76,12 +75,9 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
             }
             val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.frag")
             AlphaTestShaderGroup(
-                DrawShaderProgram(vertex, fragment, false),
-                DrawShaderProgram(vertex, fragment, true)
-            ).update {
-                attachBufferBinding(GL_UNIFORM_BUFFER, renderer.globalUBO, "Global")
-                attachBufferBinding(GL_UNIFORM_BUFFER, fogParametersUBO, "FogParameters")
-            }
+                DrawShaderProgram(this, vertex, fragment, false),
+                DrawShaderProgram(this, vertex, fragment, true)
+            )
         }
     }
 
@@ -141,6 +137,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
 
     class DrawShaderProgram(
+        private val manager: TerrainShaderManager,
         vertex: ShaderSource.Vertex,
         fragment: ShaderSource.Fragment,
         alphaTest: Boolean
@@ -152,6 +149,12 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         }
     ) {
         private val regionOffsetUniform = glGetUniformLocation(id, "regionOffset")
+
+        override fun bind() {
+            super.bind()
+            attachBuffer(GL_UNIFORM_BUFFER, manager.renderer.globalUBO, "Global")
+            attachBuffer(GL_UNIFORM_BUFFER, manager.fogParametersUBO, "FogParameters")
+        }
 
         internal fun setRegionOffset(x: Float, y: Float, z: Float) {
             glProgramUniform3f(id, regionOffsetUniform, x - 0.25f, y - 0.25f, z - 0.25f)

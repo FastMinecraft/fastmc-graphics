@@ -1,7 +1,9 @@
 package me.luna.fastmc.shared.opengl
 
+import it.unimi.dsi.fastutil.objects.Object2ByteMap
+import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import me.luna.fastmc.shared.util.EnumMap
 
 open class ShaderProgram(
     vertex: ShaderSource.Vertex,
@@ -9,7 +11,8 @@ open class ShaderProgram(
 ) : IGLObject, IGLBinding {
     final override val id: Int
 
-    private val bufferBindings = FastObjectArrayList<BufferBinding>()
+    private var currentBindingIndex = 0
+    private val bufferBindings = EnumMap<BindingTarget, Object2ByteMap<String>>()
 
     init {
         val vertexShaderID = createShader(vertex, GL_VERTEX_SHADER)
@@ -50,6 +53,7 @@ open class ShaderProgram(
                 System.err.print(it)
                 System.err.print('\n')
             }
+            System.err.flush()
             glDeleteShader(id)
             throw IllegalStateException("Failed to compile shader: $source")
         }
@@ -57,37 +61,34 @@ open class ShaderProgram(
         return id
     }
 
-    fun attachBufferBinding(target: Int, buffer: BufferObject, blockName: String) {
-        attachBufferBinding(target, buffer, blockName, -1, -1)
+    fun attachBuffer(target: Int, buffer: BufferObject, blockName: String) {
+        attachBuffer(target, buffer, blockName, -1, -1)
     }
 
+    fun attachBuffer(target: Int, buffer: BufferObject, blockName: String, offset: Int, size: Int) {
+        val bindingTarget = BindingTarget[target]
+        val map = bufferBindings.getOrPut(bindingTarget) {
+            Object2ByteOpenHashMap<String>().apply {
+                defaultReturnValue(-1)
+            }
+        }
 
-    fun attachBufferBinding(target: Int, buffer: BufferObject, blockName: String, offset: Int, size: Int) {
-        when (target) {
-            GL_UNIFORM_BUFFER -> {
-                val index = glGetUniformBlockIndex(id, blockName)
-                glUniformBlockBinding(id, index, bufferBindings.size)
-                bufferBindings.add(BufferBinding(target, buffer, offset, size))
-            }
-            GL_SHADER_STORAGE_BUFFER -> {
-                val index = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, blockName)
-                glShaderStorageBlockBinding(id, index, bufferBindings.size)
-                bufferBindings.add(BufferBinding(target, buffer, offset, size))
-            }
-            else -> throw IllegalArgumentException("Unsupported buffer binding target: $target")
+        var bindingIndex = map.getByte(blockName).toInt()
+        if (bindingIndex == -1) {
+            bindingIndex = currentBindingIndex++
+            bindingTarget.addBinding(id, blockName, bindingIndex)
+            map.put(blockName, bindingIndex.toByte())
+        }
+
+        if (offset == -1 || size == -1) {
+            glBindBufferBase(target, bindingIndex, buffer.id)
+        } else {
+            glBindBufferRange(target, bindingIndex, buffer.id, offset.toLong(), size.toLong())
         }
     }
 
     override fun bind() {
         glUseProgram(id)
-        for (i in bufferBindings.indices) {
-            val binding = bufferBindings[i]
-            if (binding.offset == -1 || binding.size == -1) {
-                glBindBufferBase(binding.target, i, binding.buffer.id)
-            } else {
-                glBindBufferRange(binding.target, i, binding.buffer.id, binding.offset.toLong(), binding.size.toLong())
-            }
-        }
     }
 
     override fun unbind() {
@@ -99,4 +100,31 @@ open class ShaderProgram(
     }
 
     data class BufferBinding(val target: Int, val buffer: BufferObject, val offset: Int, val size: Int)
+
+    private enum class BindingTarget {
+        UNIFORM_BUFFER {
+            override fun addBinding(id: Int, blockName: String, bindingIndex: Int) {
+                val index = glGetProgramResourceIndex(id, GL_UNIFORM_BLOCK, blockName)
+                glUniformBlockBinding(id, index, bindingIndex)
+            }
+        },
+        SHADER_STORAGE_BUFFER {
+            override fun addBinding(id: Int, blockName: String, bindingIndex: Int) {
+                val index = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, blockName)
+                glShaderStorageBlockBinding(id, index, bindingIndex)
+            }
+        };
+
+        abstract fun addBinding(id: Int, blockName: String, bindingIndex: Int)
+
+        companion object {
+            operator fun get(target: Int): BindingTarget {
+                return when (target) {
+                    GL_UNIFORM_BUFFER -> UNIFORM_BUFFER
+                    GL_SHADER_STORAGE_BUFFER -> SHADER_STORAGE_BUFFER
+                    else -> throw IllegalArgumentException("Unsupported buffer binding target: $target")
+                }
+            }
+        }
+    }
 }

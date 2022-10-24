@@ -194,14 +194,10 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
         fragment: ShaderSource.Fragment
     ) : ShaderProgram(vertex, fragment { define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit) }), Resource {
         private val offsetUniform = glGetUniformLocation(id, "offset")
-        private var attached = false
 
         override fun bind() {
-            if (!attached) {
-                attachBufferBinding(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.globalUBO, "Global")
-                attached = true
-            }
             super.bind()
+            attachBuffer(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.globalUBO, "Global")
         }
 
         fun setOffset(x: Float, y: Float, z: Float) {
