@@ -54,6 +54,10 @@ interface IPatchedBakedQuad {
                 bit = bit or Direction.B_NORTH
             }
 
+            if (bit == 0b00_00_00) {
+                bit = 0b11_11_11
+            }
+
             return bit
         }
     }

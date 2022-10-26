@@ -83,12 +83,12 @@ class RenderRegion(
     }
 
     class LayerBatch(regionChunkCount: Int) {
-        private val serverBuffer = BufferObject.Immutable().allocate(regionChunkCount * 63 * 20, GL_DYNAMIC_STORAGE_BIT)
-        private val clientBuffer = allocateByte(serverBuffer.size)
+        private var serverBuffer: BufferObject? = null
+        private val cachedClientBuffer = CachedBuffer(regionChunkCount * 20)
         private var index = 0
         private var isDirty = false
 
-        val bufferID get() = serverBuffer.id
+        val bufferID get() = serverBuffer?.id ?: 0
         var count = 0; private set
         val isEmpty get() = count == 0
 
@@ -99,6 +99,7 @@ class RenderRegion(
         }
 
         fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
+            val clientBuffer = cachedClientBuffer.ensureCapacityByte((count + 1) * 20, (count + 1) * 30)
             val address = clientBuffer.address + index
 
             UNSAFE.putInt(address, indexCount / 4)
@@ -113,16 +114,24 @@ class RenderRegion(
 
         fun checkUpdate() {
             if (isDirty && count != 0) {
+                val clientBuffer = cachedClientBuffer.getByte()
                 clientBuffer.limit(index)
-                glInvalidateBufferData(serverBuffer.id)
-                glNamedBufferSubData(serverBuffer.id, 0L, clientBuffer)
+                var buffer = serverBuffer
+                if (buffer == null || buffer.size < clientBuffer.remaining() || buffer.size - clientBuffer.remaining() > 1024 * 1024) {
+                    buffer?.destroy()
+                    buffer = BufferObject.Immutable().allocate(clientBuffer, GL_DYNAMIC_STORAGE_BIT)
+                    serverBuffer = buffer
+                } else {
+                    glInvalidateBufferData(buffer.id)
+                    glNamedBufferSubData(buffer.id, 0L, clientBuffer)
+                }
             }
             isDirty = false
         }
 
         fun destroy() {
-            serverBuffer.destroy()
-            clientBuffer.free()
+            serverBuffer?.destroy()
+            cachedClientBuffer.free()
         }
     }
 

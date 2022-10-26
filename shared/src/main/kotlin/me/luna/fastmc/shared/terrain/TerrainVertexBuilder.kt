@@ -116,11 +116,11 @@ abstract class TerrainVertexBuilder {
         val vertexByteIndices = LongArray(vertexBuffers.size)
         val indexByteIndices = LongArray(indexBuffers.size)
 
-        fun getVertexBuffer(faceBit: Int): BufferContext {
-            var buffer = vertexBuffers[faceBit]
+        fun getVertexBuffer(faceBitIndex: Int): BufferContext {
+            var buffer = vertexBuffers[faceBitIndex]
             if (buffer == null) {
                 buffer = task.renderer.contextProvider.getBufferContext(task)
-                vertexBuffers[faceBit] = buffer
+                vertexBuffers[faceBitIndex] = buffer
             }
             return buffer
         }

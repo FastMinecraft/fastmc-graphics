@@ -251,6 +251,10 @@ class CachedBuffer(initialCapacity: Int) {
         }
         return getFloat()
     }
+
+    fun free() {
+        byteBuffer.free()
+    }
 }
 
 internal val UNSAFE = run {
