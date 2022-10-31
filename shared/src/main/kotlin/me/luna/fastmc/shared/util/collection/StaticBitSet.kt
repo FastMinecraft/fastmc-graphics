@@ -31,10 +31,17 @@ class StaticBitSet : MutableSet<Int> {
     fun put(element: Int, state: Boolean): Boolean {
         val index = element shr 6
         val bit = 1L shl (element and 0x3F)
-        val prev = getBit(index)
-        val result = if (state) prev or bit else prev xor bit
-        putBit(index, result)
+        val prev = bitArray[index]
+        val result = if (state) prev or bit else prev and bit.inv()
+        bitArray[index] = result
         return result != prev
+    }
+
+    fun putFast(element: Int, state: Boolean) {
+        val index = element shr 6
+        val bit = 1L shl (element and 0x3F)
+        val prev = bitArray[index]
+        bitArray[index] = if (state) prev or bit else prev and bit.inv()
     }
 
     override fun add(element: Int): Boolean {
