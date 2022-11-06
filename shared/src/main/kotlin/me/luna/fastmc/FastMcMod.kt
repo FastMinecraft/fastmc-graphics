@@ -39,7 +39,7 @@ object FastMcMod {
     fun init(
         resourceManager: IResourceManager,
         worldRenderer: WorldRenderer,
-        fontRenderer: IFontRendererWrapper,
+        fontRenderer: IFontRendererWrapper
     ) {
         if (isInitialized) {
             this.resourceManager.destroy()
