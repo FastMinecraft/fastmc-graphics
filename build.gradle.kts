@@ -2,34 +2,32 @@ import dev.fastmc.modsetup.minecraftVersion
 import me.luna.jaroptimizer.JarOptimizerPluginExtension
 import kotlin.math.max
 
-ext {
+runVmOptions {
     val threads = Runtime.getRuntime().availableProcessors()
-    set(
-        "runVmOptions", listOf(
-            "-Xms2G",
-            "-Xmx2G",
-            "-XX:+UnlockExperimentalVMOptions",
-            "-XX:+AlwaysPreTouch",
-            "-XX:+ExplicitGCInvokesConcurrent",
-            "-XX:+ParallelRefProcEnabled",
-            "-XX:+UseG1GC",
-            "-XX:+UseStringDeduplication",
-            "-XX:MaxGCPauseMillis=1",
-            "-XX:G1NewSizePercent=2",
-            "-XX:G1MaxNewSizePercent=10",
-            "-XX:G1HeapRegionSize=1M",
-            "-XX:G1ReservePercent=15",
-            "-XX:G1HeapWastePercent=10",
-            "-XX:G1MixedGCCountTarget=16",
-            "-XX:InitiatingHeapOccupancyPercent=50",
-            "-XX:G1MixedGCLiveThresholdPercent=50",
-            "-XX:G1RSetUpdatingPauseTimePercent=25",
-            "-XX:G1OldCSetRegionThresholdPercent=5",
-            "-XX:SurvivorRatio=5",
-            "-XX:ParallelGCThreads=$threads",
-            "-XX:ConcGCThreads=${max(threads / 4, 1)}",
-            "-XX:FlightRecorderOptions=stackdepth=512"
-        )
+    add(
+        "-Xms2G",
+        "-Xmx2G",
+        "-XX:+UnlockExperimentalVMOptions",
+        "-XX:+AlwaysPreTouch",
+        "-XX:+ExplicitGCInvokesConcurrent",
+        "-XX:+ParallelRefProcEnabled",
+        "-XX:+UseG1GC",
+        "-XX:+UseStringDeduplication",
+        "-XX:MaxGCPauseMillis=1",
+        "-XX:G1NewSizePercent=2",
+        "-XX:G1MaxNewSizePercent=10",
+        "-XX:G1HeapRegionSize=1M",
+        "-XX:G1ReservePercent=15",
+        "-XX:G1HeapWastePercent=10",
+        "-XX:G1MixedGCCountTarget=16",
+        "-XX:InitiatingHeapOccupancyPercent=50",
+        "-XX:G1MixedGCLiveThresholdPercent=50",
+        "-XX:G1RSetUpdatingPauseTimePercent=25",
+        "-XX:G1OldCSetRegionThresholdPercent=5",
+        "-XX:SurvivorRatio=5",
+        "-XX:ParallelGCThreads=$threads",
+        "-XX:ConcGCThreads=${max(threads / 4, 1)}",
+        "-XX:FlightRecorderOptions=stackdepth=512"
     )
 }
 
