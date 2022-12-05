@@ -130,6 +130,10 @@ tasks {
         getByName("reobfJar").finalizedBy(releaseJar)
     }
 
+    artifacts {
+        archives(releaseJar)
+    }
+
     clean {
         val set = mutableSetOf<Any>()
         buildDir.listFiles()?.filterNotTo(set) {

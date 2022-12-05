@@ -1,29 +1,10 @@
-val disableTask: (TaskProvider<*>) -> Unit by rootProject.ext
-
-plugins {
-    id("architectury-plugin")
-}
-
-val minecraftVersion: String by project
-val yarnMappings: String by project
-val fabricLoaderVersion: String by project
-
-architectury {
-    minecraft = minecraftVersion
-}
-
-subprojects {
-    apply {
-        plugin("architectury-plugin")
-        plugin("dev.architectury.loom")
+architecturyProject {
+    mixinConfig("mixins.fastmc-core.json", "mixins.fastmc-accessor.json", "mixins.fastmc-patch.json")
+    accessWidenerPath.set(file("common/src/main/resources/FastMinecraft.accesswidener").absoluteFile)
+    forge {
+        atPatch {
+            patch("net/minecraft/util/math/Matrix3f", "net/minecraft/util/math/vector/Matrix3f")
+            patch("net/minecraft/util/math/Matrix4f", "net/minecraft/util/math/vector/Matrix4f")
+        }
     }
-
-    dependencies {
-        "minecraft"("com.mojang:minecraft:$minecraftVersion")
-        "mappings"("net.fabricmc:yarn:$yarnMappings")
-    }
-}
-
-tasks {
-    disableTask(jar)
 }

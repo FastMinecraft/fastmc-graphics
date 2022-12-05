@@ -1,4 +1,5 @@
-val disableTask: (TaskProvider<*>) -> Unit by rootProject.ext
+import dev.fastmc.modsetup.disableTask
+
 val sharedProject = project
 
 subprojects {
