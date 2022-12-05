@@ -14,7 +14,7 @@ includeBuild("../mod-setup")
 
 include("shared")
 include("shared:java8")
-//include("forge-1.12.2")
+include("forge-1.12.2")
 include("architectury-1.16.5", "architectury-1.16.5:common", "architectury-1.16.5:fabric", "architectury-1.16.5:forge")
 
 //include("shared:java16")

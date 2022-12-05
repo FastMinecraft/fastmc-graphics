@@ -164,12 +164,7 @@ tasks {
                               <env name="MCP_MAPPINGS" value="${mappingsChannel}_$mappingsVersion" />
                               <env name="FORGE_VERSION" value="$forgeVersion" />
                               <env name="assetIndex" value="${minecraftVersion.substringBeforeLast('.')}" />
-                              <env name="assetDirectory" value="${
-                        gradle.gradleUserHomeDir.path.replace(
-                            '\\',
-                            '/'
-                        )
-                    }/caches/forge_gradle/assets" />
+                              <env name="assetDirectory" value="${gradle.gradleUserHomeDir.path.replace('\\', '/')}/caches/forge_gradle/assets" />
                               <env name="nativesDirectory" value="${'$'}PROJECT_DIR$/../${rootProject.name}/${project.name}/build/natives" />
                               <env name="FORGE_GROUP" value="net.minecraftforge" />
                               <env name="tweakClass" value="net.minecraftforge.fml.common.launcher.FMLTweaker" />
