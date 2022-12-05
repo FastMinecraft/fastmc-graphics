@@ -1,6 +1,6 @@
-# FastMinecraft
+# Fast Minecraft Graphics
 
-Aggressive optimization mod for Minecraft
+Aggressive render optimization mod for Minecraft
 
 # Contributing
 
