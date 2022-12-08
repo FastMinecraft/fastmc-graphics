@@ -36,10 +36,6 @@ plugins {
     id("dev.fastmc.modsetup.root")
 }
 
-apply {
-    plugin("dev.fastmc.modsetup.root.architectury")
-}
-
 allprojects {
     group = "me.luna"
     version = "0.0.1"
