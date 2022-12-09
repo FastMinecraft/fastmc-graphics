@@ -5,22 +5,15 @@
   "package": "me.luna.fastmc.mixin.patch",
   "refmap": "mixins.fastmc.refmap.json",
   "client": [
-    "MixinEnumFacing",
     "MixinPatchMinecraft",
     "MixinPatchMinecraftServer",
-    "MixinTextFormatting",
-    "entity.MixinEntityDataManager",
     "gui.MixinGuiInventory",
     "optifine.MixinConfig",
     "player.MixinPlayerControllerMP",
     "render.MixinActiveRenderInfo",
-    "render.MixinBlockRenderLayer",
     "render.MixinClippingHelperImpl",
     "render.MixinPatchBakedQuad",
-    "world.MixinChunk",
-    "world.MixinPatchBlock",
     "world.MixinWorld",
-    "world.MixinWorldClient",
-    "world.MixinWorldServer"
+    "world.MixinWorldClient"
   ]
 }
