@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.model
 
-import me.luna.fastmc.shared.util.allocateByte
+import dev.fastmc.common.allocateByte
 import java.nio.ByteBuffer
 
 open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: Int) {

@@ -1,9 +1,9 @@
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.*
+import dev.fastmc.common.collection.FastObjectArrayList
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
-import me.luna.fastmc.shared.util.*
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import org.joml.FrustumIntersection
 
 @Suppress("NOTHING_TO_INLINE")

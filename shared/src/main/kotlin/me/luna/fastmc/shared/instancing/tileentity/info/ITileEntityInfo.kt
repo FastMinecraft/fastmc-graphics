@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.instancing.tileentity.info
 
+import dev.fastmc.common.ClassIDRegistry
+import dev.fastmc.common.ITypeID
 import me.luna.fastmc.shared.instancing.IInfo
-import me.luna.fastmc.shared.util.ClassIDRegistry
-import me.luna.fastmc.shared.util.ITypeID
 
 interface ITileEntityInfo<E : Any> : IInfo<E>, ITypeID {
     override val typeID: Int

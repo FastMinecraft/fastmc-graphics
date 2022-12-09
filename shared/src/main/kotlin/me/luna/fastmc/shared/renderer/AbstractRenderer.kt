@@ -1,15 +1,15 @@
 package me.luna.fastmc.shared.renderer
 
+import dev.fastmc.common.ClassIDRegistry
+import dev.fastmc.common.FastMcCoreScope
+import dev.fastmc.common.ITypeID
+import dev.fastmc.common.collection.FastIntMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.instancing.AbstractInstancingBuilder
 import me.luna.fastmc.shared.instancing.IInfo
-import me.luna.fastmc.shared.util.ClassIDRegistry
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ITypeID
-import me.luna.fastmc.shared.util.collection.FastIntMap
 import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractRenderer<ET : Any>(

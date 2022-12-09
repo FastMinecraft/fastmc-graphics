@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.util.Direction
-import me.luna.fastmc.shared.util.collection.IntArrayFIFOQueueNoShrink
-import me.luna.fastmc.shared.util.collection.StaticBitSet
+import dev.fastmc.common.Direction
+import dev.fastmc.common.collection.IntArrayFIFOQueueNoShrink
+import dev.fastmc.common.collection.StaticBitSet
 
 @Suppress("NOTHING_TO_INLINE")
 abstract class ChunkOcclusionData private constructor(private val hash: Int) {

@@ -1,14 +1,14 @@
 package me.luna.fastmc.shared.font
 
+import dev.fastmc.common.ColorARGB
+import dev.fastmc.common.allocateByte
+import dev.fastmc.common.collection.FastIntMap
+import dev.fastmc.common.skip
 import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.shorts.ShortArrayList
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
-import me.luna.fastmc.shared.util.ColorARGB
-import me.luna.fastmc.shared.util.allocateByte
-import me.luna.fastmc.shared.util.collection.FastIntMap
-import me.luna.fastmc.shared.util.skip
 import org.joml.Matrix4f
 import java.nio.ByteBuffer
 

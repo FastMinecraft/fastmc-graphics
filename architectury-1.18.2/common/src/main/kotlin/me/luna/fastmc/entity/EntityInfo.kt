@@ -1,7 +1,7 @@
 package me.luna.fastmc.entity
 
+import dev.fastmc.common.fastFloor
 import me.luna.fastmc.shared.instancing.entity.info.IEntityInfo
-import me.luna.fastmc.shared.util.fastFloor
 import net.minecraft.client.render.WorldRenderer
 import net.minecraft.entity.Entity
 import net.minecraft.util.math.BlockPos

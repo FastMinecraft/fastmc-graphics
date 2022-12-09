@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.UNSAFE
+import dev.fastmc.common.skip
 import it.unimi.dsi.fastutil.floats.FloatArrayList
-import me.luna.fastmc.shared.util.UNSAFE
-import me.luna.fastmc.shared.util.skip
 
 abstract class TerrainVertexBuilder {
     @Volatile

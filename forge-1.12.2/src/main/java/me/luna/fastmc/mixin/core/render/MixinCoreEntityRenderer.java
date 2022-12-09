@@ -1,12 +1,12 @@
 package me.luna.fastmc.mixin.core.render;
 
+import dev.fastmc.common.MathUtils;
+import dev.fastmc.common.MathUtilsKt;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.shared.FpsDisplay;
 import me.luna.fastmc.shared.renderer.WorldRenderer;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
 import me.luna.fastmc.shared.terrain.TerrainShaderManager;
-import me.luna.fastmc.shared.util.MathUtils;
-import me.luna.fastmc.shared.util.MathUtilsKt;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;

@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
+import dev.fastmc.common.collection.FastObjectArrayList
 import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
 
 internal class UploadTask(
     private val parentTask: ChunkBuilderTask,

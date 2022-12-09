@@ -1,8 +1,8 @@
 package me.luna.fastmc.mixin.core.render;
 
+import dev.fastmc.common.MathUtilsKt;
+import dev.fastmc.common.MatrixUtils;
 import me.luna.fastmc.FastMcMod;
-import me.luna.fastmc.shared.util.MathUtilsKt;
-import me.luna.fastmc.shared.util.MatrixUtils;
 import net.minecraft.client.gui.FontRenderer;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;

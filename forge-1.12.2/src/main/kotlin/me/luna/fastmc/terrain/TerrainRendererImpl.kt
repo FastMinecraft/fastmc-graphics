@@ -1,12 +1,12 @@
 package me.luna.fastmc.terrain
 
+import dev.fastmc.common.ArrayPriorityObjectPool
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.renderer.TileEntityRendererImpl
 import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkZ
 import me.luna.fastmc.shared.terrain.*
-import me.luna.fastmc.shared.util.ArrayPriorityObjectPool
 import net.minecraft.block.material.Material
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher

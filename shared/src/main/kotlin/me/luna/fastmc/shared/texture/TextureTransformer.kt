@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.texture
 
-import me.luna.fastmc.shared.util.collection.mapArray
-import me.luna.fastmc.shared.util.fastCeil
-import me.luna.fastmc.shared.util.toRadians
+import dev.fastmc.common.collection.mapArray
+import dev.fastmc.common.fastCeil
+import dev.fastmc.common.toRadians
 import java.awt.Graphics2D
 import java.awt.Rectangle
 import java.awt.geom.AffineTransform

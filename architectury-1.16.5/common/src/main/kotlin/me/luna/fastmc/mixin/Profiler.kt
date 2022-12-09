@@ -1,6 +1,6 @@
 package me.luna.fastmc.mixin
 
-import me.luna.fastmc.shared.util.IProfiler
+import dev.fastmc.common.IProfiler
 import me.luna.fastmc.util.Minecraft
 
 class Profiler(private val mc: Minecraft) : IProfiler {

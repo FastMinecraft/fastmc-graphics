@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.util
+package dev.fastmc.common
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher

@@ -1,6 +1,7 @@
 package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
+import dev.fastmc.common.FastMcCoreScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.opengl.glBindTexture
@@ -8,7 +9,6 @@ import me.luna.fastmc.shared.opengl.glBindVertexArray
 import me.luna.fastmc.shared.opengl.glUseProgramForce
 import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
-import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.util.Minecraft
 import org.lwjgl.opengl.GL11.*
 import kotlin.coroutines.CoroutineContext

@@ -1,12 +1,11 @@
 package me.luna.fastmc.mixin
 
+import dev.fastmc.common.FastMcCoreScope
+import dev.fastmc.common.ParallelUtils
+import dev.fastmc.common.collection.FastIntMap
 import it.unimi.dsi.fastutil.ints.IntSet
 import kotlinx.coroutines.*
 import me.luna.fastmc.shared.instancing.IParallelUpdate
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ParallelUtils
-import me.luna.fastmc.shared.util.collection.FastIntMap
-import net.minecraft.block.state.IBlockState
 import net.minecraft.crash.CrashReport
 import net.minecraft.entity.Entity
 import net.minecraft.tileentity.TileEntity

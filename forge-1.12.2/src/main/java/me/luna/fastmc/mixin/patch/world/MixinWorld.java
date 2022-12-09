@@ -1,13 +1,13 @@
 package me.luna.fastmc.mixin.patch.world;
 
+import dev.fastmc.common.DoubleBufferedCollection;
+import dev.fastmc.common.ITypeID;
+import dev.fastmc.common.collection.FastIntMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import me.luna.fastmc.mixin.IPatchedChunk;
 import me.luna.fastmc.mixin.IPatchedIBlockAccess;
 import me.luna.fastmc.mixin.IPatchedWorld;
-import me.luna.fastmc.shared.util.DoubleBufferedCollection;
-import me.luna.fastmc.shared.util.ITypeID;
-import me.luna.fastmc.shared.util.collection.FastIntMap;
 import me.luna.fastmc.util.RaytraceKt;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;

@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.util
+package dev.fastmc.common
 
 interface ITypeID {
     val typeID: Int

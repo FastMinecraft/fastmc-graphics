@@ -1,12 +1,12 @@
 package me.luna.fastmc.shared.instancing.tileentity
 
+import dev.fastmc.common.skip
+import me.luna.fastmc.shared.instancing.tileentity.info.IBedInfo
 import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.opengl.GLDataType
 import me.luna.fastmc.shared.opengl.impl.VertexAttribute
-import me.luna.fastmc.shared.instancing.tileentity.info.IBedInfo
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
-import me.luna.fastmc.shared.util.skip
 import java.nio.ByteBuffer
 
 class BedInstancingBuilder : TileEntityInstancingBuilder<IBedInfo<*>>(20) {

@@ -1,12 +1,12 @@
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.EnumMap
+import dev.fastmc.common.MemoryStack
+import dev.fastmc.common.ceilToInt
+import dev.fastmc.common.sq
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.ShaderSource.Companion.invoke
-import me.luna.fastmc.shared.util.EnumMap
-import me.luna.fastmc.shared.util.MemoryStack
-import me.luna.fastmc.shared.util.ceilToInt
-import me.luna.fastmc.shared.util.sq
 import java.util.*
 import kotlin.math.ln
 import kotlin.math.sqrt
@@ -176,12 +176,12 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
     enum class FogShape {
         SPHERE {
             override fun distanceSq(x1: Int, y1: Int, z1: Int, x2: Int, y2: Int, z2: Int): Int {
-                return me.luna.fastmc.shared.util.distanceSq(x1, y1, z1, x2, y2, z2)
+                return dev.fastmc.common.distanceSq(x1, y1, z1, x2, y2, z2)
             }
         },
         CYLINDER {
             override fun distanceSq(x1: Int, y1: Int, z1: Int, x2: Int, y2: Int, z2: Int): Int {
-                return me.luna.fastmc.shared.util.distanceSq(x1, z1, x2, z2)
+                return dev.fastmc.common.distanceSq(x1, z1, x2, z2)
             }
         };
 

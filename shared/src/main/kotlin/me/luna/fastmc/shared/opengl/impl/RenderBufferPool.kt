@@ -1,11 +1,11 @@
 package me.luna.fastmc.shared.opengl.impl
 
+import dev.fastmc.common.ObjectPool
+import dev.fastmc.common.pollEach
 import me.luna.fastmc.shared.opengl.BufferObject
 import me.luna.fastmc.shared.opengl.GL_DYNAMIC_DRAW
 import me.luna.fastmc.shared.opengl.glCopyNamedBufferSubData
 import me.luna.fastmc.shared.opengl.glInvalidateBufferSubData
-import me.luna.fastmc.shared.util.ObjectPool
-import me.luna.fastmc.shared.util.pollEach
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class RenderBufferPool(private val growPower: Int) {

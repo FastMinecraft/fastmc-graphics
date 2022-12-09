@@ -2,6 +2,8 @@
 
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.*
+import dev.fastmc.common.collection.FastObjectArrayList
 import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.ints.IntArrayList
@@ -9,10 +11,8 @@ import it.unimi.dsi.fastutil.ints.IntArrays
 import it.unimi.dsi.fastutil.ints.IntComparator
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
-import me.luna.fastmc.shared.opengl.impl.MappedBufferPool
 import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
-import me.luna.fastmc.shared.util.*
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import me.luna.fastmc.shared.opengl.impl.MappedBufferPool
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max

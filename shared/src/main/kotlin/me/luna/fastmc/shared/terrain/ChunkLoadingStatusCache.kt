@@ -1,7 +1,7 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.util.BYTE_FALSE
-import me.luna.fastmc.shared.util.BYTE_TRUE
+import dev.fastmc.common.BYTE_FALSE
+import dev.fastmc.common.BYTE_TRUE
 
 abstract class ChunkLoadingStatusCache(
     cameraChunkX: Int,

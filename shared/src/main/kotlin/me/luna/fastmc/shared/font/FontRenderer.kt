@@ -1,10 +1,10 @@
 package me.luna.fastmc.shared.font
 
+import dev.fastmc.common.ColorARGB
+import dev.fastmc.common.allocateByte
+import dev.fastmc.common.sq
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import me.luna.fastmc.shared.opengl.*
-import me.luna.fastmc.shared.util.ColorARGB
-import me.luna.fastmc.shared.util.allocateByte
-import me.luna.fastmc.shared.util.sq
 import org.joml.Matrix4f
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage

@@ -1,5 +1,7 @@
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.*
+import dev.fastmc.common.collection.FastObjectArrayList
 import it.unimi.dsi.fastutil.objects.ObjectArrays
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -11,11 +13,8 @@ import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.opengl.*
 import me.luna.fastmc.shared.opengl.impl.buildAttribute
 import me.luna.fastmc.shared.renderer.*
-import me.luna.fastmc.shared.util.*
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import java.util.*
 import java.util.concurrent.Future
-import kotlin.Comparator
 
 @Suppress("NOTHING_TO_INLINE")
 abstract class TerrainRenderer(

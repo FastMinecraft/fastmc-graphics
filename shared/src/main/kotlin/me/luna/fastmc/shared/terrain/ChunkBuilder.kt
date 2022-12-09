@@ -1,9 +1,9 @@
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.ObjectPool
+import dev.fastmc.common.collection.FastIntMap
+import dev.fastmc.common.collection.FastObjectArrayList
 import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
-import me.luna.fastmc.shared.util.ObjectPool
-import me.luna.fastmc.shared.util.collection.FastIntMap
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 

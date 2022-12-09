@@ -1,8 +1,8 @@
 package me.luna.fastmc.terrain
 
-import me.luna.fastmc.shared.util.FastMcExtendScope
-import me.luna.fastmc.shared.util.isDoneOrNull
-import me.luna.fastmc.shared.util.threadGroupMain
+import dev.fastmc.common.FastMcExtendScope
+import dev.fastmc.common.isDoneOrNull
+import dev.fastmc.common.threadGroupMain
 import me.luna.fastmc.util.hasPendingUpdates
 import me.luna.fastmc.util.lightStorage
 import net.minecraft.util.math.BlockPos

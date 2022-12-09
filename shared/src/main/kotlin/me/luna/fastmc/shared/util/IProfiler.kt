@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.util
+package dev.fastmc.common
 
 interface IProfiler {
     fun start(name: String)

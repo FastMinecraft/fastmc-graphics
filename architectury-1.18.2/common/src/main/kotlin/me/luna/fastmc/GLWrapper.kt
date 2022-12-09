@@ -1,9 +1,9 @@
 package me.luna.fastmc
 
 import com.mojang.blaze3d.platform.GlStateManager
+import dev.fastmc.common.allocateInt
 import me.luna.fastmc.mixin.accessor.AccessorGlStateManager
 import me.luna.fastmc.shared.opengl.IGLWrapper
-import me.luna.fastmc.shared.util.allocateInt
 import org.lwjgl.opengl.*
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer

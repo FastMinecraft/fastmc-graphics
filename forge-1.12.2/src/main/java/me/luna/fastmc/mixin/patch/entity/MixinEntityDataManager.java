@@ -1,7 +1,7 @@
 package me.luna.fastmc.mixin.patch.entity;
 
+import dev.fastmc.common.collection.FastIntMap;
 import io.netty.handler.codec.EncoderException;
-import me.luna.fastmc.shared.util.collection.FastIntMap;
 import net.minecraft.crash.CrashReport;
 import net.minecraft.crash.CrashReportCategory;
 import net.minecraft.entity.Entity;

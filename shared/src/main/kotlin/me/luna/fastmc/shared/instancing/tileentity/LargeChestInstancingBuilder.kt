@@ -1,10 +1,10 @@
 package me.luna.fastmc.shared.instancing.tileentity
 
-import me.luna.fastmc.shared.model.Model
+import dev.fastmc.common.isOdd
 import me.luna.fastmc.shared.instancing.tileentity.info.IChestInfo
+import me.luna.fastmc.shared.model.Model
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
-import me.luna.fastmc.shared.util.isOdd
 import java.nio.ByteBuffer
 
 class LargeChestInstancingBuilder : SmallChestInstancingBuilder() {

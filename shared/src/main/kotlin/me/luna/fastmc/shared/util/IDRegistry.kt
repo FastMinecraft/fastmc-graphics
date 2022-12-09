@@ -1,6 +1,6 @@
-package me.luna.fastmc.shared.util
+package dev.fastmc.common
 
-import me.luna.fastmc.shared.util.collection.DynamicBitSet
+import dev.fastmc.common.collection.DynamicBitSet
 
 class IDRegistry {
     private val bitSet = DynamicBitSet()

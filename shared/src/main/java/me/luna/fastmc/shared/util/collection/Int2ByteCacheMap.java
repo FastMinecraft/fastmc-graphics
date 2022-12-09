@@ -1,11 +1,11 @@
-package me.luna.fastmc.shared.util.collection;
+package dev.fastmc.common.collection;
 
+import dev.fastmc.common.UtilsKt;
 import it.unimi.dsi.fastutil.bytes.ByteCollection;
 import it.unimi.dsi.fastutil.ints.Int2ByteLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ByteMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectSet;
-import me.luna.fastmc.shared.util.UtilsKt;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;

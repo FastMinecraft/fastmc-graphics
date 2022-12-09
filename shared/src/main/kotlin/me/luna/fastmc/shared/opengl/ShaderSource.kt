@@ -1,9 +1,9 @@
 package me.luna.fastmc.shared.opengl
 
+import dev.fastmc.common.CachedBuffer
+import dev.fastmc.common.MD5Hash
+import dev.fastmc.common.collection.FastObjectArrayList
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
-import me.luna.fastmc.shared.util.CachedBuffer
-import me.luna.fastmc.shared.util.MD5Hash
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import java.nio.charset.CodingErrorAction
 import java.security.DigestInputStream
 import java.security.MessageDigest

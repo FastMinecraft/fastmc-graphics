@@ -1,5 +1,8 @@
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.*
+import dev.fastmc.common.collection.IntArrayFIFOQueueNoShrink
+import dev.fastmc.common.collection.StaticBitSet
 import it.unimi.dsi.fastutil.ints.IntArrays
 import it.unimi.dsi.fastutil.ints.IntComparator
 import kotlinx.coroutines.coroutineScope
@@ -7,9 +10,6 @@ import kotlinx.coroutines.launch
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkY
 import me.luna.fastmc.shared.renderer.cameraChunkZ
-import me.luna.fastmc.shared.util.*
-import me.luna.fastmc.shared.util.collection.IntArrayFIFOQueueNoShrink
-import me.luna.fastmc.shared.util.collection.StaticBitSet
 import java.util.concurrent.Future
 import kotlin.math.max
 import kotlin.math.min

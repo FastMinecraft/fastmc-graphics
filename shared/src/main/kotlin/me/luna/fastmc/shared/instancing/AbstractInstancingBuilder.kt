@@ -1,5 +1,8 @@
 package me.luna.fastmc.shared.instancing
 
+import dev.fastmc.common.FastMcCoreScope
+import dev.fastmc.common.ParallelUtils
+import dev.fastmc.common.allocateByte
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import me.luna.fastmc.FastMcMod
@@ -13,9 +16,6 @@ import me.luna.fastmc.shared.resource.IResourceManager
 import me.luna.fastmc.shared.resource.Resource
 import me.luna.fastmc.shared.resource.ResourceEntry
 import me.luna.fastmc.shared.texture.ITexture
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ParallelUtils
-import me.luna.fastmc.shared.util.allocateByte
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 

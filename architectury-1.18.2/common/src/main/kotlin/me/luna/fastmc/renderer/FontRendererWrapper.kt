@@ -1,11 +1,11 @@
 package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
+import dev.fastmc.common.ColorARGB
 import me.luna.fastmc.resource.toBufferedImage
 import me.luna.fastmc.shared.font.FontRenderer
 import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.shared.opengl.glUseProgramForce
-import me.luna.fastmc.shared.util.ColorARGB
 import me.luna.fastmc.util.ResourceLocation
 import net.minecraft.resource.ResourceManager
 import org.joml.Matrix4f

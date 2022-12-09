@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.util
+package dev.fastmc.common
 
 import me.luna.fastmc.shared.opengl.glProgramUniformMatrix4fv
 import org.joml.Matrix4f

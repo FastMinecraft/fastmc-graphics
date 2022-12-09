@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.util.collection;
+package dev.fastmc.common.collection;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;

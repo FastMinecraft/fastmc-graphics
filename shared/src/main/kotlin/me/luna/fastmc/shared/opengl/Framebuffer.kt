@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.opengl
 
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
+import dev.fastmc.common.collection.FastObjectArrayList
 
 class Framebuffer : IGLObject, IGLTargetBinding {
     override val id = glCreateFramebuffers()

@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.opengl
 
-import me.luna.fastmc.shared.util.MatrixUtils
+import dev.fastmc.common.MatrixUtils
 import org.joml.Matrix4f
 
 open class DrawShaderProgram(vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :

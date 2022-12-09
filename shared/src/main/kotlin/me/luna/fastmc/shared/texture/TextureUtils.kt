@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.texture
 
-import me.luna.fastmc.shared.util.MathUtils
+import dev.fastmc.common.MathUtils
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 

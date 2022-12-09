@@ -1,6 +1,6 @@
 package me.luna.fastmc.shared.mixin
 
-import me.luna.fastmc.shared.util.Direction
+import dev.fastmc.common.Direction
 
 interface IPatchedBakedQuad {
     val faceBit: Int get() = 0b111111

@@ -1,11 +1,10 @@
 package me.luna.fastmc.mixin.patch;
 
-import me.luna.fastmc.shared.util.FastMcCoreScope;
-import me.luna.fastmc.shared.util.FastMcExtendScope;
+import dev.fastmc.common.FastMcCoreScope;
+import dev.fastmc.common.FastMcExtendScope;
 import net.minecraft.Bootstrap;
 import net.minecraft.util.Util;
 import net.minecraft.util.crash.CrashException;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;

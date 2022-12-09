@@ -1,5 +1,11 @@
 package me.luna.fastmc.terrain
 
+import dev.fastmc.common.ArrayPriorityObjectPool
+import dev.fastmc.common.BYTE_FALSE
+import dev.fastmc.common.BYTE_TRUE
+import dev.fastmc.common.BYTE_UNCHECKED
+import dev.fastmc.common.collection.Int2ByteCacheMap
+import dev.fastmc.common.collection.Int2ObjectCacheMap
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.mixin.IPatchedRenderLayer.Companion.index
 import me.luna.fastmc.mixin.IPatchedVoxelShape
@@ -9,12 +15,6 @@ import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkZ
 import me.luna.fastmc.shared.terrain.*
-import me.luna.fastmc.shared.util.ArrayPriorityObjectPool
-import me.luna.fastmc.shared.util.BYTE_FALSE
-import me.luna.fastmc.shared.util.BYTE_TRUE
-import me.luna.fastmc.shared.util.BYTE_UNCHECKED
-import me.luna.fastmc.shared.util.collection.Int2ByteCacheMap
-import me.luna.fastmc.shared.util.collection.Int2ObjectCacheMap
 import me.luna.fastmc.util.Minecraft
 import net.minecraft.block.BlockRenderType
 import net.minecraft.block.BlockState

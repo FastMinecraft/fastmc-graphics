@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.instancing.entity.info
 
+import dev.fastmc.common.ClassIDRegistry
+import dev.fastmc.common.ITypeID
 import me.luna.fastmc.shared.instancing.IInfo
-import me.luna.fastmc.shared.util.ClassIDRegistry
-import me.luna.fastmc.shared.util.ITypeID
 
 interface IEntityInfo<E : Any> : IInfo<E>, ITypeID {
     override val typeID: Int

@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared.texture
 
+import dev.fastmc.common.allocateByte
+import dev.fastmc.common.free
 import me.luna.fastmc.shared.opengl.*
-import me.luna.fastmc.shared.util.allocateByte
-import me.luna.fastmc.shared.util.free
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer
 import java.nio.ByteBuffer

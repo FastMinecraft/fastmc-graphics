@@ -1,13 +1,13 @@
 package me.luna.fastmc.mixin.core;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import dev.fastmc.common.FastMcCoreScope;
+import dev.fastmc.common.FastMcExtendScope;
 import me.luna.fastmc.FastMcMod;
 import me.luna.fastmc.GLWrapper;
 import me.luna.fastmc.RendererReloader;
 import me.luna.fastmc.shared.FpsDisplay;
 import me.luna.fastmc.shared.terrain.ChunkBuilderTask;
-import me.luna.fastmc.shared.util.FastMcCoreScope;
-import me.luna.fastmc.shared.util.FastMcExtendScope;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.SplashScreen;
 import net.minecraft.client.world.ClientWorld;

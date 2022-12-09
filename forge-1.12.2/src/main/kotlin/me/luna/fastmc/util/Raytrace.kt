@@ -1,7 +1,7 @@
 package me.luna.fastmc.util
 
-import me.luna.fastmc.shared.util.distanceSq
-import me.luna.fastmc.shared.util.fastFloor
+import dev.fastmc.common.distanceSq
+import dev.fastmc.common.fastFloor
 import net.minecraft.block.state.IBlockState
 import net.minecraft.util.EnumFacing
 import net.minecraft.util.math.BlockPos

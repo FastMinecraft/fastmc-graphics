@@ -1,8 +1,8 @@
 package me.luna.fastmc.mixin.patch.world;
 
+import dev.fastmc.common.DoubleBufferedCollection;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import me.luna.fastmc.shared.util.DoubleBufferedCollection;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEventData;
 import net.minecraft.network.play.server.SPacketBlockAction;

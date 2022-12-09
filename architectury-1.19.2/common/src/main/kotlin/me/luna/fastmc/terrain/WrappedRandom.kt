@@ -4,7 +4,7 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Charsets
 import com.google.common.hash.Hashing
 import com.google.common.primitives.Longs
-import me.luna.fastmc.shared.util.Splitmix64Random
+import dev.fastmc.common.Splitmix64Random
 import net.minecraft.util.math.MathHelper
 import net.minecraft.util.math.random.RandomSplitter
 import net.minecraft.util.math.random.Xoroshiro128PlusPlusRandom

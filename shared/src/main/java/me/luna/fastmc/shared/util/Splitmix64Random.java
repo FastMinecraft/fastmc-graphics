@@ -1,4 +1,4 @@
-package me.luna.fastmc.shared.util;
+package dev.fastmc.common;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;

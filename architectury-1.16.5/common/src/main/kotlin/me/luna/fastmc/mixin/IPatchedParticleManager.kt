@@ -1,14 +1,14 @@
 package me.luna.fastmc.mixin
 
 import com.google.common.collect.EvictingQueue
+import dev.fastmc.common.FastMcCoreScope
+import dev.fastmc.common.ParallelUtils
+import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.common.pollEach
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.ParallelUtils
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
-import me.luna.fastmc.shared.util.pollEach
 import net.minecraft.client.particle.EmitterParticle
 import net.minecraft.client.particle.Particle
 import net.minecraft.client.particle.ParticleTextureSheet

@@ -1,15 +1,15 @@
 package me.luna.fastmc.shared.terrain
 
-import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
+import dev.fastmc.common.Cancellable
+import dev.fastmc.common.Direction
+import dev.fastmc.common.UpdateCounter
+import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.common.distanceSq
 import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.opengl.impl.RenderBufferPool
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkY
 import me.luna.fastmc.shared.renderer.cameraChunkZ
-import me.luna.fastmc.shared.util.Cancellable
-import me.luna.fastmc.shared.util.Direction
-import me.luna.fastmc.shared.util.UpdateCounter
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
-import me.luna.fastmc.shared.util.distanceSq
 import org.joml.FrustumIntersection
 import java.util.concurrent.atomic.AtomicReference
 

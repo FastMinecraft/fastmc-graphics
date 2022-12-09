@@ -1,6 +1,7 @@
 package me.luna.fastmc.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
+import dev.fastmc.common.FastMcCoreScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -8,10 +9,9 @@ import kotlinx.coroutines.withContext
 import me.luna.fastmc.shared.instancing.AbstractInstancingBuilder
 import me.luna.fastmc.shared.instancing.tileentity.*
 import me.luna.fastmc.shared.instancing.tileentity.info.IChestInfo
-import me.luna.fastmc.shared.renderer.TileEntityRenderer
 import me.luna.fastmc.shared.renderer.IRenderer
+import me.luna.fastmc.shared.renderer.TileEntityRenderer
 import me.luna.fastmc.shared.renderer.WorldRenderer
-import me.luna.fastmc.shared.util.FastMcCoreScope
 import me.luna.fastmc.tileentity.ChestInfo
 import me.luna.fastmc.util.*
 import net.minecraft.block.enums.ChestType

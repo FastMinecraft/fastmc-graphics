@@ -1,10 +1,10 @@
 package me.luna.fastmc
 
+import dev.fastmc.common.CachedBuffer
+import dev.fastmc.common.allocateInt
+import dev.fastmc.common.wrapDirectByteBuffer
 import me.luna.fastmc.mixin.accessor.AccessorGlStateManager
 import me.luna.fastmc.shared.opengl.IGLWrapper
-import me.luna.fastmc.shared.util.CachedBuffer
-import me.luna.fastmc.shared.util.allocateInt
-import me.luna.fastmc.shared.util.wrapDirectByteBuffer
 import net.minecraft.client.renderer.GlStateManager
 import org.lwjgl.PointerWrapperAbstract
 import org.lwjgl.opengl.*

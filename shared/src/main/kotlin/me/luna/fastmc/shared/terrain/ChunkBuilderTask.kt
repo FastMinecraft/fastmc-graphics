@@ -2,6 +2,8 @@
 
 package me.luna.fastmc.shared.terrain
 
+import dev.fastmc.common.*
+import dev.fastmc.common.collection.FastObjectArrayList
 import it.unimi.dsi.fastutil.objects.ObjectCollections
 import kotlinx.coroutines.*
 import me.luna.fastmc.FastMcMod
@@ -9,8 +11,6 @@ import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkY
 import me.luna.fastmc.shared.renderer.cameraChunkZ
-import me.luna.fastmc.shared.util.*
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList
 import java.lang.ref.WeakReference
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory

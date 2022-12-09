@@ -2,6 +2,7 @@ package me.luna.fastmc.mixin.core.render;
 
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import dev.fastmc.common.collection.FastObjectArrayList;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
@@ -12,7 +13,6 @@ import me.luna.fastmc.shared.renderer.WorldRenderer;
 import me.luna.fastmc.shared.terrain.RenderChunk;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
 import me.luna.fastmc.shared.terrain.TerrainShaderManager;
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import me.luna.fastmc.util.AdaptersKt;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;

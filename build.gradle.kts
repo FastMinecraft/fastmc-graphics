@@ -1,4 +1,3 @@
-import dev.fastmc.modsetup.minecraftVersion
 import me.luna.jaroptimizer.JarOptimizerPluginExtension
 import kotlin.math.max
 
@@ -37,9 +36,6 @@ plugins {
 }
 
 allprojects {
-    group = "me.luna"
-    version = "0.0.1"
-
     repositories {
         mavenCentral()
         maven("https://libraries.minecraft.net")
@@ -74,25 +70,11 @@ tasks {
 
         group = "build"
 
-        subprojects.asSequence()
-            .filterNot {
-                it.name.contains("shared")
+        from(
+            provider {
+                subprojects.mapNotNull { it.tasks.findByName("releaseJar")?.outputs }
             }
-            .forEach {
-                dependsOn(it.tasks.assemble)
-            }
-
-        duplicatesStrategy = DuplicatesStrategy.INCLUDE
-
-        subprojects.forEach { project ->
-            val regex =
-                "${rootProject.name}-(?:fabric|forge)-${project.minecraftVersion}-${rootProject.version}-release\\.jar".toRegex()
-            from(file("${project.buildDir}/libs/")) {
-                include {
-                    it.name.matches(regex)
-                }
-            }
-        }
+        )
 
         into(file("$buildDir/libs"))
     }

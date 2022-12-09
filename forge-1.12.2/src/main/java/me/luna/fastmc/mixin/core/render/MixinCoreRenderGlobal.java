@@ -1,5 +1,6 @@
 package me.luna.fastmc.mixin.core.render;
 
+import dev.fastmc.common.collection.FastObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
 import me.luna.fastmc.FastMcMod;
@@ -7,7 +8,6 @@ import me.luna.fastmc.renderer.EntityRendererImpl;
 import me.luna.fastmc.shared.renderer.WorldRenderer;
 import me.luna.fastmc.shared.terrain.RenderChunkStorage;
 import me.luna.fastmc.shared.terrain.TerrainRenderer;
-import me.luna.fastmc.shared.util.collection.FastObjectArrayList;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.WorldClient;

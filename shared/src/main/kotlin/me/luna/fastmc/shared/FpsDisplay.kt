@@ -1,8 +1,8 @@
 package me.luna.fastmc.shared
 
+import dev.fastmc.common.ColorARGB
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.shared.font.FontRenderer
-import me.luna.fastmc.shared.util.ColorARGB
 import org.joml.Matrix4f
 
 object FpsDisplay {

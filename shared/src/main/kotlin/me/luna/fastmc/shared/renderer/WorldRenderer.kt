@@ -1,13 +1,13 @@
 package me.luna.fastmc.shared.renderer
 
+import dev.fastmc.common.MemoryStack
+import dev.fastmc.common.fastFloor
+import dev.fastmc.common.skip
 import kotlinx.coroutines.CoroutineScope
 import me.luna.fastmc.shared.opengl.BufferObject
 import me.luna.fastmc.shared.opengl.GL_DYNAMIC_STORAGE_BIT
 import me.luna.fastmc.shared.opengl.glNamedBufferSubData
 import me.luna.fastmc.shared.terrain.TerrainRenderer
-import me.luna.fastmc.shared.util.MemoryStack
-import me.luna.fastmc.shared.util.fastFloor
-import me.luna.fastmc.shared.util.skip
 import org.joml.FrustumIntersection
 import org.joml.Matrix4f
 import kotlin.coroutines.CoroutineContext

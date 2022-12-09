@@ -1,5 +1,7 @@
 package me.luna.fastmc
 
+import dev.fastmc.common.FastMcCoreScope
+import dev.fastmc.common.IProfiler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.luna.fastmc.shared.Config
@@ -8,8 +10,6 @@ import me.luna.fastmc.shared.font.IFontRendererWrapper
 import me.luna.fastmc.shared.opengl.IGLWrapper
 import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.resource.IResourceManager
-import me.luna.fastmc.shared.util.FastMcCoreScope
-import me.luna.fastmc.shared.util.IProfiler
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 

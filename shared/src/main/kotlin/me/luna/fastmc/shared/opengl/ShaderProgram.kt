@@ -1,9 +1,9 @@
 package me.luna.fastmc.shared.opengl
 
+import dev.fastmc.common.EnumMap
 import it.unimi.dsi.fastutil.objects.Object2ByteMap
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.shared.util.EnumMap
 
 open class ShaderProgram(
     vertex: ShaderSource.Vertex,
