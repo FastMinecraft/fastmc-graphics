@@ -5,9 +5,9 @@ import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.MCVersion
 import org.spongepowered.asm.launch.MixinBootstrap
 import org.spongepowered.asm.mixin.Mixins
 
-@IFMLLoadingPlugin.Name("FastMcCoremod")
+@IFMLLoadingPlugin.Name("FastMcGraphicsCoremod")
 @MCVersion("1.12.2")
-class FastMcCoremod : IFMLLoadingPlugin {
+class FastMcGraphicsCoremod : IFMLLoadingPlugin {
     init {
         MixinBootstrap.init()
         Mixins.addConfigurations(

@@ -5,9 +5,9 @@ import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.MCVersion
 import org.spongepowered.asm.launch.MixinBootstrap
 import org.spongepowered.asm.mixin.Mixins
 
-@IFMLLoadingPlugin.Name("FastMcCoremod")
+@IFMLLoadingPlugin.Name("FastMcGrahpicDevFixCoremod")
 @MCVersion("1.12.2")
-class FastMcDevFixCoremod : IFMLLoadingPlugin {
+class FastMcGraphicsDevFixCoremod : IFMLLoadingPlugin {
     private val enableMod = true
 
     init {
