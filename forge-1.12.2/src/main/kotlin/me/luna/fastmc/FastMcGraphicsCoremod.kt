@@ -13,8 +13,7 @@ class FastMcGraphicsCoremod : IFMLLoadingPlugin {
         Mixins.addConfigurations(
             "mixins.fastmc-core.json",
             "mixins.fastmc-accessor.json",
-            "mixins.fastmc-patch.json",
-            "mixins.fastmc-devfix.json"
+            "mixins.fastmc-patch.json"
         )
     }
 
