@@ -1,20 +1,20 @@
 {
-  "required": true,
-  "minVersion": "0.8",
-  "compatibilityLevel": "JAVA_8",
-  "package": "me.luna.fastmc.mixin.accessor",
-  "client": [
-    "AccessorBackgroundRenderer",
-    "AccessorBiomeAccess",
-    "AccessorChunkLightProvider",
-    "AccessorGlStateManager",
-    "AccessorLevelPropagator",
-    "AccessorLightmapTextureManager",
-    "AccessorLightStorage",
-    "AccessorThreadExecutor",
-    "AccessorVoxelShape"
-  ],
-  "injectors": {
-    "defaultRequire": 1
-  }
+    "required": true,
+    "minVersion": "0.8",
+    "compatibilityLevel": "JAVA_8",
+    "package": "me.luna.fastmc.mixin.accessor",
+    "client": [
+        "AccessorBackgroundRenderer",
+        "AccessorBiomeAccess",
+        "AccessorChunkLightProvider",
+        "AccessorGlStateManager",
+        "AccessorLevelPropagator",
+        "AccessorLightmapTextureManager",
+        "AccessorLightStorage",
+        "AccessorThreadExecutor",
+        "AccessorVoxelShape"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
 }

@@ -17,8 +17,8 @@
     ]
   },
   "mixins": [
-    "mixins.fastmc-core.json",
     "mixins.fastmc-accessor.json",
+    "mixins.fastmc-core.json",
     "mixins.fastmc-patch.json"
   ],
   "accessWidener": "FastMinecraft.accesswidener",

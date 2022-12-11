@@ -1,6 +1,9 @@
 import me.luna.jaroptimizer.JarOptimizerPluginExtension
 import kotlin.math.max
 
+group = "dev.fastmc"
+version = "0.0.2"
+
 runVmOptions {
     val threads = Runtime.getRuntime().availableProcessors()
     add(
