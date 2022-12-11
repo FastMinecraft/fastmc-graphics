@@ -38,8 +38,8 @@ plugins {
 allprojects {
     repositories {
         mavenCentral()
-        maven("https://libraries.minecraft.net")
-        maven("https://maven.fastmc.dev")
+        maven("https://maven.fastmc.dev/")
+        maven("https://libraries.minecraft.net/")
     }
 
     dependencies {

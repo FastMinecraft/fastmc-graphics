@@ -4,11 +4,11 @@ pluginManagement {
     repositories {
         mavenLocal()
         gradlePluginPortal()
+        maven("https://maven.fastmc.dev/")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.architectury.dev/")
         maven("https://files.minecraftforge.net/maven/")
         maven("https://repo.spongepowered.org/repository/maven-public/")
-        maven("https://maven.fastmc.dev")
     }
 }
 

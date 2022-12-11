@@ -1,7 +1,5 @@
 dependencies {
-    api("dev.fastmc:fastmc-common:1.0-SNAPSHOT") {
-        isTransitive = false
-    }
+    compileOnly("dev.fastmc:fastmc-common:1.0-SNAPSHOT")
 }
 
 subprojects {
