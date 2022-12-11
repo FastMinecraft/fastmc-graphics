@@ -2,22 +2,24 @@ rootProject.name = "fastmc-graphics"
 
 pluginManagement {
     repositories {
+        mavenLocal()
+        gradlePluginPortal()
         maven("https://maven.fabricmc.net/")
         maven("https://maven.architectury.dev/")
         maven("https://files.minecraftforge.net/maven/")
-        gradlePluginPortal()
-        maven("https://raw.githubusercontent.com/Luna5ama/JarOptimizer/maven-repo")
+        maven("https://repo.spongepowered.org/repository/maven-public/")
+        maven("https://maven.fastmc.dev")
     }
 }
 
-includeBuild("../mod-setup")
-includeBuild("../fastmc-common") {
-    dependencySubstitution {
-        substitute(module("dev.fastmc:common")).using(project(":"))
-        substitute(module("dev.fastmc:common-java8")).using(project(":java8"))
-        substitute(module("dev.fastmc:common-java17")).using(project(":java17"))
-    }
-}
+//includeBuild("../mod-setup")
+//includeBuild("../fastmc-common") {
+//    dependencySubstitution {
+//        substitute(module("dev.fastmc:fastmc-common")).using(project(":"))
+//        substitute(module("dev.fastmc:fastmc-common-java8")).using(project(":java8"))
+//        substitute(module("dev.fastmc:fastmc-common-java17")).using(project(":java17"))
+//    }
+//}
 
 include("shared")
 include("shared:java8")

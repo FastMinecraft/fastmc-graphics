@@ -1,12 +1,12 @@
 dependencies {
-    api("dev.fastmc:common") {
+    api("dev.fastmc:fastmc-common:1.0-SNAPSHOT") {
         isTransitive = false
     }
 }
 
 subprojects {
     dependencies {
-        libraryApi("dev.fastmc:common-${project.name}") {
+        libraryApi("dev.fastmc:fastmc-common-${project.name}:1.0-SNAPSHOT") {
             isTransitive = false
         }
     }
