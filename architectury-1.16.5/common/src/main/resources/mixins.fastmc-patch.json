@@ -20,7 +20,8 @@
         "render.MixinRenderLayer",
         "render.MixinWeightedBakedModel",
         "world.MixinPatchBiome",
-        "world.MixinPatchClientChunkManager"
+        "world.MixinPatchClientChunkManager",
+        "MixinSimpleVoxelShape"
     ],
     "injectors": {
         "defaultRequire": 1
