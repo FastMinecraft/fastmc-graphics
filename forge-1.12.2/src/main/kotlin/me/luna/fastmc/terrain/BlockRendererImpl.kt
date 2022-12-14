@@ -707,7 +707,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
                     ++i
                 }
             } else {
-                val k = (state.getValue(BlockLiquid.LEVEL) as Int).toInt()
+                val k = state.getValue(BlockLiquid.LEVEL)
                 if (k >= 8 || k == 0) {
                     f += BlockLiquid.getLiquidHeightPercent(k) * 10.0f
                     i += 10

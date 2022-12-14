@@ -5,7 +5,6 @@
     "package": "me.luna.fastmc.mixin.patch",
     "client": [
         "MixinArrayVoxelShape",
-        "MixinFractionalPairList",
         "MixinPatchMinecraftClient",
         "MixinPatchMinecraftServer",
         "MixinSlicedVoxelShape",
