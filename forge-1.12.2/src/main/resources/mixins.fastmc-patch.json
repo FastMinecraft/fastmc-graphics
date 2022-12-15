@@ -12,7 +12,6 @@
     "player.MixinPlayerControllerMP",
     "render.MixinActiveRenderInfo",
     "render.MixinClippingHelperImpl",
-    "render.MixinPatchBakedQuad",
     "world.MixinWorld",
     "world.MixinWorldClient"
   ]
