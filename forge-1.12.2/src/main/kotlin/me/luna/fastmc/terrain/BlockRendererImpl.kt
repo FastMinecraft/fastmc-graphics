@@ -34,10 +34,9 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         val seed = MathHelper.getPositionRandom(context.renderBlockPos)
         val model = blockModels.getModelForState(state)
 
-        if (Minecraft.isAmbientOcclusionEnabled() && state.getLightValue(
-                worldSnapshot,
-                context.renderBlockPos
-            ) == 0 && model.isAmbientOcclusion(state)
+        if (Minecraft.isAmbientOcclusionEnabled()
+            && state.getLightValue(worldSnapshot, context.renderBlockPos) == 0
+            && model.isAmbientOcclusion(state)
         ) {
             context.random.setSeed(seed)
             val random = context.random.nextLong()
@@ -374,7 +373,11 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             )
             context.activeVertexBuilder.putQuad(0b11_11_11)
 
-            if ((state.block as BlockLiquid).shouldRenderSides(worldSnapshot, tempPos.setPos(context.blockX, context.blockY + 1, context.blockZ))) {
+            if ((state.block as BlockLiquid).shouldRenderSides(
+                    worldSnapshot,
+                    tempPos.setPos(context.blockX, context.blockY + 1, context.blockZ)
+                )
+            ) {
                 context.activeVertexBuilder.putVertex(
                     context.renderPosX + 0.0f,
                     context.renderPosY + fluidHeightNW,
@@ -693,7 +696,7 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         var i = 0
         var f = 0.0f
         for (j in 0..3) {
-            val x1 = x -(j and 1)
+            val x1 = x - (j and 1)
             val y1 = y
             val z1 = z - (j shr 1 and 1)
             if (worldSnapshot.getBlockState(x1, y1 + 1, z1).material === blockMaterial) {

@@ -7,10 +7,10 @@ import dev.fastmc.common.BYTE_UNCHECKED
 import dev.fastmc.common.collection.Int2ByteCacheMap
 import dev.fastmc.common.collection.Int2ObjectCacheMap
 import me.luna.fastmc.FastMcMod
-import me.luna.fastmc.mixin.IPatchedRenderLayer.Companion.index
 import me.luna.fastmc.mixin.accessor.AccessorVoxelShape
 import me.luna.fastmc.renderer.TileEntityRendererImpl
 import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
+import me.luna.fastmc.shared.renderer.WorldRenderer
 import me.luna.fastmc.shared.renderer.cameraChunkX
 import me.luna.fastmc.shared.renderer.cameraChunkZ
 import me.luna.fastmc.shared.terrain.*
@@ -18,7 +18,6 @@ import me.luna.fastmc.util.Minecraft
 import net.minecraft.block.BlockRenderType
 import net.minecraft.block.BlockState
 import net.minecraft.client.MinecraftClient
-import net.minecraft.client.render.RenderLayer
 import net.minecraft.client.render.RenderLayers
 import net.minecraft.entity.Entity
 import net.minecraft.fluid.Fluids
@@ -31,9 +30,11 @@ import net.minecraft.util.shape.VoxelShape
 import net.minecraft.util.shape.VoxelShapes
 import net.minecraft.world.chunk.ChunkStatus
 
-class TerrainRendererImpl(renderer: me.luna.fastmc.shared.renderer.WorldRenderer) : TerrainRenderer(
+private const val LAYER_COUNT = 3
+
+class TerrainRendererImpl(renderer: WorldRenderer) : TerrainRenderer(
     renderer,
-    RenderLayer.getBlockLayers().size
+    LAYER_COUNT
 ) {
     override val minChunkY: Int
         get() {
@@ -150,7 +151,7 @@ private class ChunkBuilderContextProviderImpl : ContextProvider() {
 }
 
 @Suppress("LeakingThis", "NOTHING_TO_INLINE")
-abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().size) {
+abstract class RebuildContextImpl : RebuildContext(3) {
     override val worldSnapshot = WorldSnapshotImpl(this)
     override val blockRenderer by lazy { BlockRendererImpl(this) }
 
@@ -191,13 +192,13 @@ abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().
                     blockZ = z
 
                     if (blockState.renderType === BlockRenderType.MODEL) {
-                        setActiveLayer(task, RenderLayers.getBlockLayer(blockState).index)
+                        setActiveLayer(task, RenderLayers.getBlockLayer(blockState) as IPatchedRenderLayer)
                         blockRenderer.renderBlock(blockState)
                     }
 
                     val fluidState = worldSnapshot.getFluidState(x, y, z)
                     if (fluidState.fluid !== emptyFluid) {
-                        setActiveLayer(task, RenderLayers.getFluidLayer(fluidState).index)
+                        setActiveLayer(task, RenderLayers.getFluidLayer(fluidState) as IPatchedRenderLayer)
                         blockRenderer.renderFluid(fluidState, blockState)
                     }
 

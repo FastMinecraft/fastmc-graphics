@@ -13,8 +13,12 @@ abstract class TerrainVertexBuilder {
     @Volatile
     var bufferGroup: BufferGroup? = null
 
-    fun initBuffer(task: ChunkBuilderTask) {
+    private var modelAttribute = 0b0000_0001
+
+    fun initBuffer(task: ChunkBuilderTask, layer: IPatchedRenderLayer) {
         this.task = task
+        modelAttribute = layer.modelAttribute
+
         if (bufferGroup == null) {
             bufferGroup = BufferGroup(
                 task,
@@ -43,6 +47,7 @@ abstract class TerrainVertexBuilder {
 
     fun clearBuffer() {
         bufferGroup = null
+        modelAttribute = 0b0000_0001
     }
 
     open fun putVertex(
@@ -78,6 +83,8 @@ abstract class TerrainVertexBuilder {
         UNSAFE.putByte(address + 12L, r.toByte())
         UNSAFE.putByte(address + 13L, g.toByte())
         UNSAFE.putByte(address + 14L, b.toByte())
+
+        UNSAFE.putByte(address + 15L, modelAttribute.toByte())
 
         bufferGroup.vertexByteIndices[faceBit - 1] += 16L
         buffer.skip(16)

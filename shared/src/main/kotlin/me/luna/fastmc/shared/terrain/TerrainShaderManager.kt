@@ -12,13 +12,13 @@ import kotlin.math.ln
 import kotlin.math.sqrt
 
 class TerrainShaderManager(private val renderer: TerrainRenderer) {
-    val shader get() = activeShaderGroup.activeShader
+    val shader get() = activeShaderGroup
 
     var fogRangeSq = Int.MAX_VALUE; private set
 
     private val fogParametersUBO = BufferObject.Immutable().allocate(24, GL_DYNAMIC_STORAGE_BIT)
 
-    private val shaderMap = EnumMap<FogShape, EnumMap<FogType, AlphaTestShaderGroup<DrawShaderProgram>>>()
+    private val shaderMap = EnumMap<FogShape, EnumMap<FogType, TerrainShaderProgram>>()
     private var activeFogShape = FogShape.SPHERE
     private var activeShaderGroup = getShader(FogShape.SPHERE, FogType.LINEAR)
 
@@ -27,10 +27,6 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
             renderer.cameraBlockX, renderer.cameraBlockY, renderer.cameraBlockZ,
             x, y, z
         ) <= renderer.shaderManager.fogRangeSq
-    }
-
-    fun alphaTest(state: Boolean) {
-        activeShaderGroup.alphaTest(state)
     }
 
     fun linearFog(fogShape: FogShape, start: Float, end: Float, red: Float, green: Float, blue: Float) {
@@ -61,7 +57,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
     private fun getShader(
         fogShape: FogShape,
         fogType: FogType
-    ): AlphaTestShaderGroup<DrawShaderProgram> {
+    ): TerrainShaderProgram {
         return shaderMap.getOrPut(fogShape, ::EnumMap).getOrPut(fogType) {
             val vertex = ShaderSource.Vertex("/assets/shaders/terrain/Terrain.vert") {
                 FogShape.values().forEach {
@@ -74,10 +70,8 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
                 define("FOG_TYPE", fogType)
             }
             val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.frag")
-            AlphaTestShaderGroup(
-                DrawShaderProgram(this, vertex, fragment, false),
-                DrawShaderProgram(this, vertex, fragment, true)
-            )
+
+            TerrainShaderProgram(this, vertex, fragment)
         }
     }
 
@@ -107,45 +101,14 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         fogParametersUBO.destroy()
     }
 
-    private class AlphaTestShaderGroup<T : ShaderProgram>(
-        private val normal: T,
-        private val alphaTest: T
-    ) {
-        var activeShader = normal
-
-        fun alphaTest(state: Boolean) {
-            activeShader = if (state) {
-                alphaTest
-            } else {
-                normal
-            }
-        }
-
-        fun destroy() {
-            normal.destroy()
-            alphaTest.destroy()
-        }
-
-        companion object {
-            inline fun <T : ShaderProgram> AlphaTestShaderGroup<T>.update(block: T.() -> Unit): AlphaTestShaderGroup<T> {
-                block.invoke(normal)
-                block.invoke(alphaTest)
-                return this
-            }
-        }
-    }
-
-
-    class DrawShaderProgram(
+    class TerrainShaderProgram(
         private val manager: TerrainShaderManager,
         vertex: ShaderSource.Vertex,
-        fragment: ShaderSource.Fragment,
-        alphaTest: Boolean
+        fragment: ShaderSource.Fragment
     ) : ShaderProgram(
         vertex,
         fragment {
             define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit)
-            if (alphaTest) define("ALPHA_TEST")
         }
     ) {
         private val regionOffsetUniform = glGetUniformLocation(id, "regionOffset")

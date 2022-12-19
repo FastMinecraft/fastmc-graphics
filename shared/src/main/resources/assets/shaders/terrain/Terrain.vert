@@ -20,12 +20,15 @@ layout(location = 0) in vec3 pos;
 layout(location = 1) in vec2 uv;
 layout(location = 2) in vec2 lightMapUV;
 layout(location = 3) in vec3 color;
+layout(location = 4) in int modelAttribute;
 
 out FragData {
     vec4 color;
     vec2 uv;
     vec2 lightMapUV;
     float fogAmount;
+    float lodMultiplier;
+    float alphaTestThreshold;
 } fragData;
 
 #if FOG_TYPE != FOG_TYPE_LINEAR
@@ -43,6 +46,9 @@ void main() {
     fragData.color = vec4(color, 1.0);
     fragData.uv = uv;
     fragData.lightMapUV = (lightMapUV + 8.0) * 0.00390625;
+
+    fragData.lodMultiplier = float(modelAttribute & 1);
+    fragData.alphaTestThreshold = float((modelAttribute >> 1) & 1) - 0.5;
 
     #if FOG_SHAPE == FOG_SHAPE_SPHERE
     float fogDistance = length(coord);

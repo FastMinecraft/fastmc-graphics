@@ -629,33 +629,23 @@ public abstract class MixinCoreEntityRenderer {
         this.mc.profiler.startSection("solid");
         TerrainRenderer terrainRenderer = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+
+        RenderHelper.disableStandardItemLighting();
+
         ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        GlStateManager.bindTexture(blockTexture.getGlTextureId());
+        blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
 
         int lightMapTexture = this.mc.getTextureManager().getTexture(this.locationLightMap).getGlTextureId();
         glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
 
-        RenderHelper.disableStandardItemLighting();
-        GlStateManager.bindTexture(blockTexture.getGlTextureId());
         GlStateManager.disableAlpha();
         GlStateManager.disableBlend();
 
-        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
+        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
         shader.bind();
 
         terrainRenderer.renderLayer(0);
-
-        this.mc.profiler.endStartSection("cutoutMipped");
-        shaderManager.alphaTest(true);
-        shader = shaderManager.getShader();
-        shader.bind();
-        blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
-        terrainRenderer.renderLayer(1);
-
-        this.mc.profiler.endStartSection("cutout");
-        blockTexture.setBlurMipmap(false, false);
-        terrainRenderer.renderLayer(2);
-        blockTexture.restoreLastBlurMipmap();
-        shaderManager.alphaTest(false);
 
         GlStateManager.enableAlpha();
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
@@ -668,7 +658,7 @@ public abstract class MixinCoreEntityRenderer {
         this.mc.profiler.startSection("translucent");
         TerrainRenderer terrainRenderer = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
-        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
+        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
 
         this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
         GlStateManager.enableBlend();
@@ -683,7 +673,7 @@ public abstract class MixinCoreEntityRenderer {
         GlStateManager.depthFunc(GL_LEQUAL);
 
         shader.bind();
-        terrainRenderer.renderLayer(3);
+        terrainRenderer.renderLayer(1);
         shader.unbind();
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);

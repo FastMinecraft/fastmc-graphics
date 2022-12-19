@@ -13,14 +13,14 @@ in FragData {
     vec2 uv;
     vec2 lightMapUV;
     float fogAmount;
+    float lodMultiplier;
+    float alphaTestThreshold;
 } fragData;
 
 out vec4 fragColor;
 
 void main() {
-    fragColor = texture(blockTexture, fragData.uv);
-    #ifdef ALPHA_TEST
-    if (fragColor.a <= 0.5) discard;
-    #endif
+    fragColor = textureLod(blockTexture, fragData.uv, textureQueryLod(blockTexture, fragData.uv).y * fragData.lodMultiplier);
+    if (fragColor.a <= fragData.alphaTestThreshold) discard;
     fragColor = mix(fogParameters.fogColor, fragColor * fragData.color * texture(lightMapTexture, fragData.lightMapUV), fragData.fogAmount);
 }

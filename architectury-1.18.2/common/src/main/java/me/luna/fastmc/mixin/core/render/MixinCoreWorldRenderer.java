@@ -630,35 +630,23 @@ public abstract class MixinCoreWorldRenderer {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
 
-        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         int lightMapTexture = getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
         glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
 
+        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         blockTexture.bindTexture();
+        blockTexture.setFilter(false, true);
+
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL_LEQUAL);
 
-        TerrainShaderManager.DrawShaderProgram deferredShader = shaderManager.getShader();
+        TerrainShaderManager.TerrainShaderProgram deferredShader = shaderManager.getShader();
         deferredShader.bind();
 
-        blockTexture.setFilter(false, true);
         terrainRenderer.renderLayer(0);
-
-        shaderManager.alphaTest(true);
-        deferredShader = shaderManager.getShader();
-        deferredShader.bind();
-
-        this.client.getProfiler().swap("cutoutMipped");
-        terrainRenderer.renderLayer(1);
-
-        this.client.getProfiler().swap("cutout");
-        blockTexture.setFilter(false, false);
-        terrainRenderer.renderLayer(2);
-        blockTexture.setFilter(false, true);
-        shaderManager.alphaTest(false);
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
@@ -672,6 +660,8 @@ public abstract class MixinCoreWorldRenderer {
 
         AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         blockTexture.bindTexture();
+        blockTexture.setFilter(false, true);
+
         RenderSystem.enableCull();
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(
@@ -696,17 +686,16 @@ public abstract class MixinCoreWorldRenderer {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
 
-        TerrainShaderManager.DrawShaderProgram shader = shaderManager.getShader();
+        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
         shader.bind();
 
-        blockTexture.setFilter(false, true);
-        terrainRenderer.renderLayer(3);
+        terrainRenderer.renderLayer(1);
 
         if (usingFbo) {
             weather.beginWrite(false);
         }
         this.client.getProfiler().swap("tripwire");
-        terrainRenderer.renderLayer(4);
+        terrainRenderer.renderLayer(2);
         this.client.getProfiler().pop();
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);

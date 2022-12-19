@@ -11,14 +11,15 @@ import net.minecraft.block.material.Material
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.tileentity.TileEntityRendererDispatcher
 import net.minecraft.tileentity.TileEntity
-import net.minecraft.util.BlockRenderLayer
 import net.minecraft.util.EnumBlockRenderType
 import net.minecraft.util.EnumFacing
 import net.minecraft.util.math.BlockPos
 
+private const val LAYER_COUNT = 2
+
 class TerrainRendererImpl(renderer: me.luna.fastmc.shared.renderer.WorldRenderer) : TerrainRenderer(
     renderer,
-    BlockRenderLayer.values().size,
+    LAYER_COUNT,
 ) {
     override val minChunkY get() = 0
     override val maxChunkY get() = 16
@@ -107,7 +108,7 @@ private class ChunkBuilderContextProviderImpl : ContextProvider() {
 }
 
 @Suppress("LeakingThis", "NOTHING_TO_INLINE")
-abstract class RebuildContextImpl : RebuildContext(BlockRenderLayer.values().size) {
+abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
     override val worldSnapshot = WorldSnapshotImpl(this)
     override val blockRenderer by lazy { BlockRendererImpl(this) }
 
@@ -143,11 +144,11 @@ abstract class RebuildContextImpl : RebuildContext(BlockRenderLayer.values().siz
 
                     when (blockState.renderType) {
                         EnumBlockRenderType.MODEL -> {
-                            setActiveLayer(task, block.renderLayer.ordinal)
+                            setActiveLayer(task, block.renderLayer as IPatchedRenderLayer)
                             blockRenderer.renderBlock(blockState)
                         }
                         EnumBlockRenderType.LIQUID -> {
-                            setActiveLayer(task, block.renderLayer.ordinal)
+                            setActiveLayer(task, block.renderLayer as IPatchedRenderLayer)
                             blockRenderer.renderFluid(blockState, blockState)
                         }
                         else -> {

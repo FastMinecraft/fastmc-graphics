@@ -105,7 +105,7 @@ abstract class TerrainRenderer(
                 val indicesUpdate = chunkStorage.checkChunkIndicesUpdate()
                 val viewUpdate =
                     cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0
-                            || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
+                        || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
                 val frustumUpdate = lastMatrixHash != matrixHash
                 val forceUpdate = forceUpdateTimer.tickAndReset(1000L) || !chunkStorage.cameraChunk.isBuilt
 
@@ -438,11 +438,11 @@ abstract class TerrainRenderer(
 
     private inline fun RenderChunk.checkAnyAdjBuilt(): Boolean {
         return checkAdjacentBuilt(Direction.I_DOWN)
-                || checkAdjacentBuilt(Direction.I_UP)
-                || checkAdjacentBuilt(Direction.I_NORTH)
-                || checkAdjacentBuilt(Direction.I_SOUTH)
-                || checkAdjacentBuilt(Direction.I_WEST)
-                || checkAdjacentBuilt(Direction.I_EAST)
+            || checkAdjacentBuilt(Direction.I_UP)
+            || checkAdjacentBuilt(Direction.I_NORTH)
+            || checkAdjacentBuilt(Direction.I_SOUTH)
+            || checkAdjacentBuilt(Direction.I_WEST)
+            || checkAdjacentBuilt(Direction.I_EAST)
     }
 
     private inline fun RenderChunk.checkAdjacentBuilt(index: Int): Boolean {
@@ -452,9 +452,9 @@ abstract class TerrainRenderer(
 
     private inline fun RenderChunk.checkAdjChunkLoaded(statusCache: ChunkLoadingStatusCache): Boolean {
         return statusCache.isChunkLoaded(chunkX, chunkZ + 1)
-                && statusCache.isChunkLoaded(chunkX - 1, chunkZ)
-                && statusCache.isChunkLoaded(chunkX, chunkZ - 1)
-                && statusCache.isChunkLoaded(chunkX + 1, chunkZ)
+            && statusCache.isChunkLoaded(chunkX - 1, chunkZ)
+            && statusCache.isChunkLoaded(chunkX, chunkZ - 1)
+            && statusCache.isChunkLoaded(chunkX + 1, chunkZ)
     }
 
     private suspend fun updateRegionCulling(resort: Boolean, refresh: Boolean) {
@@ -528,11 +528,11 @@ abstract class TerrainRenderer(
 
     private fun calculateVisibleFaceBit(renderChunk: RenderChunk): Int {
         return (Direction.B_EAST * ((renderChunk.minX - cameraX).fastFloor() ushr 31)) or
-                (Direction.B_WEST * ((cameraX - renderChunk.maxX).fastFloor() ushr 31)) or
-                (Direction.B_UP * ((renderChunk.minY - cameraY).fastFloor() ushr 31)) or
-                (Direction.B_DOWN * ((cameraY - renderChunk.maxY).fastFloor() ushr 31)) or
-                (Direction.B_SOUTH * ((renderChunk.minZ - cameraZ).fastFloor() ushr 31)) or
-                (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).fastFloor() ushr 31))
+            (Direction.B_WEST * ((cameraX - renderChunk.maxX).fastFloor() ushr 31)) or
+            (Direction.B_UP * ((renderChunk.minY - cameraY).fastFloor() ushr 31)) or
+            (Direction.B_DOWN * ((cameraY - renderChunk.maxY).fastFloor() ushr 31)) or
+            (Direction.B_SOUTH * ((renderChunk.minZ - cameraZ).fastFloor() ushr 31)) or
+            (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).fastFloor() ushr 31))
     }
 
     private fun updateDebugInfo() {
@@ -683,7 +683,7 @@ abstract class TerrainRenderer(
             float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true) // Block texture uv
             float(2, 2, GLDataType.GL_UNSIGNED_BYTE, false) // Light map uv
             float(3, 3, GLDataType.GL_UNSIGNED_BYTE, true) // Color multiplier
-            padding(1)
+            int(4, 1, GLDataType.GL_UNSIGNED_BYTE) // Attributes
         }
     }
 }

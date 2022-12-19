@@ -1,5 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package me.luna.fastmc.shared.terrain
 
 import dev.fastmc.common.*
@@ -309,7 +307,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
             instancingTileEntityList = rebuildContext.instancingTileEntityList.copyOrNull()
             globalTileEntityList = rebuildContext.globalTileEntityList.copyOrNull()
 
-            val translucentBufferPair = bufferGroupArray[3]
+            val translucentBufferPair = bufferGroupArray[1]
             translucentData = if (translucentBufferPair != null) {
                 val indexBuffer = translucentBufferPair.indexBuffers[0]!!.region.buffer
                 val sortContext = renderer.contextProvider.getSortContext(this@RebuildTask)
@@ -492,7 +490,7 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler)
 
         renderer.chunkBuilder.scheduleUpload(this) {
             translucentData(newData)
-            updateLayer(3, null, bufferContext, null)
+            updateLayer(1, null, bufferContext, null)
         }
     }
 }

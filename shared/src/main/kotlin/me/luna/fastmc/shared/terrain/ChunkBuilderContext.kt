@@ -141,7 +141,7 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     var activeLayer = 0
     val translucentVertexBuilder = TranslucentVertexBuilder()
     val vertexBuilderArray = Array(layerCount) {
-        if (it == 3) translucentVertexBuilder else OpaqueTerrainVertexBuilder()
+        if (it == 1) translucentVertexBuilder else OpaqueTerrainVertexBuilder()
     }
     val activeVertexBuilder: TerrainVertexBuilder
         get() = vertexBuilderArray[activeLayer]
@@ -176,9 +176,9 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     abstract val worldSnapshot: WorldSnapshot112<*, *, *>
     abstract val blockRenderer: BlockRenderer<*, *>
 
-    inline fun setActiveLayer(task: ChunkBuilderTask, index: Int) {
-        vertexBuilderArray[index].initBuffer(task)
-        activeLayer = index
+    inline fun setActiveLayer(task: ChunkBuilderTask, layer: IPatchedRenderLayer) {
+        vertexBuilderArray[layer.layerIndex].initBuffer(task, layer)
+        activeLayer = layer.layerIndex
     }
 
     override fun init(task: ChunkBuilderTask) {
