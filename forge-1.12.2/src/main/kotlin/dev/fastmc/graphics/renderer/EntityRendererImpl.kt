@@ -1,9 +1,9 @@
 package dev.fastmc.graphics.renderer
 
-import dev.fastmc.common.FastMcCoreScope
-import dev.fastmc.common.ITypeID
 import dev.fastmc.graphics.shared.renderer.EntityRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.fastmc.graphics.shared.util.ITypeID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch

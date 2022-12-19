@@ -6,6 +6,8 @@ import dev.fastmc.common.collection.StaticBitSet
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.fastmc.graphics.shared.util.FastMcExtendScope
 import it.unimi.dsi.fastutil.ints.IntArrays
 import it.unimi.dsi.fastutil.ints.IntComparator
 import kotlinx.coroutines.coroutineScope

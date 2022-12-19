@@ -7,6 +7,7 @@ import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
+import dev.fastmc.graphics.shared.util.threadGroupMain
 import java.util.concurrent.*
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger

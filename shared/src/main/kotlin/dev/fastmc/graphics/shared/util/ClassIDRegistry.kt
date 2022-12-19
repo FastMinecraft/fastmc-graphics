@@ -1,4 +1,4 @@
-package dev.fastmc.common
+package dev.fastmc.graphics.shared.util
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap
 

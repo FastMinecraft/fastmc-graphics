@@ -1,5 +1,6 @@
-package dev.fastmc.common
+package dev.fastmc.graphics.shared.util
 
+import dev.fastmc.common.ParallelUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.ForkJoinPool

@@ -1,9 +1,9 @@
 package dev.fastmc.graphics.mixin
 
-import dev.fastmc.common.FastMcCoreScope
 import dev.fastmc.common.ParallelUtils
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.graphics.shared.instancing.IParallelUpdate
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import it.unimi.dsi.fastutil.ints.IntSet
 import kotlinx.coroutines.*
 import net.minecraft.crash.CrashReport

@@ -8,6 +8,8 @@ import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.opengl.*
 import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
 import dev.fastmc.graphics.shared.renderer.*
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.fastmc.graphics.shared.util.FastMcExtendScope
 import it.unimi.dsi.fastutil.objects.ObjectArrays
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch

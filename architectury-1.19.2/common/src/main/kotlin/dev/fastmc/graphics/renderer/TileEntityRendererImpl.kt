@@ -2,7 +2,6 @@ package dev.fastmc.graphics.renderer
 
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
-import dev.fastmc.common.FastMcCoreScope
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.tileentity.*
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IChestInfo
@@ -11,6 +10,7 @@ import dev.fastmc.graphics.shared.opengl.GL_TEXTURE2
 import dev.fastmc.graphics.shared.renderer.IRenderer
 import dev.fastmc.graphics.shared.renderer.TileEntityRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.tileentity.ChestInfo
 import dev.fastmc.graphics.util.*
 import kotlinx.coroutines.CoroutineScope

@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.mixin
 
-import dev.fastmc.common.IProfiler
+import dev.fastmc.graphics.shared.util.IProfiler
 import dev.fastmc.graphics.util.Minecraft
 
 class Profiler(private val mc: Minecraft) : IProfiler {

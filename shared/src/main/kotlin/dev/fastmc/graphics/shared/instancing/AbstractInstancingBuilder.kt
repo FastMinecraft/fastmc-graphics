@@ -1,6 +1,5 @@
 package dev.fastmc.graphics.shared.instancing
 
-import dev.fastmc.common.FastMcCoreScope
 import dev.fastmc.common.ParallelUtils
 import dev.fastmc.common.allocateByte
 import dev.fastmc.graphics.FastMcMod
@@ -14,6 +13,7 @@ import dev.fastmc.graphics.shared.resource.IResourceManager
 import dev.fastmc.graphics.shared.resource.Resource
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.nio.ByteBuffer

@@ -1,5 +1,6 @@
-package dev.fastmc.common
+package dev.fastmc.graphics.shared.util
 
+import dev.fastmc.common.allocateFloat
 import dev.fastmc.graphics.shared.opengl.glProgramUniformMatrix4fv
 import org.joml.Matrix4f
 import java.nio.FloatBuffer

@@ -1,10 +1,10 @@
 package dev.fastmc.graphics.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
-import dev.fastmc.common.FastMcCoreScope
-import dev.fastmc.common.ITypeID
 import dev.fastmc.graphics.shared.renderer.EntityRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.fastmc.graphics.shared.util.ITypeID
 import dev.fastmc.graphics.util.Minecraft
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope

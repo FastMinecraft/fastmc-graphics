@@ -1,13 +1,13 @@
 package dev.fastmc.graphics
 
-import dev.fastmc.common.FastMcCoreScope
-import dev.fastmc.common.IProfiler
 import dev.fastmc.graphics.shared.Config
 import dev.fastmc.graphics.shared.FpsDisplay
 import dev.fastmc.graphics.shared.font.IFontRendererWrapper
 import dev.fastmc.graphics.shared.opengl.IGLWrapper
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.resource.IResourceManager
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.fastmc.graphics.shared.util.IProfiler
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager

@@ -1,11 +1,11 @@
 package dev.fastmc.graphics.renderer
 
-import dev.fastmc.common.FastMcCoreScope
 import dev.fastmc.graphics.shared.opengl.glBindTexture
 import dev.fastmc.graphics.shared.opengl.glBindVertexArray
 import dev.fastmc.graphics.shared.opengl.glUseProgramForce
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.resource.IResourceManager
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import net.minecraft.client.Minecraft

@@ -1,13 +1,13 @@
 package dev.fastmc.graphics.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
-import dev.fastmc.common.FastMcCoreScope
 import dev.fastmc.graphics.mixin.accessor.AccessorBufferRenderer
 import dev.fastmc.graphics.shared.opengl.glBindTexture
 import dev.fastmc.graphics.shared.opengl.glBindVertexArray
 import dev.fastmc.graphics.shared.opengl.glUseProgramForce
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.resource.IResourceManager
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.util.Minecraft
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch

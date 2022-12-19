@@ -1,12 +1,12 @@
 package dev.fastmc.graphics.mixin.core;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import dev.fastmc.common.FastMcCoreScope;
-import dev.fastmc.common.FastMcExtendScope;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.GLWrapper;
 import dev.fastmc.graphics.RendererReloader;
 import dev.fastmc.graphics.shared.FpsDisplay;
+import dev.fastmc.graphics.shared.util.FastMcCoreScope;
+import dev.fastmc.graphics.shared.util.FastMcExtendScope;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.SplashScreen;
 import net.minecraft.client.world.ClientWorld;

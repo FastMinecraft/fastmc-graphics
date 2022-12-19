@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.terrain
 
 import dev.fastmc.common.isDoneOrNull
-import dev.fastmc.common.threadGroupMain
+import dev.fastmc.graphics.shared.util.threadGroupMain
 import dev.fastmc.graphics.util.hasPendingUpdates
 import dev.fastmc.graphics.util.lightStorage
 import net.minecraft.util.math.BlockPos

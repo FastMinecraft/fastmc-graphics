@@ -1,10 +1,10 @@
 package dev.fastmc.graphics.mixin
 
 import com.google.common.collect.EvictingQueue
-import dev.fastmc.common.FastMcCoreScope
 import dev.fastmc.common.ParallelUtils
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.common.pollEach
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch

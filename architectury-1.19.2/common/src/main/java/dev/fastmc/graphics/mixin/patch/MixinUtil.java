@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.mixin.patch;
 
-import dev.fastmc.common.FastMcCoreScope;
-import dev.fastmc.common.FastMcExtendScope;
+import dev.fastmc.graphics.shared.util.FastMcCoreScope;
+import dev.fastmc.graphics.shared.util.FastMcExtendScope;
 import net.minecraft.util.Util;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

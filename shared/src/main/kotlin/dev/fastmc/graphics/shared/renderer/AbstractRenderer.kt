@@ -1,11 +1,11 @@
 package dev.fastmc.graphics.shared.renderer
 
-import dev.fastmc.common.ClassIDRegistry
-import dev.fastmc.common.FastMcCoreScope
-import dev.fastmc.common.ITypeID
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.IInfo
+import dev.fastmc.graphics.shared.util.ClassIDRegistry
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.fastmc.graphics.shared.util.ITypeID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch

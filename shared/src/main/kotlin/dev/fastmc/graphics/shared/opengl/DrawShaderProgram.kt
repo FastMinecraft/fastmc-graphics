@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.shared.opengl
 
-import dev.fastmc.common.MatrixUtils
+import dev.fastmc.graphics.shared.util.MatrixUtils
 import org.joml.Matrix4f
 
 open class DrawShaderProgram(vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :

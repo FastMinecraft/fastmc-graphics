@@ -1,10 +1,10 @@
 package dev.fastmc.graphics.mixin.patch.world;
 
 import dev.fastmc.common.DoubleBufferedCollection;
-import dev.fastmc.common.ITypeID;
 import dev.fastmc.common.collection.FastIntMap;
 import dev.fastmc.graphics.mixin.IPatchedIBlockAccess;
 import dev.fastmc.graphics.mixin.IPatchedWorld;
+import dev.fastmc.graphics.shared.util.ITypeID;
 import dev.fastmc.graphics.util.RaytraceKt;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;

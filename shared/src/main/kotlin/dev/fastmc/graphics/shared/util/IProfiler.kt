@@ -1,4 +1,4 @@
-package dev.fastmc.common
+package dev.fastmc.graphics.shared.util
 
 interface IProfiler {
     fun start(name: String)
