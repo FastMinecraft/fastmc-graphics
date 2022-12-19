@@ -1,6 +1,5 @@
 package me.luna.fastmc.mixin.patch;
 
-import me.luna.fastmc.mixin.IPatchedVoxelShape;
 import net.minecraft.util.shape.SimpleVoxelShape;
 import net.minecraft.util.shape.VoxelSet;
 import net.minecraft.util.shape.VoxelShape;
@@ -10,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SimpleVoxelShape.class)
-public abstract class MixinSimpleVoxelShape extends VoxelShape implements IPatchedVoxelShape {
+public abstract class MixinSimpleVoxelShape extends VoxelShape {
     private static final int CLASS_HASH = SimpleVoxelShape.class.hashCode();
     private int hash = 0;
 
@@ -27,7 +26,7 @@ public abstract class MixinSimpleVoxelShape extends VoxelShape implements IPatch
     }
 
     @Override
-    public int hash() {
+    public int hashCode() {
         return hash;
     }
 }

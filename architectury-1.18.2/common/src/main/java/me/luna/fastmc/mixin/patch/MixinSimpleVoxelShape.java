@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(SimpleVoxelShape.class)
-public class MixinSimpleVoxelShape extends VoxelShape implements IPatchedVoxelShape {
+public class MixinSimpleVoxelShape extends VoxelShape {
     private static final int CLASS_HASH = SimpleVoxelShape.class.hashCode();
     private int hash = 0;
 
@@ -39,7 +39,7 @@ public class MixinSimpleVoxelShape extends VoxelShape implements IPatchedVoxelSh
     }
 
     @Override
-    public int hash() {
+    public int hashCode() {
         return hash;
     }
 }

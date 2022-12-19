@@ -11,7 +11,6 @@
     "MixinSimpleVoxelShape",
     "MixinSlicedVoxelShape",
     "MixinUtil",
-    "MixinVoxelShape",
     "render.MixinPatchBackgroundRenderer",
     "render.MixinPatchBakedQuad",
     "render.MixinPatchBasicBakedModel",

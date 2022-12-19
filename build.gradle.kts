@@ -38,7 +38,7 @@ plugins {
     id("dev.fastmc.modsetup.root").version("1.0-SNAPSHOT")
 }
 
-allprojects {
+subprojects {
     repositories {
         mavenCentral()
         maven("https://maven.fastmc.dev/")
@@ -46,9 +46,13 @@ allprojects {
     }
 
     dependencies {
+        val kotlinVersion: String by rootProject
+        val kotlinxCoroutineVersion: String by rootProject
         val jomlVersion: String by rootProject
 
-        libraryImplementation("org.joml:joml:$jomlVersion")
+        "libraryImplementation"("org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion")
+        "libraryImplementation"("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutineVersion")
+        "libraryImplementation"("org.joml:joml:$jomlVersion")
 
         compileOnly("org.apache.logging.log4j:log4j-api:2.8.1")
         compileOnly("it.unimi.dsi:fastutil:7.1.0")

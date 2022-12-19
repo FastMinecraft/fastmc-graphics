@@ -8,7 +8,6 @@ import dev.fastmc.common.collection.Int2ByteCacheMap
 import dev.fastmc.common.collection.Int2ObjectCacheMap
 import me.luna.fastmc.FastMcMod
 import me.luna.fastmc.mixin.IPatchedRenderLayer.Companion.index
-import me.luna.fastmc.mixin.IPatchedVoxelShape
 import me.luna.fastmc.renderer.TileEntityRendererImpl
 import me.luna.fastmc.shared.instancing.tileentity.info.ITileEntityInfo
 import me.luna.fastmc.shared.renderer.cameraChunkX
@@ -254,8 +253,8 @@ abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().
                 false
             }
             else -> {
-                var hash = (shape as IPatchedVoxelShape).hash()
-                hash = hash * 31 + (neighbor as IPatchedVoxelShape).hash()
+                var hash = shape.hashCode()
+                hash = hash * 31 + neighbor.hashCode()
                 hash = hash * 31 + direction.ordinal
 
                 when (coveredSideCache.get(hash)) {
@@ -377,7 +376,7 @@ abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().
 
         if (result == null) {
             val shape = state.getCullingShape(worldSnapshot, cullingFaceTempPos.set(x, y, z))
-            val hash = (shape as IPatchedVoxelShape).hash() * 31 + direction.ordinal
+            val hash = shape.hashCode() * 31 + direction.ordinal
             result = cullingFaceCache.get(hash)
             if (result == null) {
                 result = VoxelShapes.extrudeFace(shape, direction)!!
@@ -411,7 +410,7 @@ abstract class RebuildContextImpl : RebuildContext(RenderLayer.getBlockLayers().
     }
 
     private inline fun hash(a: VoxelShape, b: VoxelShape): Int {
-        return (a as IPatchedVoxelShape).hash() * 31 + (b as IPatchedVoxelShape).hash()
+        return a.hashCode() * 31 + b.hashCode()
     }
 
     private inline fun index(x: Int, y: Int, z: Int): Int {

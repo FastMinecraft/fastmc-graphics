@@ -593,7 +593,7 @@ abstract class TerrainRenderer(
                 }
 
                 debugInfoString = String.format(
-                    "D: %d, Region: %d/%d/%d, Chunk: %d/%d/%d(%.1f/%.1f/%.1f MB), Total: %02d, Upload: %02d, Buffer: %03d/%03d(%.1f/%.1f MB)",
+                    "D: %d, R: %d/%d/%d, C: %d/%d/%d(%.1f/%.1f/%.1f MB), T: %02d, U: %02d, B: %03d/%03d(%.1f/%.1f MB)",
                     lastViewDistance,
                     visibleRegionCount,
                     regionCount,

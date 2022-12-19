@@ -3,10 +3,6 @@ package me.luna.fastmc.mixin
 import net.minecraft.util.shape.FractionalDoubleList
 
 interface IPatchedVoxelShape {
-    fun hash(): Int {
-        return this.hashCode()
-    }
-
     companion object {
         private val cache = arrayOfNulls<FractionalDoubleList>(1024)
 
