@@ -139,7 +139,7 @@ class ContextPool<T : Context>(val coreSize: Int, val timeout: Long, val factory
     }
 }
 
-@Suppress("UNCHECKED_CAST")
+@Suppress("UNCHECKED_CAST", "LeakingThis")
 abstract class RebuildContext(layerCount: Int) : Context() {
     @JvmField
     var chunkX = 0
@@ -169,9 +169,9 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     var renderPosZ = 0.0f
 
     var activeLayer = 0
-    val translucentVertexBuilder = TranslucentVertexBuilder()
+    val translucentVertexBuilder = TranslucentVertexBuilder(this)
     val vertexBuilderArray = Array(layerCount) {
-        if (it == 1) translucentVertexBuilder else OpaqueTerrainVertexBuilder()
+        if (it == 1) translucentVertexBuilder else OpaqueTerrainVertexBuilder(this)
     }
     val activeVertexBuilder: TerrainVertexBuilder
         get() = vertexBuilderArray[activeLayer]
@@ -206,6 +206,9 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     abstract val worldSnapshot: WorldSnapshot112<*, *, *>
     abstract val blockRenderer: BlockRenderer<*, *>
 
+    @JvmField
+    val bound = RenderChunk.MutableBound()
+
     inline fun setActiveLayer(task: ChunkBuilderTask, layer: IPatchedRenderLayer) {
         vertexBuilderArray[layer.layerIndex].initBuffer(task, layer)
         activeLayer = layer.layerIndex
@@ -229,6 +232,13 @@ abstract class RebuildContext(layerCount: Int) : Context() {
         activeLayer = 0
 
         occlusionDataBuilder.clear()
+
+        bound.minX = 8.0f
+        bound.minY = 8.0f
+        bound.minZ = 8.0f
+        bound.maxX = 8.0f
+        bound.maxY = 8.0f
+        bound.maxZ = 8.0f
     }
 
     override fun release0() {

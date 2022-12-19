@@ -4,7 +4,7 @@ import dev.fastmc.common.UNSAFE
 import dev.fastmc.common.skip
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 
-abstract class TerrainVertexBuilder {
+abstract class TerrainVertexBuilder (protected val context: RebuildContext) {
     @Volatile
     var task: ChunkBuilderTask? = null
 
@@ -62,6 +62,23 @@ abstract class TerrainVertexBuilder {
         lightMapUV: Int,
         faceBit: Int
     ) {
+        val bound = context.bound
+        if (x < bound.minX) {
+            bound.minX = x
+        } else if (x > bound.maxX) {
+            bound.maxX = x
+        }
+        if (y < bound.minY) {
+            bound.minY = y
+        } else if (y > bound.maxY) {
+            bound.maxY = y
+        }
+        if (z < bound.minZ) {
+            bound.minZ = z
+        } else if (z > bound.maxZ) {
+            bound.maxZ = z
+        }
+
         val bufferGroup = bufferGroup!!
         val region = bufferGroup.getVertexBuffer(faceBit - 1).region
         val buffer = region.buffer
@@ -164,12 +181,12 @@ abstract class TerrainVertexBuilder {
     }
 }
 
-class OpaqueTerrainVertexBuilder : TerrainVertexBuilder() {
+class OpaqueTerrainVertexBuilder(context: RebuildContext) : TerrainVertexBuilder(context) {
     override val bufferCount: Int
         get() = 63
 }
 
-class TranslucentVertexBuilder : TerrainVertexBuilder() {
+class TranslucentVertexBuilder(context: RebuildContext) : TerrainVertexBuilder(context) {
     override val bufferCount: Int
         get() = 1
 

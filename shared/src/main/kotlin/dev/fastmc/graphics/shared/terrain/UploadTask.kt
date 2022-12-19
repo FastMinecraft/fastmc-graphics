@@ -6,6 +6,7 @@ import dev.fastmc.graphics.shared.opengl.glCopyNamedBufferSubData
 
 internal class UploadTask(
     private val parentTask: ChunkBuilderTask,
+    private val bound: RenderChunk.Bound?,
     private val occlusionData: ChunkOcclusionData?,
     private val translucentData: TranslucentData?,
     private val modifyTranslucentData: Boolean,
@@ -36,6 +37,7 @@ internal class UploadTask(
 
     fun runUpdate(): Boolean {
         if (cleared) {
+            if (bound != null)  renderChunk.bound = bound
             if (occlusionData != null) renderChunk.occlusionData = occlusionData
             if (modifyTranslucentData) renderChunk.translucentData = translucentData
             if (modifyTileEntity) {
@@ -61,6 +63,7 @@ internal class UploadTask(
     class Builder(
         private val parentTask: ChunkBuilderTask,
     ) {
+        private var bound: RenderChunk.Bound? = null
         private var occlusionData: ChunkOcclusionData? = null
         private var translucentData: TranslucentData? = null
         private var modifyTranslucentData = false
@@ -69,6 +72,10 @@ internal class UploadTask(
         private var instancingTileEntityList: FastObjectArrayList<ITileEntityInfo<*>>? = null
         private var globalTileEntityList: FastObjectArrayList<ITileEntityInfo<*>>? = null
         private var modifyTileEntity = false
+
+        fun bound(bound: RenderChunk.Bound) {
+            this.bound = bound
+        }
 
         fun occlusionData(data: ChunkOcclusionData?) {
             occlusionData = data
@@ -105,6 +112,7 @@ internal class UploadTask(
         internal fun build(): UploadTask {
             return UploadTask(
                 parentTask,
+                bound,
                 occlusionData,
                 translucentData,
                 modifyTranslucentData,

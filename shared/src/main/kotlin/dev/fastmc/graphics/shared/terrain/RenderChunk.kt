@@ -29,13 +29,16 @@ class RenderChunk(
     inline val originY get() = chunkY shl 4
     inline val originZ get() = chunkZ shl 4
 
-    inline val minX get() = originX
-    inline val minY get() = originY
-    inline val minZ get() = originZ
+    inline val minX get() = originX + bound.minX
+    inline val minY get() = originY + bound.minY
+    inline val minZ get() = originZ + bound.minZ
 
-    inline val maxX get() = originX + 16
-    inline val maxY get() = originY + 16
-    inline val maxZ get() = originZ + 16
+    inline val maxX get() = originX + bound.maxX
+    inline val maxY get() = originY + bound.maxY
+    inline val maxZ get() = originZ + bound.maxZ
+
+    @JvmField
+    var bound: RenderChunk.Bound = Bound.Default
 
     @JvmField
     var regionIndex = 0
@@ -122,6 +125,7 @@ class RenderChunk(
             this.chunkY = chunkY
             this.chunkZ = chunkZ
 
+            bound = Bound.Default
             regionIndex = (chunkY shl 8) or (chunkZ shl 4) or chunkX
 
             lastTaskRef.getAndSet(null)?.cancel()
@@ -178,7 +182,39 @@ class RenderChunk(
             val x = (originX - renderer.renderPosX).toFloat()
             val y = (originY - renderer.renderPosY).toFloat()
             val z = (originZ - renderer.renderPosZ).toFloat()
-            return frustum.testAab(x, y, z, x + 16.0f, y + 16.0f, z + 16.0f)
+            return frustum.testAab(
+                x + bound.minX, y + bound.minY, z + bound.minZ,
+                x + bound.maxX, y + bound.maxY, z + bound.maxZ
+            )
         }
+    }
+
+    sealed interface Bound {
+        val minX: Float
+        val minY: Float
+        val minZ: Float
+        val maxX: Float
+        val maxY: Float
+        val maxZ: Float
+
+        object Default : Bound {
+            override val minX get() = 0.0f
+            override val minY get() = 0.0f
+            override val minZ get() = 0.0f
+            override val maxX get() = 16.0f
+            override val maxY get() = 16.0f
+            override val maxZ get() = 16.0f
+        }
+    }
+
+    data class MutableBound(
+        override var minX: Float,
+        override var minY: Float,
+        override var minZ: Float,
+        override var maxX: Float,
+        override var maxY: Float,
+        override var maxZ: Float
+    ) : Bound {
+        constructor() : this(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f)
     }
 }
