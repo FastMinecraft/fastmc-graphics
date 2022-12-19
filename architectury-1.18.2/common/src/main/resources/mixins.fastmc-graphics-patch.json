@@ -1,25 +1,31 @@
 {
     "required": true,
     "minVersion": "0.8",
-    "compatibilityLevel": "JAVA_8",
+    "compatibilityLevel": "JAVA_17",
     "package": "me.luna.fastmc.mixin.patch",
     "client": [
         "MixinArrayVoxelShape",
+        "MixinFractionalPairList",
         "MixinPatchMinecraftClient",
         "MixinPatchMinecraftServer",
+        "MixinSimpleVoxelShape",
         "MixinSlicedVoxelShape",
         "MixinUtil",
+        "render.MixinPatchBackgroundRenderer",
         "render.MixinPatchBakedQuad",
         "render.MixinPatchBasicBakedModel",
         "render.MixinPatchBillboardParticle",
         "render.MixinPatchEmitterParticle",
+        "render.MixinPatchMatrix3f",
+        "render.MixinPatchMatrix4f",
+        "render.MixinPatchMatrixStack",
         "render.MixinPatchParticle",
         "render.MixinPatchParticleManager",
         "render.MixinRenderLayer",
         "render.MixinWeightedBakedModel",
+        "world.MixinFlowableFluid",
         "world.MixinPatchBiome",
-        "world.MixinPatchClientChunkManager",
-        "MixinSimpleVoxelShape"
+        "world.MixinPatchClientChunkManager"
     ],
     "injectors": {
         "defaultRequire": 1

@@ -1,4 +1,8 @@
 architecturyProject {
-    mixinConfig("mixins.fastmc-core.json", "mixins.fastmc-accessor.json", "mixins.fastmc-patch.json")
-    accessWidenerPath.set(file("common/src/main/resources/FastMinecraft.accesswidener").absoluteFile)
+    mixinConfig(
+        "mixins.fastmc-graphics-core.json",
+        "mixins.fastmc-graphics-accessor.json",
+        "mixins.fastmc-graphics-patch.json"
+    )
+    accessWidenerPath.set(file("common/src/main/resources/fastmc-graphics.accesswidener").absoluteFile)
 }

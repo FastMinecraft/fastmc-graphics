@@ -1,26 +1,24 @@
 modLoader = "javafml"
 loaderVersion = "[40,)"
-issueTrackerURL = "https://github.com/Luna5ama/FastMinecraft/issues"
+issueTrackerURL = "https://github.com/FastMinecraft/fastmc-graphics/issues"
 license = "MIT"
 
 [[mods]]
-modId = "fastmc"
+modId = "fastmc-graphics"
 version = "${version}"
-displayName = "Fast Minecraft"
+displayName = "Fast Minecraft Graphics"
 authors = "Luna"
-description = '''
-Aggressive optimization mod
-'''
+description = "Aggressive render optimization mod for Minecraft"
 #logoFile = ""
 
-[[dependencies.fastmc]]
+[[dependencies.fastmc-graphics]]
 modId = "forge"
 mandatory = true
 versionRange = "[40,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.fastmc]]
+[[dependencies.fastmc-graphics]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[1.18.2,)"

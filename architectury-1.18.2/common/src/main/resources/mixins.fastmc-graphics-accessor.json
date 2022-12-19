@@ -1,0 +1,20 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "compatibilityLevel": "JAVA_17",
+    "package": "me.luna.fastmc.mixin.accessor",
+    "client": [
+        "AccessorBackgroundRenderer",
+        "AccessorBufferRenderer",
+        "AccessorChunkLightProvider",
+        "AccessorGlStateManager",
+        "AccessorLevelPropagator",
+        "AccessorLightmapTextureManager",
+        "AccessorLightStorage",
+        "AccessorThreadExecutor",
+        "AccessorVoxelShape"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

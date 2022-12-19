@@ -1,0 +1,18 @@
+{
+    "required": true,
+    "minVersion": "0.7",
+    "compatibilityLevel": "JAVA_8",
+    "package": "me.luna.fastmc.mixin.patch",
+    "refmap": "mixins.fastmc-graphics.refmap.json",
+    "client": [
+        "MixinPatchMinecraft",
+        "MixinPatchMinecraftServer",
+        "gui.MixinGuiInventory",
+        "optifine.MixinConfig",
+        "player.MixinPlayerControllerMP",
+        "render.MixinActiveRenderInfo",
+        "render.MixinClippingHelperImpl",
+        "world.MixinWorld",
+        "world.MixinWorldClient"
+    ]
+}

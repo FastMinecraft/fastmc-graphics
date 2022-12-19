@@ -17,13 +17,13 @@
         ]
     },
     "mixins": [
-        "mixins.fastmc-graphics-accessor.json",
         "mixins.fastmc-graphics-core.json",
+        "mixins.fastmc-graphics-accessor.json",
         "mixins.fastmc-graphics-patch.json"
     ],
     "accessWidener": "fastmc-graphics.accesswidener",
     "depends": {
         "fabricloader": ">=0.11",
-        "minecraft": "1.16.5"
+        "minecraft": "1.19.2"
     }
 }

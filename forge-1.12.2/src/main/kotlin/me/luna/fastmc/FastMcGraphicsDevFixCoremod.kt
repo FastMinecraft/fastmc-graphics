@@ -5,7 +5,7 @@ import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin.MCVersion
 import org.spongepowered.asm.launch.MixinBootstrap
 import org.spongepowered.asm.mixin.Mixins
 
-@IFMLLoadingPlugin.Name("FastMcGrahpicDevFixCoremod")
+@IFMLLoadingPlugin.Name("FastMcGrahpics")
 @MCVersion("1.12.2")
 class FastMcGraphicsDevFixCoremod : IFMLLoadingPlugin {
     private val enableMod = true
@@ -14,14 +14,14 @@ class FastMcGraphicsDevFixCoremod : IFMLLoadingPlugin {
         MixinBootstrap.init()
         if (enableMod) {
             Mixins.addConfigurations(
-                "mixins.fastmc-core.json",
-                "mixins.fastmc-accessor.json",
-                "mixins.fastmc-patch.json",
-                "mixins.fastmc-devfix.json"
+                "mixins.fastmc-graphics-core.json",
+                "mixins.fastmc-graphics-accessor.json",
+                "mixins.fastmc-graphics-patch.json",
+                "mixins.fastmc-graphics-devfix.json"
             )
         } else {
             Mixins.addConfigurations(
-                "mixins.fastmc-devfix.json"
+                "mixins.fastmc-graphics-devfix.json"
             )
         }
     }
