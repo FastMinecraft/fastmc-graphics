@@ -2,7 +2,7 @@
     "required": true,
     "minVersion": "0.8",
     "compatibilityLevel": "JAVA_17",
-    "package": "me.luna.fastmc.mixin.patch",
+    "package": "dev.fastmc.graphics.mixin.patch",
     "client": [
         "MixinArrayVoxelShape",
         "MixinFractionalPairList",

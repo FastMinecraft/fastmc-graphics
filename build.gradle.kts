@@ -88,7 +88,7 @@ tasks {
     }
 
     configure<JarOptimizerPluginExtension> {
-        add(collectJars, "me.luna.fastmc", "org.spongepowered")
+        add(collectJars, "dev.fastmc.graphics", "org.spongepowered")
     }
 
     assemble {

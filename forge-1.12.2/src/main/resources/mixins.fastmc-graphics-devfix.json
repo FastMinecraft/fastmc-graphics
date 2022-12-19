@@ -2,7 +2,7 @@
     "required": false,
     "minVersion": "0.7",
     "compatibilityLevel": "JAVA_8",
-    "package": "me.luna.fastmc.mixin.devfix",
+    "package": "dev.fastmc.graphics.mixin.devfix",
     "refmap": "mixins.fastmc-graphics.refmap.json",
     "client": [
         "MixinASMModParser",

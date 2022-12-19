@@ -7,8 +7,8 @@ forgeProject {
         "mixins.fastmc-graphics-core.json",
         "mixins.fastmc-graphics-patch.json"
     )
-    coreModClass.set("me.luna.fastmc.FastMcGraphicsCoremod")
-    devCoreModClass.set("me.luna.fastmc.FastMcGraphicsDevFixCoremod")
+    coreModClass.set("dev.fastmc.graphics.FastMcGraphicsCoremod")
+    devCoreModClass.set("dev.fastmc.graphics.FastMcGraphicsDevFixCoremod")
 }
 
 configure<MixinExtension> {
