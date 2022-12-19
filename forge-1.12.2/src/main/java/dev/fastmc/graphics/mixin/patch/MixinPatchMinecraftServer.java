@@ -10,6 +10,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class MixinPatchMinecraftServer {
     @Inject(method = "run", at = @At("HEAD"))
     private void Inject$runServer$HEAD(CallbackInfo ci) {
-        Thread.currentThread().setPriority(1);
+        Thread.currentThread().setPriority(6);
     }
 }

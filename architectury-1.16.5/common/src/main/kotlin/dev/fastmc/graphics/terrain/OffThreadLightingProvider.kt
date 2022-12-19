@@ -1,6 +1,5 @@
 package dev.fastmc.graphics.terrain
 
-import dev.fastmc.common.FastMcExtendScope
 import dev.fastmc.common.isDoneOrNull
 import dev.fastmc.common.threadGroupMain
 import dev.fastmc.graphics.util.hasPendingUpdates
@@ -98,25 +97,9 @@ class OffThreadLightingProvider(
             if (!hasBlockLightUpdate && !hasSkyLightUpdate) return
 
             lastLightUpdateFuture = executor.submit {
-                val writeLock = readWriteLock.writeLock()
-                writeLock.withLock {
-                    val blockLightUpdate = if (hasBlockLightUpdate) {
-                        FastMcExtendScope.pool.submit {
-                            blockLightProvider?.doLightUpdates(Int.MAX_VALUE, true, true)
-                        }
-                    } else {
-                        null
-                    }
-                    val skyLightUpdate = if (hasSkyLightUpdate) {
-                        FastMcExtendScope.pool.submit {
-                            skyLightProvider?.doLightUpdates(Int.MAX_VALUE, true, true)
-                        }
-                    } else {
-                        null
-                    }
-
-                    blockLightUpdate?.get()
-                    skyLightUpdate?.get()
+                readWriteLock.writeLock().withLock {
+                    blockLightProvider?.doLightUpdates(Int.MAX_VALUE, true, true)
+                    skyLightProvider?.doLightUpdates(Int.MAX_VALUE, true, true)
                 }
             }
         }
@@ -136,7 +119,7 @@ class OffThreadLightingProvider(
             LinkedBlockingQueue(),
             ThreadFactory {
                 Thread(threadGroupMain, it, "FastMinecraft-Lighting").apply {
-                    priority = 3
+                    priority = 7
                 }
             }
         )

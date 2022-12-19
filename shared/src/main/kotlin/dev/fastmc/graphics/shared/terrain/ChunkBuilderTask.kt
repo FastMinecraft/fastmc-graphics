@@ -168,7 +168,7 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
 
                 override fun newThread(r: Runnable): Thread {
                     return Thread(group, r, "FastMinecraft-ChunkBuilder-${counter.incrementAndGet()}").apply {
-                        priority = 1
+                        priority = 4
                     }
                 }
             }

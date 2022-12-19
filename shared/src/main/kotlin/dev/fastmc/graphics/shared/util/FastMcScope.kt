@@ -20,7 +20,7 @@ private val corePool = ScheduledThreadPoolExecutor(
 
         override fun newThread(r: Runnable): Thread {
             return Thread(group, r, "FastMinecraft-Core-${counter.incrementAndGet()}").apply {
-                priority = 6
+                priority = 8
                 isDaemon = true
             }
         }
@@ -44,7 +44,7 @@ private val extendPool = ForkJoinPool(
                 private val threadID = idRegistry.register()
 
                 init {
-                    priority = 2
+                    priority = 3
                     name = "FastMinecraft-Extend-${threadID + 1}"
                 }
 
