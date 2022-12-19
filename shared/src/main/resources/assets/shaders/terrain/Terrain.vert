@@ -42,7 +42,7 @@ void main() {
 
     fragData.color = vec4(color, 1.0);
     fragData.uv = uv;
-    fragData.lightMapUV = lightMapUV * 0.00390625;
+    fragData.lightMapUV = (lightMapUV + 8.0) * 0.00390625;
 
     #if FOG_SHAPE == FOG_SHAPE_SPHERE
     float fogDistance = length(coord);

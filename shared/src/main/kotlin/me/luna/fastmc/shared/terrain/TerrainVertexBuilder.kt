@@ -73,7 +73,7 @@ abstract class TerrainVertexBuilder {
         UNSAFE.putShort(address + 6L, (u * 65535.0f).toInt().toShort())
         UNSAFE.putShort(address + 8L, (v * 65535.0f).toInt().toShort())
 
-        UNSAFE.putShort(address + 10L, (lightMapUV + 0x0808).toShort())
+        UNSAFE.putShort(address + 10L, lightMapUV.toShort())
 
         UNSAFE.putByte(address + 12L, r.toByte())
         UNSAFE.putByte(address + 13L, g.toByte())
