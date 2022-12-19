@@ -38,6 +38,9 @@ class RenderChunk(
     inline val maxZ get() = originZ + 16
 
     @JvmField
+    var regionIndex = 0
+
+    @JvmField
     val frustumCull: FrustumCull = FrustumCullImpl()
 
     @JvmField
@@ -118,6 +121,8 @@ class RenderChunk(
             this.chunkX = chunkX
             this.chunkY = chunkY
             this.chunkZ = chunkZ
+
+            regionIndex = (chunkY shl 8) or (chunkZ shl 4) or chunkX
 
             lastTaskRef.getAndSet(null)?.cancel()
             occlusionData = ChunkOcclusionData.EMPTY
