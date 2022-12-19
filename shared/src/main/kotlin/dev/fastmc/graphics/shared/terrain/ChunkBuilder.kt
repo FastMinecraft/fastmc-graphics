@@ -1,41 +1,49 @@
 package dev.fastmc.graphics.shared.terrain
 
-import dev.fastmc.common.ObjectPool
+import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
-import java.util.concurrent.ConcurrentLinkedQueue
+import dev.fastmc.graphics.shared.renderer.cameraChunkX
+import dev.fastmc.graphics.shared.renderer.cameraChunkY
+import dev.fastmc.graphics.shared.renderer.cameraChunkZ
+import java.util.concurrent.*
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 abstract class ChunkBuilder(
     protected val renderer: TerrainRenderer
 ) {
-    val taskSchedulerPool = ObjectPool { TaskScheduler() }
+    val taskFactoryPool = ObjectPool { TaskFactory() }
+    private val taskScheduler = TaskScheduler()
+
     private val uploadTaskQueue = ConcurrentLinkedQueue<UploadTask>()
     private val pendingUploadQueueMap = FastIntMap<PendingUploadQueue>()
 
     private val uploadTaskCount0 = AtomicInteger(0)
     private val totalTaskCount0 = AtomicInteger(0)
 
-    val totalTaskCount get() = totalTaskCount0.get()
+    val totalTaskCount get() = totalTaskCount0.get() + taskScheduler.queuedTaskCount
     val uploadTaskCount get() = uploadTaskCount0.get()
 
     private val visibleClearCount = AtomicInteger(0)
     var uploadCount = 0; private set
     var visibleUploadCount = 0; private set
 
-    inline fun scheduleTasks(block: TaskScheduler.() -> Unit) {
-        val taskScheduler = synchronized(taskSchedulerPool) {
-            taskSchedulerPool.get()
+    inline fun scheduleTasks(block: TaskFactory.() -> Unit) {
+        val taskScheduler = synchronized(taskFactoryPool) {
+            taskFactoryPool.get()
         }
         taskScheduler.init()
         block.invoke(taskScheduler)
-        synchronized(taskSchedulerPool) {
-            taskSchedulerPool.put(taskScheduler)
+        synchronized(taskFactoryPool) {
+            taskFactoryPool.put(taskScheduler)
         }
     }
 
     fun update() {
+        taskScheduler.update()
+
         uploadCount = 0
         visibleUploadCount = visibleClearCount.getAndSet(0)
 
@@ -65,7 +73,7 @@ abstract class ChunkBuilder(
     }
 
     fun clear() {
-        ChunkBuilderTask.cancelAllAndJoin()
+        taskScheduler.clear()
 
         uploadTaskQueue.removeIf {
             it.cancel()
@@ -77,7 +85,7 @@ abstract class ChunkBuilder(
         pendingUploadQueueMap.clear()
     }
 
-    protected abstract fun newRebuildTask(scheduler: TaskScheduler): RebuildTask
+    protected abstract fun newRebuildTask(scheduler: TaskFactory): RebuildTask
 
     internal inline fun scheduleUpload(task: ChunkBuilderTask, block: UploadTask.Builder.() -> Unit) {
         task.checkCancelled()
@@ -134,7 +142,7 @@ abstract class ChunkBuilder(
         }
     }
 
-    inner class TaskScheduler {
+    inner class TaskFactory {
         private val rebuildTaskPool = ObjectPool { newRebuildTask(this) }
         private val sortTaskPool = ObjectPool { SortTask(renderer, this) }
         private val pendingReleaseBuildTask = FastObjectArrayList<RebuildTask>()
@@ -155,12 +163,12 @@ abstract class ChunkBuilder(
             }
         }
 
-        fun scheduleRebuild(renderChunk: RenderChunk): Boolean {
+        fun createRebuild(renderChunk: RenderChunk): Boolean {
             val task = rebuildTaskPool.get()
 
             return if (task.init(renderChunk)) {
                 renderChunk.isDirty = false
-                task.run()
+                taskScheduler.schedule(task)
                 true
             } else {
                 renderChunk.isDirty = false
@@ -178,12 +186,12 @@ abstract class ChunkBuilder(
             }
         }
 
-        fun scheduleSort(renderChunk: RenderChunk): Boolean {
+        fun createSort(renderChunk: RenderChunk): Boolean {
             if (renderChunk.translucentData == null) return false
             val task = sortTaskPool.get()
 
             return if (task.init(renderChunk)) {
-                task.run()
+                taskScheduler.schedule(task)
                 true
             } else {
                 sortTaskPool.put(task)
@@ -212,6 +220,77 @@ abstract class ChunkBuilder(
                     pendingReleaseSortTask.add(task)
                 }
             }
+        }
+    }
+
+    inner class TaskScheduler : Comparator<ChunkBuilderTask> {
+        @Suppress("UNCHECKED_CAST")
+        private val threadPool = ThreadPoolExecutor(
+            ParallelUtils.CPU_THREADS,
+            ParallelUtils.CPU_THREADS,
+            114514,
+            TimeUnit.SECONDS,
+            PriorityBlockingQueue(16, this) as BlockingQueue<Runnable>,
+            object : ThreadFactory {
+                private val counter = AtomicInteger(0)
+                private val group = ThreadGroup(threadGroupMain, "ChunkBuilder")
+
+                override fun newThread(r: Runnable): Thread {
+                    return Thread(group, r, "FastMinecraft-ChunkBuilder-${counter.incrementAndGet()}").apply {
+                        priority = 4
+                    }
+                }
+            }
+        )
+
+        private var frustum = renderer.frustum
+        private var matrixHash = renderer.matrixPosHash
+        private var cameraChunkX = renderer.cameraChunkX
+        private var cameraChunkY = renderer.cameraChunkY
+        private var cameraChunkZ = renderer.cameraChunkZ
+
+        val queuedTaskCount get() = threadPool.queue.size
+
+        fun schedule(task: ChunkBuilderTask) {
+            threadPool.execute(task)
+        }
+
+        fun update() {
+            frustum = renderer.frustum
+            matrixHash = renderer.matrixPosHash
+            cameraChunkX = renderer.cameraChunkX
+            cameraChunkY = renderer.cameraChunkY
+            cameraChunkZ = renderer.cameraChunkZ
+        }
+
+        fun clear() {
+            threadPool.queue.pollEach {
+                (it as ChunkBuilderTask).cancel()
+                it.run()
+            }
+            while (threadPool.activeCount != 0) {
+                renderer.contextProvider.update()
+                Thread.sleep(5)
+            }
+        }
+
+        override fun compare(o1: ChunkBuilderTask, o2: ChunkBuilderTask): Int {
+            val visible1 = o1.renderChunk.frustumCull.isInFrustum(frustum, matrixHash)
+            val visible2 = o2.renderChunk.frustumCull.isInFrustum(frustum, matrixHash)
+
+            if (visible1 != visible2) {
+                return if (visible1) -1 else 1
+            }
+
+            val distance1 = distanceSq(
+                cameraChunkX, cameraChunkY, cameraChunkZ,
+                o1.chunkX, o1.chunkY, o1.chunkZ
+            )
+            val distance2 = distanceSq(
+                cameraChunkX, cameraChunkY, cameraChunkZ,
+                o2.chunkX, o2.chunkY, o2.chunkZ
+            )
+            return distance1.compareTo(distance2)
         }
     }
 }

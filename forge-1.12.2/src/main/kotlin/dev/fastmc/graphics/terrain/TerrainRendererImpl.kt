@@ -1,6 +1,5 @@
 package dev.fastmc.graphics.terrain
 
-import dev.fastmc.common.ArrayPriorityObjectPool
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.renderer.TileEntityRendererImpl
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
@@ -66,12 +65,12 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
 }
 
 private class ChunkBuilderImpl(renderer: TerrainRenderer) : ChunkBuilder(renderer) {
-    override fun newRebuildTask(scheduler: TaskScheduler): RebuildTask {
+    override fun newRebuildTask(scheduler: TaskFactory): RebuildTask {
         return RebuildTaskImpl(renderer, scheduler)
     }
 }
 
-private class RebuildTaskImpl(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler) :
+private class RebuildTaskImpl(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
     RebuildTask(renderer, scheduler) {
     override fun init0(renderChunk: RenderChunk) {
         super.init0(renderChunk)
@@ -97,7 +96,7 @@ private class ChunkBuilderContextProviderImpl : ContextProvider() {
         postConstruct()
     }
 
-    override fun newRebuildContext(pool: ArrayPriorityObjectPool<*, RebuildContext>): RebuildContext {
+    override fun newRebuildContext(pool: ContextPool<RebuildContext>): RebuildContext {
         return object : RebuildContextImpl() {
             override fun release0() {
                 super.release0()
@@ -114,7 +113,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
 
     val renderBlockPos = BlockPos.MutableBlockPos()
 
-    override suspend fun renderChunk(task: RebuildTask) {
+    override fun renderChunk(task: RebuildTask) {
         val startX = chunkX shl 4
         val startY = chunkY shl 4
         val startZ = chunkZ shl 4

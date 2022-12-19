@@ -11,17 +11,32 @@ import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntArrays
 import it.unimi.dsi.fastutil.ints.IntComparator
-import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
 
 abstract class ContextProvider {
-    private var bufferPool0: MappedBufferPool? = null
-    var rebuildContextPool: ArrayPriorityObjectPool<ChunkBuilderTask, RebuildContext>? = null; private set
-    var sortContextPool: ArrayPriorityObjectPool<ChunkBuilderTask, SortContext>? = null; private set
+    private val rebuildContextPool = ContextPool(
+        ParallelUtils.CPU_THREADS * 2,
+        15000L
+    ) {
+        newRebuildContext(it)
+    }
 
+    private val sortContextPool = ContextPool(
+        ParallelUtils.CPU_THREADS * 4,
+        5000L
+    ) {
+        object : SortContext() {
+            override fun release0() {
+                it.put(this)
+            }
+        }
+    }
+
+    private var bufferPool0: MappedBufferPool? = null
     val bufferPool get() = bufferPool0!!
     private val objectPool = ConcurrentObjectPool { BufferContextImpl() }
 
@@ -41,34 +56,16 @@ abstract class ContextProvider {
             max(ParallelUtils.CPU_THREADS * 512, 2048),
             ParallelUtils.CPU_THREADS * 256
         )
-
-        rebuildContextPool = ArrayPriorityObjectPool(
-            ParallelUtils.CPU_THREADS * 8,
-            ChunkBuilderTask.unsynchronizedComparator()
-        ) {
-            newRebuildContext(it)
-        }
-
-        sortContextPool = ArrayPriorityObjectPool(
-            ParallelUtils.CPU_THREADS * 8,
-            ChunkBuilderTask.unsynchronizedComparator()
-        ) {
-            object : SortContext() {
-                override fun release0() {
-                    it.put(this)
-                }
-            }
-        }
     }
 
-    suspend inline fun getRebuildContext(task: ChunkBuilderTask): RebuildContext {
-        val context = withContext(NonCancellable) { rebuildContextPool!!.get(task) }
+    fun getRebuildContext(task: ChunkBuilderTask): RebuildContext {
+        val context = rebuildContextPool.get()
         context.init(task)
         return context
     }
 
-    suspend inline fun getSortContext(task: ChunkBuilderTask): SortContext {
-        val context = withContext(NonCancellable) { sortContextPool!!.get(task) }
+    fun getSortContext(task: ChunkBuilderTask): SortContext {
+        val context = sortContextPool.get()
         context.init(task)
         return context
     }
@@ -89,10 +86,12 @@ abstract class ContextProvider {
         bufferPool.destroy()
     }
 
-    protected abstract fun newRebuildContext(pool: ArrayPriorityObjectPool<*, RebuildContext>): RebuildContext
+    protected abstract fun newRebuildContext(pool: ContextPool<RebuildContext>): RebuildContext
 }
 
 sealed class Context {
+    var lastUsed = System.currentTimeMillis(); private set
+
     private val taskID = AtomicInteger(Int.MIN_VALUE)
 
     open fun init(task: ChunkBuilderTask) {
@@ -104,7 +103,40 @@ sealed class Context {
 
     fun release(task: ChunkBuilderTask) {
         if (taskID.compareAndSet(task.id, Int.MIN_VALUE)) {
+            lastUsed = System.currentTimeMillis()
             release0()
+        }
+    }
+}
+
+class ContextPool<T : Context>(val coreSize: Int, val timeout: Long, val factory: (ContextPool<T>) -> T) {
+    private val initState = AtomicBoolean(false)
+    private val pool = ConcurrentLinkedQueue<T>()
+
+    fun get(): T {
+        if (!initState.getAndSet(true)) {
+            repeat(coreSize) {
+                pool.add(factory(this))
+            }
+        }
+
+        return pool.poll() ?: factory(this)
+    }
+
+    fun put(context: T) {
+        pool.add(context)
+    }
+
+    fun update() {
+        var size = pool.size
+        val removeTime = System.currentTimeMillis() - timeout
+        pool.removeIf {
+            if (size > coreSize && it.lastUsed < removeTime) {
+                size--
+                true
+            } else {
+                false
+            }
         }
     }
 }
@@ -212,7 +244,7 @@ abstract class RebuildContext(layerCount: Int) : Context() {
         worldSnapshot.clear()
     }
 
-    abstract suspend fun renderChunk(task: RebuildTask)
+    abstract fun renderChunk(task: RebuildTask)
 
     fun setupRenderPos() {
         renderPosX = (blockX and 15).toFloat()
@@ -772,7 +804,6 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
 abstract class SortContext : Context() {
     val tempIndexData = ByteArrayList(ByteArrayList.DEFAULT_INITIAL_CAPACITY + 1)
     val tempQuadCenter = FloatArrayList(FloatArrayList.DEFAULT_INITIAL_CAPACITY + 1)
@@ -834,7 +865,6 @@ abstract class SortContext : Context() {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
 abstract class BufferContext : Context() {
     protected open val region0 = AtomicReference<MappedBufferPool.Region?>()
     val region get() = region0.get()!!

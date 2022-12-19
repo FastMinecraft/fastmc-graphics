@@ -49,6 +49,8 @@ abstract class TerrainRenderer(
         DoubleBufferedCollection.emptyInitAction()
     )
 
+    private var updateCounter = 0
+
     private var lastSortScheduleTask: Future<*>? = null
     private var lastRebuildScheduleTask: Future<*>? = null
 
@@ -119,8 +121,15 @@ abstract class TerrainRenderer(
                     FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
 
                     if (chunkBuilder.visibleUploadCount != 0) {
-                        chunkStorage.markCaveCullingDirty()
                         updateRegion = true
+                    }
+
+                    updateCounter += chunkBuilder.visibleUploadCount
+                    if (updateCounter > 512
+                        || chunkBuilder.totalTaskCount < ParallelUtils.CPU_THREADS * 4
+                        && updateCounter != 0) {
+                        chunkStorage.markCaveCullingDirty()
+                        updateCounter = 0
                     }
                 }
 
@@ -172,6 +181,8 @@ abstract class TerrainRenderer(
     }
 
     fun clear() {
+        updateCounter = 0
+
         lastSortScheduleTask?.cancel(true)
         lastRebuildScheduleTask?.cancel(true)
         lastSortScheduleTask = null
@@ -234,7 +245,7 @@ abstract class TerrainRenderer(
             for (i in chunkIndices.size - 1 downTo 0) {
                 val renderChunk = chunkArray[chunkIndices[i]]
                 if (renderChunk.isVisible && renderChunk.isDirty) {
-                    scheduleRebuild(renderChunk)
+                    createRebuild(renderChunk)
                 }
             }
         }
@@ -284,7 +295,7 @@ abstract class TerrainRenderer(
                                 cameraChunkX, cameraChunkZ
                             ) > 64
                         ) break
-                        if (scheduleSort(renderChunk)) {
+                        if (createSort(renderChunk)) {
                             --count
                         }
                     }
@@ -469,56 +480,56 @@ abstract class TerrainRenderer(
 
             for (regionIndex in regionArray.indices) {
                 val region = regionArray[regionIndex]
-                if (region.frustumCull.isInFrustum()) {
-                    launch {
-                        val list = region.visibleRenderChunkList
-                        val array = list.elements()
-                        val size = list.size
+                if (!region.frustumCull.isInFrustum()) continue
 
-                        if (resort) {
-                            System.arraycopy(array, 0, region.sortSuppArray, 0, size)
-                            ObjectArrays.mergeSort(array, 0, size, comparator, region.sortSuppArray)
-                        }
+                launch {
+                    val list = region.visibleRenderChunkList
+                    val array = list.elements()
+                    val size = list.size
 
-                        if (refresh) {
-                            for (i in 0 until size) {
-                                array[i].resetUpdate()
-                            }
-                        } else {
-                            var updated = false
-                            var i = 0
-                            while (!updated && i < size) {
-                                updated = array[i++].checkUpdate()
-                            }
-                            while (i < size) {
-                                array[i++].resetUpdate()
-                            }
-                            if (!updated) return@launch
+                    if (resort) {
+                        System.arraycopy(array, 0, region.sortSuppArray, 0, size)
+                        ObjectArrays.mergeSort(array, 0, size, comparator, region.sortSuppArray)
+                    }
+
+                    if (refresh) {
+                        for (i in 0 until size) {
+                            array[i].resetUpdate()
                         }
+                    } else {
+                        var updated = false
+                        var i = 0
+                        while (!updated && i < size) {
+                            updated = array[i++].checkUpdate()
+                        }
+                        while (i < size) {
+                            array[i++].resetUpdate()
+                        }
+                        if (!updated) return@launch
+                    }
+
+                    for (i in 0 until size) {
+                        region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i])
+                    }
+
+                    for (layerIndex in 0 until layerCount) {
+                        val layerBatch = region.getLayer(layerIndex)
+                        layerBatch.update()
 
                         for (i in 0 until size) {
-                            region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i])
-                        }
-
-                        for (layerIndex in 0 until layerCount) {
-                            val layerBatch = region.getLayer(layerIndex)
-                            layerBatch.update()
-
-                            for (i in 0 until size) {
-                                val renderChunk = array[i]
-                                val layer = renderChunk.layers[layerIndex]
-                                val vertexRegion = layer.vertexRegion ?: continue
-                                val indexRegion = layer.indexRegion ?: continue
-                                layer.faceData?.addToBatch(
-                                    layerBatch,
-                                    vertexRegion.offset,
-                                    indexRegion.offset,
-                                    region.tempVisibleBits[i],
-                                    (renderChunk.originX and 255 shl 20)
-                                        or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
-                                        or (renderChunk.originZ and 255)
-                                )
-                            }
+                            val renderChunk = array[i]
+                            val layer = renderChunk.layers[layerIndex]
+                            val vertexRegion = layer.vertexRegion ?: continue
+                            val indexRegion = layer.indexRegion ?: continue
+                            layer.faceData?.addToBatch(
+                                layerBatch,
+                                vertexRegion.offset,
+                                indexRegion.offset,
+                                region.tempVisibleBits[i],
+                                (renderChunk.originX and 255 shl 20)
+                                    or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
+                                    or (renderChunk.originZ and 255)
+                            )
                         }
                     }
                 }

@@ -1,5 +1,7 @@
 package dev.fastmc.graphics.shared.terrain
 
+import it.unimi.dsi.fastutil.ints.IntArrayList
+
 sealed interface FaceData {
     fun addToBatch(
         batch: RenderRegion.LayerBatch,
@@ -29,17 +31,22 @@ sealed interface FaceData {
     }
 
     class Multiple(private val dataArray: IntArray) : FaceData {
+        private val visibleIndices: IntArray
         private val allFaceBits: Int
 
         init {
             var bits = 0
+            val visibleIndexList = IntArrayList()
 
             for (i in 0 until MAX_COUNT) {
                 if (dataArray[i * 3] != -1) {
+                    visibleIndexList.add(i)
                     bits = bits or (i + 1)
                 }
             }
 
+            visibleIndexList.trim()
+            visibleIndices = visibleIndexList.elements()
             allFaceBits = bits
         }
 
@@ -52,10 +59,10 @@ sealed interface FaceData {
         ) {
             if (visibleFaceBit and allFaceBits == 0) return
 
-            for (i in 0 until MAX_COUNT) {
-                val index = i * 3
-                if (dataArray[index] == -1) continue
-                if ((i + 1) and visibleFaceBit == 0) continue
+            for (i in visibleIndices.indices) {
+                val dataIndex = visibleIndices[i]
+                val index = dataIndex * 3
+                if ((dataIndex + 1) and visibleFaceBit == 0) continue
 
                 batch.put(
                     vertexRegionOffset + dataArray[index],

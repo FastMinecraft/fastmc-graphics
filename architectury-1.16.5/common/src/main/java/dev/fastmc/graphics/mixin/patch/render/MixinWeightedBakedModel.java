@@ -47,5 +47,4 @@ public class MixinWeightedBakedModel {
     public List<BakedQuad> getQuads(@Nullable BlockState state, @Nullable Direction face, Random random) {
         return modelArray[(random.nextInt() & 0x7FFFFFFF) % this.totalWeight].model.getQuads(state, face, random);
     }
-
 }

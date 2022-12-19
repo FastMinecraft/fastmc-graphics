@@ -1,25 +1,15 @@
 package dev.fastmc.graphics.shared.terrain
 
-import dev.fastmc.common.*
+import dev.fastmc.common.Cancellable
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkY
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
-import it.unimi.dsi.fastutil.objects.ObjectCollections
-import kotlinx.coroutines.*
-import java.lang.ref.WeakReference
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ThreadFactory
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntUnaryOperator
-import kotlin.coroutines.cancellation.CancellationException
 
-sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: ChunkBuilder.TaskScheduler) :
-    Cancellable {
+sealed class ChunkBuilderTask(val renderer: TerrainRenderer, private val factory: ChunkBuilder.TaskFactory) :
+    Cancellable, Runnable {
     @JvmField
     internal var renderChunkNullable: RenderChunk? = null
     val renderChunk get() = renderChunkNullable!!
@@ -27,7 +17,6 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
     private val id0 = AtomicInteger(nextId())
     val id get() = id0.get()
 
-    private var job: Job? = null
     private var thread: Thread? = null
     private val resources = FastObjectArrayList<Context>()
 
@@ -43,13 +32,9 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
     val chunkY get() = originY shr 4
     val chunkZ get() = originZ shr 4
 
-    override val isCancelled get() = (renderChunkNullable?.isDestroyed ?: false) || (job?.isCancelled ?: false)
-    val isCompleted get() = job.isCompletedOrNull
+    private val cancelState = AtomicBoolean(false)
 
-    init {
-        @Suppress("LeakingThis")
-        globalTaskList.add(WeakReference(this))
-    }
+    override val isCancelled get() = (renderChunkNullable?.isDestroyed ?: false) || (cancelState.get())
 
     internal fun init(renderChunk: RenderChunk): Boolean {
         return try {
@@ -65,6 +50,7 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
     }
 
     protected open fun init0(renderChunk: RenderChunk) {
+        this.cancelState.set(false)
         this.renderChunkNullable = renderChunk
         id0.set(nextId())
 
@@ -78,9 +64,9 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
     }
 
     open fun reset() {
+        this.cancelState.set(false)
         this.renderChunkNullable = null
 
-        job = null
         resources.clear()
 
         relativeCameraX = Float.MAX_VALUE
@@ -102,41 +88,39 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
         }
     }
 
-    internal fun run() {
-        job = scope.launch(start = CoroutineStart.LAZY) {
-            val renderChunk = renderChunk
-            scheduler.onTaskStart(this@ChunkBuilderTask, renderChunk)
-            try {
-                checkCancelled()
-                run0()
-            } catch (e: TaskFinishedException) {
-                //
-            } catch (e: CancellationException) {
-                onFinish()
-                throw e
-            } catch (t: Throwable) {
-                t.printStackTrace()
-            }
+    override fun run() {
+        val renderChunk = renderChunk
+        factory.onTaskStart(this@ChunkBuilderTask, renderChunk)
+        try {
+            checkCancelled()
+            run0()
+        } catch (e: TaskFinishedException) {
+            //
+        } catch (e: CancellationException) {
+            onFinish()
+        } catch (t: Throwable) {
+            t.printStackTrace()
         }
-        job!!.start()
     }
 
-    protected abstract suspend fun run0()
+    abstract fun run0()
 
     internal fun onUpload() {
-        scheduler.onTaskUpload()
+        factory.onTaskUpload()
     }
 
     internal fun onFinish() {
-        scheduler.onTaskFinish(this)
+        factory.onTaskFinish(this)
     }
 
     fun checkCancelled() {
-        job?.ensureActive()
+        if (cancelState.get()) {
+            throw CancellationException()
+        }
     }
 
     internal fun cancel() {
-        job?.cancel()
+        cancelState.set(true)
     }
 
     internal fun finish() {
@@ -156,59 +140,6 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
     }
 
     companion object {
-        private val scope = CoroutineScope(ThreadPoolExecutor(
-            ParallelUtils.CPU_THREADS,
-            ParallelUtils.CPU_THREADS,
-            114514,
-            TimeUnit.SECONDS,
-            LinkedBlockingQueue(),
-            object : ThreadFactory {
-                private val counter = AtomicInteger(0)
-                private val group = ThreadGroup(threadGroupMain, "ChunkBuilder")
-
-                override fun newThread(r: Runnable): Thread {
-                    return Thread(group, r, "FastMinecraft-ChunkBuilder-${counter.incrementAndGet()}").apply {
-                        priority = 4
-                    }
-                }
-            }
-        ).asCoroutineDispatcher())
-
-        private val globalTaskList =
-            ObjectCollections.synchronize(FastObjectArrayList<WeakReference<ChunkBuilderTask>>())
-
-        @JvmStatic
-        fun cancelAllAndJoin() {
-            val tempList = FastObjectArrayList<ChunkBuilderTask>()
-
-            synchronized(globalTaskList) {
-                globalTaskList.removeIf {
-                    val task = it.get()
-                    if (task == null) {
-                        true
-                    } else {
-                        task.cancel()
-                        tempList.add(task)
-                        false
-                    }
-                }
-            }
-
-            if (tempList.isNotEmpty()) {
-                runBlocking {
-                    val job = launch(FastMcCoreScope.context) {
-                        for (i in tempList.indices) {
-                            val task = tempList[i]
-                            task.job?.cancelAndJoin()
-                        }
-                    }
-                    while (job.isActive) {
-                        FastMcMod.worldRenderer.terrainRenderer.contextProvider.update()
-                    }
-                }
-            }
-        }
-
         private val idCounter = AtomicInteger(Int.MIN_VALUE + 1)
         private val updateFunc = IntUnaryOperator {
             var value = it + 1
@@ -222,71 +153,12 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, val scheduler: Chun
         private fun nextId(): Int {
             return idCounter.getAndUpdate(updateFunc)
         }
-
-        @JvmStatic
-        fun unsynchronizedComparator(): Comparator<ChunkBuilderTask> {
-            return UnsynchronizedComparator
-        }
-
-        @JvmStatic
-        fun synchronizedComparator(renderer: TerrainRenderer): Comparator<ChunkBuilderTask> {
-            return SynchronizedComparator(renderer)
-        }
-
-        private object UnsynchronizedComparator : Comparator<ChunkBuilderTask> {
-            override fun compare(o1: ChunkBuilderTask, o2: ChunkBuilderTask): Int {
-                val visible1 = o1.renderChunk.frustumCull.isInFrustum()
-                val visible2 = o2.renderChunk.frustumCull.isInFrustum()
-
-                if (visible1 != visible2) {
-                    return if (visible1) 1 else -1
-                }
-
-                return -distanceSq(
-                    o1.renderer.cameraChunkX, o1.renderer.cameraChunkY, o1.renderer.cameraChunkZ,
-                    o1.chunkX, o1.chunkY, o1.chunkZ
-                ).compareTo(
-                    -distanceSq(
-                        o2.renderer.cameraChunkX, o2.renderer.cameraChunkY, o2.renderer.cameraChunkZ,
-                        o2.chunkX, o2.chunkY, o2.chunkZ
-                    )
-                )
-            }
-        }
-
-        private class SynchronizedComparator(terrainRenderer: TerrainRenderer) : Comparator<ChunkBuilderTask> {
-            private val frustum = terrainRenderer.frustum
-            private val matrixHash = terrainRenderer.matrixPosHash
-
-            private val cameraChunkX = terrainRenderer.cameraChunkX
-            private val cameraChunkY = terrainRenderer.cameraChunkY
-            private val cameraChunkZ = terrainRenderer.cameraChunkZ
-
-            override fun compare(o1: ChunkBuilderTask, o2: ChunkBuilderTask): Int {
-                val visible1 = o1.renderChunk.frustumCull.isInFrustum(frustum, matrixHash)
-                val visible2 = o2.renderChunk.frustumCull.isInFrustum(frustum, matrixHash)
-
-                if (visible1 != visible2) {
-                    return if (visible1) 1 else -1
-                }
-
-                return -distanceSq(
-                    cameraChunkX, cameraChunkY, cameraChunkZ,
-                    o1.chunkX, o1.chunkY, o1.chunkZ
-                ).compareTo(
-                    -distanceSq(
-                        cameraChunkX, cameraChunkY, cameraChunkZ,
-                        o2.chunkX, o2.chunkY, o2.chunkZ
-                    )
-                )
-            }
-        }
     }
 }
 
-abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler) :
+abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
     ChunkBuilderTask(renderer, scheduler) {
-    final override suspend fun run0() {
+    final override fun run0() {
         val bufferGroupArray: Array<TerrainVertexBuilder.BufferGroup?>
         val occlusionData: ChunkOcclusionData
         val translucentData: TranslucentData?
@@ -461,7 +333,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
     }
 }
 
-class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler) :
+class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
     ChunkBuilderTask(renderer, scheduler) {
     private var data: TranslucentData? = null
 
@@ -475,7 +347,7 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler)
         data = null
     }
 
-    override suspend fun run0() {
+    override fun run0() {
         val sortContext = renderer.contextProvider.getSortContext(this@SortTask)
         val newData = sortContext.sortQuads(this@SortTask, data!!)
         sortContext.release(this@SortTask)

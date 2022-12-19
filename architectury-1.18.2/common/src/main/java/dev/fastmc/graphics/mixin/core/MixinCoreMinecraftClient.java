@@ -7,7 +7,6 @@ import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.GLWrapper;
 import dev.fastmc.graphics.RendererReloader;
 import dev.fastmc.graphics.shared.FpsDisplay;
-import dev.fastmc.graphics.shared.terrain.ChunkBuilderTask;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.SplashOverlay;
 import net.minecraft.client.world.ClientWorld;
@@ -60,7 +59,7 @@ public abstract class MixinCoreMinecraftClient extends ReentrantThreadExecutor<R
     public void Inject$close$INVOKE$Util$shutdownExecutors(CallbackInfo ci) {
         FastMcCoreScope.INSTANCE.getPool().shutdown();
         FastMcExtendScope.INSTANCE.getPool().shutdown();
-        ChunkBuilderTask.cancelAllAndJoin();
+        FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer().getChunkBuilder().clear();
 
         boolean shutdown;
         try {

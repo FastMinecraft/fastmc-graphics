@@ -25,7 +25,6 @@ import kotlin.math.min
 
 @Suppress("DuplicatedCode")
 class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRenderer<BlockState, FluidState>() {
-    @Suppress("UNCHECKED_CAST")
     override val worldSnapshot = context.worldSnapshot
 
     private val random = WrappedSplitmix64Random()

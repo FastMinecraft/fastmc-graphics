@@ -1,6 +1,5 @@
 package dev.fastmc.graphics.terrain
 
-import dev.fastmc.common.ArrayPriorityObjectPool
 import dev.fastmc.common.BYTE_FALSE
 import dev.fastmc.common.BYTE_TRUE
 import dev.fastmc.common.BYTE_UNCHECKED
@@ -94,12 +93,12 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
 }
 
 private class ChunkBuilderImpl(renderer: TerrainRenderer) : ChunkBuilder(renderer) {
-    override fun newRebuildTask(scheduler: TaskScheduler): RebuildTask {
+    override fun newRebuildTask(scheduler: TaskFactory): RebuildTask {
         return RebuildTaskImpl(renderer, scheduler)
     }
 }
 
-private class RebuildTaskImpl(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskScheduler) : RebuildTask(
+private class RebuildTaskImpl(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) : RebuildTask(
     renderer,
     scheduler
 ) {
@@ -123,7 +122,7 @@ private class ChunkBuilderContextProviderImpl : ContextProvider() {
         postConstruct()
     }
 
-    override fun newRebuildContext(pool: ArrayPriorityObjectPool<*, RebuildContext>): RebuildContext {
+    override fun newRebuildContext(pool: ContextPool<RebuildContext>): RebuildContext {
         return object : RebuildContextImpl() {
             override fun release0() {
                 super.release0()
@@ -139,6 +138,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
     override val blockRenderer by lazy { BlockRendererImpl(this) }
 
     private val faceCullingCache = ByteArray(16 * 16 * 16 * 6)
+
     private val coveredSideCache = Int2ByteCacheMap(512, BYTE_UNCHECKED)
     private val matchVoxelShapeCache = Int2ByteCacheMap(2048, BYTE_UNCHECKED)
     private val cullingFaceCache = Int2ObjectCacheMap<VoxelShape>(2048)
@@ -150,7 +150,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
         faceCullingCache.fill(BYTE_UNCHECKED)
     }
 
-    override suspend fun renderChunk(task: RebuildTask) {
+    override fun renderChunk(task: RebuildTask) {
         val startX = chunkX shl 4
         val startY = chunkY shl 4
         val startZ = chunkZ shl 4
@@ -287,7 +287,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
         }
     }
 
-    inline fun fuzzyEqualSq(a: Double, b: Double, tolerance: Double): Boolean {
+    private inline fun fuzzyEqualSq(a: Double, b: Double, tolerance: Double): Boolean {
         val c = a - b
         return c * c <= tolerance
     }
