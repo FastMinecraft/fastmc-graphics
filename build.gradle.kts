@@ -36,6 +36,7 @@ plugins {
 
 subprojects {
     repositories {
+        mavenLocal()
         mavenCentral()
         maven("https://maven.fastmc.dev/")
         maven("https://libraries.minecraft.net/")

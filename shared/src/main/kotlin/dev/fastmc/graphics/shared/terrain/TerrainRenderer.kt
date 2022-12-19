@@ -517,8 +517,12 @@ abstract class TerrainRenderer(
                         if (!updated) return@launch
                     }
 
+                    val bbBuffer = region.boundingBoxBuffer
+                    bbBuffer.update()
+
                     for (i in 0 until size) {
                         region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i]).toByte()
+                        bbBuffer.put(array[i])
                     }
 
                     for (layerIndex in 0 until layerCount) {
