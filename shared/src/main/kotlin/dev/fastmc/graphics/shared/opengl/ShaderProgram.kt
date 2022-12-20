@@ -6,8 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2ByteMap
 import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap
 
 open class ShaderProgram(
-    vertex: ShaderSource.Vertex,
-    fragment: ShaderSource.Fragment
+    vararg shaders: ShaderSource,
 ) : IGLObject, IGLBinding {
     final override val id: Int
 
@@ -15,30 +14,30 @@ open class ShaderProgram(
     private val bufferBindings = EnumMap<BindingTarget, Object2ByteMap<String>>()
 
     init {
-        val vertexShaderID = createShader(vertex, GL_VERTEX_SHADER)
-        val fragShaderID = createShader(fragment, GL_FRAGMENT_SHADER)
-        val id = glCreateProgram()
+        val programID = glCreateProgram()
+        val shaderIDs = IntArray(shaders.size) { i ->
+            createShader(shaders[i]).also {
+                glAttachShader(programID, it)
+            }
+        }
 
-        glAttachShader(id, vertexShaderID)
-        glAttachShader(id, fragShaderID)
-
-        glLinkProgram(id)
-        val linked = glGetProgrami(id, GL_LINK_STATUS)
+        glLinkProgram(programID)
+        val linked = glGetProgrami(programID, GL_LINK_STATUS)
         if (linked == 0) {
-            FastMcMod.logger.error(glGetProgramInfoLog(id, 1024))
-            glDeleteProgram(id)
+            FastMcMod.logger.error(glGetProgramInfoLog(programID, 1024))
+            glDeleteProgram(programID)
             throw IllegalStateException("Shader program failed to link")
         }
-        this.id = id
+        this.id = programID
 
-        glDetachShader(id, vertexShaderID)
-        glDetachShader(id, fragShaderID)
-        glDeleteShader(vertexShaderID)
-        glDeleteShader(fragShaderID)
+        shaderIDs.forEach {
+            glDetachShader(programID, it)
+            glDeleteShader(it)
+        }
     }
 
-    private fun createShader(source: ShaderSource, shaderType: Int): Int {
-        val id = glCreateShader(shaderType)
+    private fun createShader(source: ShaderSource): Int {
+        val id = glCreateShader(source.glTypeEnum)
 
         glShaderSource(id, source.codeSrc)
         glCompileShader(id)
@@ -50,8 +49,7 @@ open class ShaderProgram(
             source.codeSrc.lines().forEachIndexed { i, it ->
                 System.err.print(i + 1)
                 System.err.print('\t')
-                System.err.print(it)
-                System.err.print('\n')
+                System.err.println(it)
             }
             System.err.flush()
             glDeleteShader(id)

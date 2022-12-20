@@ -549,6 +549,8 @@ inline fun glMemoryBarrier(barriers: Int) = glWrapper.glMemoryBarrier(barriers)
 
 
 // GL43
+const val GL_COMPUTE_SHADER = 0x91B9
+
 const val GL_SHADER_STORAGE_BUFFER = 0x90D2
 
 const val GL_UNIFORM = 0x92E1

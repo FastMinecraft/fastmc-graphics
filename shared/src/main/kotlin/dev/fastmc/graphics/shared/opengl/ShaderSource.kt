@@ -8,7 +8,7 @@ import java.nio.charset.CodingErrorAction
 import java.security.DigestInputStream
 import java.security.MessageDigest
 
-sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
+sealed class ShaderSource(val name: String, val glTypeEnum: Int, val codeSrc: CharSequence) {
     private val lines by lazy { codeSrc.lines() }
     protected abstract val provider: Provider<*>
     protected abstract val typeName: String
@@ -17,7 +17,7 @@ sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
         return "[$typeName]$name"
     }
 
-    class Vertex private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, codeSrc) {
+    class Vertex private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_VERTEX_SHADER, codeSrc) {
         override val provider: Provider<Vertex> get() = Companion
         override val typeName = "Vertex"
 
@@ -28,7 +28,7 @@ sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
         }
     }
 
-    class Fragment private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, codeSrc) {
+    class Fragment private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_VERTEX_SHADER, codeSrc) {
         override val provider: Provider<Fragment> get() = Companion
         override val typeName = "Fragment"
 
@@ -39,7 +39,18 @@ sealed class ShaderSource(val name: String, val codeSrc: CharSequence) {
         }
     }
 
-    class Util private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, codeSrc) {
+    class Compute private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_COMPUTE_SHADER, codeSrc) {
+        override val provider: Provider<Compute> get() = Companion
+        override val typeName = "Compute"
+
+        companion object : Provider<Compute>("comp") {
+            override fun newInstance(name: String, codeSrc: CharSequence): Compute {
+                return Compute(name, codeSrc)
+            }
+        }
+    }
+
+    class Util private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, -1, codeSrc) {
         override val provider: Provider<Util> get() = Companion
         override val typeName = "Util"
 
