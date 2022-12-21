@@ -278,4 +278,14 @@ class GLWrapper : IGLWrapper {
     override fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?) {
         GL45C.glClearNamedBufferData(buffer, internalformat, format, type, data)
     }
+
+    override fun glClearNamedBufferSubData(
+        buffer: Int,
+        internalformat: Int,
+        offset: Long,
+        size: Long,
+        format: Int,
+        type: Int,
+        data: ByteBuffer?
+    ) = GL45C.glClearNamedBufferSubData(buffer, internalformat, offset, size, format, type, data)
 }

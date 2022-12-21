@@ -196,6 +196,16 @@ interface IGLWrapper {
     )
 
     fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?)
+
+    fun glClearNamedBufferSubData(
+        buffer: Int,
+        internalformat: Int,
+        offset: Long,
+        size: Long,
+        format: Int,
+        type: Int,
+        data: ByteBuffer?
+    )
 }
 
 // GL11
@@ -735,3 +745,13 @@ inline fun glFlushMappedNamedBufferRange(
 
 inline fun glClearNamedBufferData(buffer: Int, internalformat: Int, format: Int, type: Int, data: ByteBuffer?) =
     glWrapper.glClearNamedBufferData(buffer, internalformat, format, type, data)
+
+inline fun glClearNamedBufferSubData(
+    buffer: Int,
+    internalformat: Int,
+    offset: Long,
+    size: Long,
+    format: Int,
+    type: Int,
+    data: ByteBuffer?
+) = glWrapper.glClearNamedBufferSubData(buffer, internalformat, offset, size, format, type, data)
