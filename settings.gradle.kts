@@ -13,13 +13,6 @@ pluginManagement {
 }
 
 //includeBuild("../mod-setup")
-//includeBuild("../fastmc-common") {
-//    dependencySubstitution {
-//        substitute(module("dev.fastmc:fastmc-common")).using(project(":"))
-//        substitute(module("dev.fastmc:fastmc-common-java8")).using(project(":java8"))
-//        substitute(module("dev.fastmc:fastmc-common-java17")).using(project(":java17"))
-//    }
-//}
 
 include("shared")
 include("shared:java8")
