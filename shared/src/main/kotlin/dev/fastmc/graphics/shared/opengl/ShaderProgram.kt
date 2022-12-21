@@ -49,7 +49,8 @@ open class ShaderProgram(
             source.codeSrc.lines().forEachIndexed { i, it ->
                 System.err.print(i + 1)
                 System.err.print('\t')
-                System.err.println(it)
+                System.err.print(it)
+                System.err.print('\n')
             }
             System.err.flush()
             glDeleteShader(id)

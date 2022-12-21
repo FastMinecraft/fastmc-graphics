@@ -19,7 +19,7 @@ sealed class ShaderSource(val name: String, val glTypeEnum: Int, val codeSrc: Ch
 
     class Vertex private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_VERTEX_SHADER, codeSrc) {
         override val provider: Provider<Vertex> get() = Companion
-        override val typeName = "Vertex"
+        override val typeName  get() = "Vertex"
 
         companion object : Provider<Vertex>("vert") {
             override fun newInstance(name: String, codeSrc: CharSequence): Vertex {
@@ -28,9 +28,9 @@ sealed class ShaderSource(val name: String, val glTypeEnum: Int, val codeSrc: Ch
         }
     }
 
-    class Fragment private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_VERTEX_SHADER, codeSrc) {
+    class Fragment private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_FRAGMENT_SHADER, codeSrc) {
         override val provider: Provider<Fragment> get() = Companion
-        override val typeName = "Fragment"
+        override val typeName get() = "Fragment"
 
         companion object : Provider<Fragment>("frag") {
             override fun newInstance(name: String, codeSrc: CharSequence): Fragment {
@@ -41,7 +41,7 @@ sealed class ShaderSource(val name: String, val glTypeEnum: Int, val codeSrc: Ch
 
     class Compute private constructor(name: String, codeSrc: CharSequence) : ShaderSource(name, GL_COMPUTE_SHADER, codeSrc) {
         override val provider: Provider<Compute> get() = Companion
-        override val typeName = "Compute"
+        override val typeName  get() = "Compute"
 
         companion object : Provider<Compute>("comp") {
             override fun newInstance(name: String, codeSrc: CharSequence): Compute {
