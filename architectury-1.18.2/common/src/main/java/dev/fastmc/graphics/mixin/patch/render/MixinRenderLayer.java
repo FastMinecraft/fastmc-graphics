@@ -1,32 +1,11 @@
 package dev.fastmc.graphics.mixin.patch.render;
 
-import com.google.common.collect.ImmutableList;
 import dev.fastmc.graphics.shared.terrain.IPatchedRenderLayer;
 import net.minecraft.client.render.RenderLayer;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
-
-import java.util.List;
 
 @Mixin(RenderLayer.class)
 public class MixinRenderLayer implements IPatchedRenderLayer {
-    private static final List<RenderLayer> blockLayers = ImmutableList.of(
-        RenderLayer.getSolid(),
-        RenderLayer.getCutoutMipped(),
-        RenderLayer.getCutout(),
-        RenderLayer.getTranslucent(),
-        RenderLayer.getTripwire()
-    );
-
-    /**
-     * @author Luna
-     * @reason Memory allocation optimization
-     */
-    @Overwrite
-    public static List<RenderLayer> getBlockLayers() {
-        return blockLayers;
-    }
-
     static {
         ((MixinRenderLayer) (Object) RenderLayer.getSolid()).index = 0;
 

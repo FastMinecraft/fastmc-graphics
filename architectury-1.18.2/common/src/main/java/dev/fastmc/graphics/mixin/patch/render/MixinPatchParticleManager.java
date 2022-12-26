@@ -1,7 +1,6 @@
 package dev.fastmc.graphics.mixin.patch.render;
 
 import dev.fastmc.graphics.mixin.IPatchedParticleManager;
-import dev.fastmc.graphics.tileentity.IPatchedParticle;
 import net.minecraft.client.particle.EmitterParticle;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleManager;
@@ -11,9 +10,6 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Map;
 import java.util.Queue;
@@ -34,11 +30,6 @@ public abstract class MixinPatchParticleManager implements IPatchedParticleManag
 
     @Shadow
     protected abstract void tickParticle(Particle particle);
-
-    @Inject(method = "tickParticle", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/particle/Particle;tick()V", shift = At.Shift.AFTER))
-    private void tickParticle$Inject$INVOKE$tick$AFTER(Particle particle, CallbackInfo ci) {
-        ((IPatchedParticle) particle).updateBrightness();
-    }
 
     /**
      * @author Luna
