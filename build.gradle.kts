@@ -7,6 +7,9 @@ version = "0.0.2"
 runVmOptions {
     val threads = Runtime.getRuntime().availableProcessors()
     add(
+        "-Djoml.fastmath=true",
+        "-Djoml.sinLookup=true",
+        "-Djoml.useMathFma=true",
         "-Xms2G",
         "-Xmx2G",
         "-XX:+UnlockExperimentalVMOptions",
@@ -66,6 +69,7 @@ subprojects {
                 freeCompilerArgs += listOf(
                     "-opt-in=kotlin.RequiresOptIn",
                     "-opt-in=kotlin.contracts.ExperimentalContracts",
+                    "-Xbackend-threads=0"
                 )
             }
         }
