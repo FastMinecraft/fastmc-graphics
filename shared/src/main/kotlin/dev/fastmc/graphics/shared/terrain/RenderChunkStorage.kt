@@ -62,6 +62,7 @@ class RenderChunkStorage(
 
     private val regionDistanceArray = IntArray(totalRegion)
     var regionIndices = IntArray(totalRegion) { it }; private set
+    var regionOrder = regionIndices.copyOf(); private set
 
     private var caveCullingDirty = true
     private val caveCullingUpdateCounter = UpdateCounter()
@@ -239,7 +240,13 @@ class RenderChunkStorage(
             }
         )
 
+        val newRegionOrder = IntArray(totalRegion)
+        for (i in newRegionIndices.indices) {
+            newRegionOrder[newRegionIndices[i]] = i
+        }
+
         regionIndices = newRegionIndices
+        regionOrder = newRegionOrder
     }
 
     fun markCaveCullingDirty() {

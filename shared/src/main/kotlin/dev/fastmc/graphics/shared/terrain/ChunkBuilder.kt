@@ -34,6 +34,8 @@ abstract class ChunkBuilder(
     var uploadCount = 0; private set
     var visibleUploadCount = 0; private set
 
+    private var distanceFlush = false
+
     inline fun scheduleTasks(block: TaskFactory.() -> Unit) {
         val taskScheduler = synchronized(taskFactoryPool) {
             taskFactoryPool.get()
@@ -62,12 +64,22 @@ abstract class ChunkBuilder(
                 var queue = pendingUploadQueueMap[region.index]
                 if (queue == null || queue.vertexBufferPool !== region.vertexBufferPool) {
                     queue?.clear()
-                    queue = PendingUploadQueue(region.vertexBufferPool, region.indexBufferPool)
+                    queue = PendingUploadQueue(region)
                     pendingUploadQueueMap[region.index] = queue
                 }
                 queue.add(it)
             }
-            pendingUploadQueueMap.values.maxByOrNull { it.taskCount }?.flush()
+            pendingUploadQueueMap.values.asSequence()
+                .filter { it.taskCount > 0 }
+                .run {
+                    if (distanceFlush) {
+                        maxByOrNull { renderer.chunkStorage.regionOrder[it.region.index] }
+                    } else {
+                        maxByOrNull { it.taskCount }
+                    }
+                }?.flush()
+
+            distanceFlush = !distanceFlush
         }
 
         renderer.contextProvider.update()
@@ -101,9 +113,10 @@ abstract class ChunkBuilder(
     }
 
     private inner class PendingUploadQueue(
-        val vertexBufferPool: RenderBufferPool,
-        val indexBufferPool: RenderBufferPool
+        val region: RenderRegion,
     ) {
+        val vertexBufferPool = region.vertexBufferPool
+        val indexBufferPool = region.indexBufferPool
         private val list = FastObjectArrayList.wrap(arrayOfNulls<UploadTask>(4096), 0)
 
         val taskCount get() = list.size
