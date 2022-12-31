@@ -262,12 +262,8 @@ abstract class TerrainRenderer(
         var count = 0
 
         if (lastSortChunkX != roundedChunkX || lastSortChunkY != roundedChunkY || lastSortChunkZ != roundedChunkZ) {
-            count = 64
-        } else if (distanceSq(
-                cameraX, cameraY, cameraZ,
-                lastSortX, lastSortY, lastSortZ
-            ) > 1.0
-        ) {
+            count = 128
+        } else if (distanceSq(cameraX, cameraY, cameraZ, lastSortX, lastSortY, lastSortZ) > 1.0) {
             count = 16
         }
 
@@ -291,12 +287,8 @@ abstract class TerrainRenderer(
                         if (count == 0) break
                         val chunkIndex = chunkIndices[i]
                         val renderChunk = chunkArray[chunkIndex]
+                        if (renderChunk.isEmpty) continue
                         if (!renderChunk.isVisible) continue
-                        if (distanceSq(
-                                renderChunk.chunkX, renderChunk.chunkZ,
-                                cameraChunkX, cameraChunkZ
-                            ) > 64
-                        ) break
                         if (createSort(renderChunk)) {
                             --count
                         }

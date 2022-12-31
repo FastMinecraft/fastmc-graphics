@@ -186,8 +186,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 val indexSize = indexBuffer.remaining()
                 val quadCount = rebuildContext.translucentVertexBuilder.posArrayList.size / 12
 
-                sortContext.tempQuadCenter.ensureCapacity(quadCount * 3)
-                val quadCenterArray = sortContext.tempQuadCenter.elements()
+                val quadCenterArray = sortContext.getQuadCenterArray(quadCount * 3)
                 val posArray = rebuildContext.translucentVertexBuilder.posArrayList.elements()
 
                 for (i in 0 until quadCount) {
@@ -202,8 +201,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 }
                 rebuildContext.release(this@RebuildTask)
 
-                sortContext.tempIndexData.ensureCapacity(indexSize)
-                val indexDataArray = sortContext.tempIndexData.elements()
+                val indexDataArray = sortContext.getIndexDataArray(indexSize)
                 indexBuffer.get(indexDataArray, 0, indexSize)
 
                 val data = sortContext.sortQuads(this@RebuildTask, indexDataArray, quadCenterArray, quadCount)

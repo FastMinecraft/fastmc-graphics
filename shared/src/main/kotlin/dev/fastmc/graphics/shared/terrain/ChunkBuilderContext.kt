@@ -4,11 +4,9 @@ package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.graphics.DistanceSort
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.opengl.impl.MappedBufferPool
-import it.unimi.dsi.fastutil.bytes.ByteArrayList
-import it.unimi.dsi.fastutil.floats.FloatArrayList
-import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.IntArrays
 import it.unimi.dsi.fastutil.ints.IntComparator
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -805,12 +803,25 @@ abstract class RebuildContext(layerCount: Int) : Context() {
 }
 
 abstract class SortContext : Context() {
-    val tempIndexData = ByteArrayList(ByteArrayList.DEFAULT_INITIAL_CAPACITY + 1)
-    val tempQuadCenter = FloatArrayList(FloatArrayList.DEFAULT_INITIAL_CAPACITY + 1)
+    private var tempIndexData = ByteArray(0)
+    private var tempQuadCenter = FloatArray(0)
 
-    private val distanceList = FloatArrayList(FloatArrayList.DEFAULT_INITIAL_CAPACITY + 1)
-    private val indexList = IntArrayList(IntArrayList.DEFAULT_INITIAL_CAPACITY + 1)
-    private val sortSuppIndexList = IntArrayList(IntArrayList.DEFAULT_INITIAL_CAPACITY + 1)
+    private var distanceArray = FloatArray(0)
+    private var indexArray = IntArray(0)
+
+    fun getIndexDataArray(capacity: Int): ByteArray {
+        if (tempIndexData.size < capacity) {
+            tempIndexData = ByteArray(max(capacity, capacity + (capacity shr 1)))
+        }
+        return tempIndexData
+    }
+
+    fun getQuadCenterArray(capacity: Int): FloatArray {
+        if (tempQuadCenter.size < capacity) {
+            tempQuadCenter = FloatArray(max(capacity, capacity + (capacity shr 1)))
+        }
+        return tempQuadCenter
+    }
 
     inline fun sortQuads(task: ChunkBuilderTask, data: TranslucentData): TranslucentData {
         return sortQuads(task, data.indexData, data.quadCenter, data.quadCenter.size / 3)
@@ -822,13 +833,10 @@ abstract class SortContext : Context() {
         quadCenter: FloatArray,
         quadCount: Int
     ): TranslucentData {
-        distanceList.ensureCapacity(quadCount)
-        indexList.ensureCapacity(quadCount)
-        sortSuppIndexList.ensureCapacity(quadCount)
-
-        val distanceArray = distanceList.elements()
-        val indexArray = indexList.elements()
-        val sortSuppIndexArray = sortSuppIndexList.elements()
+        if (distanceArray.size < quadCount) {
+            distanceArray = FloatArray(max(quadCount, quadCount + (quadCount shr 1)))
+            indexArray = IntArray(max(quadCount, quadCount + (quadCount shr 1)))
+        }
 
         for (i in 0 until quadCount) {
             val quadCenterIndex = i * 3
@@ -841,16 +849,9 @@ abstract class SortContext : Context() {
                 task.relativeCameraZ
             )
             indexArray[i] = i
-            sortSuppIndexArray[i] = i
         }
 
-        val comparator = object : IntComparator {
-            override fun compare(k1: Int, k2: Int): Int {
-                return distanceArray[k1].compareTo(distanceArray[k2])
-            }
-        }
-
-        IntArrays.mergeSort(indexArray, 0, quadCount, comparator, sortSuppIndexArray)
+        DistanceSort.sort(indexArray, distanceArray, 0, quadCount)
 
         val newIndexData = ByteArray(quadCount * 6 * 4)
         val newQuadCenter = FloatArray(quadCount * 3)
