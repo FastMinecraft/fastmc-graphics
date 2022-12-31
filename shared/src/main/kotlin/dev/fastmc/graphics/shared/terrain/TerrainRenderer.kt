@@ -298,6 +298,7 @@ abstract class TerrainRenderer(
         }
     }
 
+    @Suppress("DuplicatedCode")
     private suspend fun updateChunkCulling() {
         val chunkStorage = chunkStorage
 

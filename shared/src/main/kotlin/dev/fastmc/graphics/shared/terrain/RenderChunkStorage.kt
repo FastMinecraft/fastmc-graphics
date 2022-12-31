@@ -299,6 +299,7 @@ class RenderChunkStorage(
                 if (!renderChunk.occlusionData.isVisible(directions[oppositeDirection], nextDirection)) continue
                 val nextRenderChunk = renderChunk.adjacentRenderChunk[nextDirection.ordinal] ?: continue
                 if (!newCullingBitSet.add(nextRenderChunk.index)) continue
+                if (!nextRenderChunk.isBuilt) continue
                 caveCullingQueue.enqueue(nextRenderChunk.index or (nextDirection.idOpposite shl 17) or ((excludedDirections or nextDirection.bitOpposite) shl 20))
             }
         }
