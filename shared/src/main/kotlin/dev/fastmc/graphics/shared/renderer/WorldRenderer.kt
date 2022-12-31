@@ -42,7 +42,7 @@ abstract class WorldRenderer : IRenderer {
 
     final override val globalUBO = BufferObject.Immutable().allocate(268, GL_DYNAMIC_STORAGE_BIT)
 
-    final override val frustum = FrustumIntersection(projectionMatrix, false)
+    final override var frustum = FrustumIntersection()
     final override var matrixHash = 0L
     final override var matrixPosHash = 0L
 
@@ -111,9 +111,11 @@ abstract class WorldRenderer : IRenderer {
         }
     }
 
+    private val multiplied = Matrix4f()
+
     fun updateFrustum() {
-        val multiplied = projectionMatrix.mul(modelViewMatrix, Matrix4f())
-        frustum.set(multiplied, false)
+        val multiplied = projectionMatrix.mul(modelViewMatrix, multiplied)
+        frustum = FrustumIntersection(multiplied, false)
 
         var hash = 1L
         hash = 31L * hash + multiplied.m00().toRawBits()

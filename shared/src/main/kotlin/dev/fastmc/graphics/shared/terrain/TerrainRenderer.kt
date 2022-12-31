@@ -540,83 +540,86 @@ abstract class TerrainRenderer(
             (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).fastFloor() ushr 31))
     }
 
+    private val updateDebugRunnable = Runnable {
+        val chunkBuilder = chunkBuilder
+        val uploadBufferPool = contextProvider.bufferPool
+        val chunkStorage = chunkStorage
+        val chunkArray = chunkStorage.renderChunkArray
+        val regionArray = chunkStorage.regionArray
+
+        var visibleRegionCount = 0
+        var regionCount = 0
+
+        var totalChunkVertexSize = 0L
+        var bufferCapacity = 0L
+
+        var visibleChunkCount = 0
+        var totalChunkCount = 0
+        var visibleChunkVertexSize = 0L
+
+        for (i in regionArray.indices) {
+            val region = regionArray[i]
+            val allocated = region.vertexBufferPool.allocated + region.indexBufferPool.allocated
+            totalChunkVertexSize += allocated
+            if (allocated != 0) {
+                if (region.frustumCull.isInFrustum()) {
+                    visibleRegionCount++
+                }
+                regionCount++
+            }
+            bufferCapacity += region.vertexBufferPool.capacity
+            bufferCapacity += region.indexBufferPool.capacity
+        }
+
+        for (i in chunkArray.indices) {
+            val renderChunk = chunkArray[i]
+            val layers = renderChunk.layers
+            if (renderChunk.isVisible) {
+                for (i2 in layers.indices) {
+                    val layer = layers[i2]
+
+                    val vertexRegion = layer.vertexRegion
+                    if (vertexRegion != null) {
+                        visibleChunkVertexSize += vertexRegion.length
+                    }
+
+                    val indexRegion = layer.indexRegion
+                    if (indexRegion != null) {
+                        visibleChunkVertexSize += indexRegion.length
+                    }
+                }
+            }
+            if (!renderChunk.isEmpty) {
+                if (renderChunk.isVisible) visibleChunkCount++
+                totalChunkCount++
+            }
+        }
+
+        debugInfoString = String.format(
+            "D: %d, R: %d/%d/%d, C: %d/%d/%d(%.1f/%.1f/%.1f MB), T: %02d, A: %d, U: %02d, B: %d/%d(%.1f/%.1f MB)",
+            lastViewDistance,
+            visibleRegionCount,
+            regionCount,
+            regionArray.size,
+            visibleChunkCount,
+            totalChunkCount,
+            chunkArray.size,
+            visibleChunkVertexSize.toDouble() / 1048576.0,
+            totalChunkVertexSize.toDouble() / 1048576.0,
+            bufferCapacity.toDouble() / 1048576.0,
+            chunkBuilder.totalTaskCount,
+            chunkBuilder.activeTaskCount,
+            chunkBuilder.uploadTaskCount,
+            uploadBufferPool.allocatedRegion,
+            uploadBufferPool.maxRegions,
+            uploadBufferPool.allocatedSize.toDouble() / 1048576.0,
+            uploadBufferPool.capacity.toDouble() / 1048576.0
+        )
+    }
+
     private fun updateDebugInfo() {
         if (lastDebugUpdateTask.isDoneOrNull) {
-            lastDebugUpdateTask = FastMcExtendScope.pool.submit {
-                val chunkBuilder = chunkBuilder
-                val uploadBufferPool = contextProvider.bufferPool
-                val chunkStorage = chunkStorage
-                val chunkArray = chunkStorage.renderChunkArray
-                val regionArray = chunkStorage.regionArray
-
-                var visibleRegionCount = 0
-                var regionCount = 0
-
-                var totalChunkVertexSize = 0L
-                var bufferCapacity = 0L
-
-                var visibleChunkCount = 0
-                var totalChunkCount = 0
-                var visibleChunkVertexSize = 0L
-
-                for (i in regionArray.indices) {
-                    val region = regionArray[i]
-                    val allocated = region.vertexBufferPool.allocated + region.indexBufferPool.allocated
-                    totalChunkVertexSize += allocated
-                    if (allocated != 0) {
-                        if (region.frustumCull.isInFrustum()) {
-                            visibleRegionCount++
-                        }
-                        regionCount++
-                    }
-                    bufferCapacity += region.vertexBufferPool.capacity
-                    bufferCapacity += region.indexBufferPool.capacity
-                }
-
-                for (i in chunkArray.indices) {
-                    val renderChunk = chunkArray[i]
-                    val layers = renderChunk.layers
-                    if (renderChunk.isVisible) {
-                        for (i2 in layers.indices) {
-                            val layer = layers[i2]
-
-                            val vertexRegion = layer.vertexRegion
-                            if (vertexRegion != null) {
-                                visibleChunkVertexSize += vertexRegion.length
-                            }
-
-                            val indexRegion = layer.indexRegion
-                            if (indexRegion != null) {
-                                visibleChunkVertexSize += indexRegion.length
-                            }
-                        }
-                    }
-                    if (!renderChunk.isEmpty) {
-                        if (renderChunk.isVisible) visibleChunkCount++
-                        totalChunkCount++
-                    }
-                }
-
-                debugInfoString = String.format(
-                    "D: %d, R: %d/%d/%d, C: %d/%d/%d(%.1f/%.1f/%.1f MB), T: %02d, U: %02d, B: %03d/%03d(%.1f/%.1f MB)",
-                    lastViewDistance,
-                    visibleRegionCount,
-                    regionCount,
-                    regionArray.size,
-                    visibleChunkCount,
-                    totalChunkCount,
-                    chunkArray.size,
-                    visibleChunkVertexSize.toDouble() / 1048576.0,
-                    totalChunkVertexSize.toDouble() / 1048576.0,
-                    bufferCapacity.toDouble() / 1048576.0,
-                    chunkBuilder.totalTaskCount,
-                    chunkBuilder.uploadTaskCount,
-                    uploadBufferPool.allocatedRegion,
-                    uploadBufferPool.maxRegions,
-                    uploadBufferPool.allocatedSize.toDouble() / 1048576.0,
-                    uploadBufferPool.capacity.toDouble() / 1048576.0
-                )
-            }
+            lastDebugUpdateTask = FastMcExtendScope.pool.submit(updateDebugRunnable)
         }
     }
 

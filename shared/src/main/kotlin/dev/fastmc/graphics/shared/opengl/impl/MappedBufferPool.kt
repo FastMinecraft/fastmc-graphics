@@ -209,16 +209,14 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
 
                                         return
                                     }
-                                } else if (allocated != 0) {
-                                    for (i1 in i until i + allocated) {
-                                        sectorState.set(i1, FALSE)
+                                } else {
+                                    if (allocated != 0) {
+                                        for (i1 in i until i + allocated) {
+                                            sectorState.set(i1, FALSE)
+                                        }
+                                        doNotify()
                                     }
-                                    doNotify()
-                                    return@label
-                                }
-
-                                if (lock.withLock { condition.awaitNanos(1_000_000L) } <= 0) {
-                                    task.checkCancelled()
+                                    break
                                 }
                             }
                         }

@@ -51,8 +51,8 @@ abstract class ContextProvider {
     protected fun postConstruct() {
         bufferPool0 = MappedBufferPool(
             (8 * 1024).countTrailingZeroBits(),
-            max(ParallelUtils.CPU_THREADS * 512, 2048),
-            ParallelUtils.CPU_THREADS * 256
+            max(ParallelUtils.CPU_THREADS * 1024, 2048),
+            ParallelUtils.CPU_THREADS * 512
         )
     }
 
@@ -77,6 +77,8 @@ abstract class ContextProvider {
     }
 
     open fun update() {
+        rebuildContextPool.update()
+        sortContextPool.update()
         bufferPool.update()
     }
 
