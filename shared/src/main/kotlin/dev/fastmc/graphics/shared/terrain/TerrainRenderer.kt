@@ -51,8 +51,6 @@ abstract class TerrainRenderer(
         DoubleBufferedCollection.emptyInitAction()
     )
 
-    private var updateCounter = 0
-
     private var lastSortScheduleTask: Future<*>? = null
     private var lastRebuildScheduleTask: Future<*>? = null
 
@@ -123,15 +121,8 @@ abstract class TerrainRenderer(
                     FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
 
                     if (chunkBuilder.visibleUploadCount != 0) {
-                        updateRegion = true
-                    }
-
-                    updateCounter += chunkBuilder.visibleUploadCount
-                    if (updateCounter > 512
-                        || chunkBuilder.totalTaskCount < ParallelUtils.CPU_THREADS * 4
-                        && updateCounter != 0) {
                         chunkStorage.markCaveCullingDirty()
-                        updateCounter = 0
+                        updateRegion = true
                     }
                 }
 
@@ -183,8 +174,6 @@ abstract class TerrainRenderer(
     }
 
     fun clear() {
-        updateCounter = 0
-
         lastSortScheduleTask?.cancel(true)
         lastRebuildScheduleTask?.cancel(true)
         lastSortScheduleTask = null
