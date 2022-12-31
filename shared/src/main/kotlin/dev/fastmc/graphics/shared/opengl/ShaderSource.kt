@@ -113,14 +113,12 @@ sealed class ShaderSource(val name: String, val glTypeEnum: Int, val codeSrc: Ch
             val md5 = MessageDigest.getInstance("MD5")
 
             cachedByteBuffer.getByte().clear()
-            var read = 0
 
             url.openStream().use { inputStream ->
                 DigestInputStream(inputStream, md5).use {
                     var byte = it.read()
                     while (byte != -1) {
-                        read++
-                        cachedByteBuffer.ensureCapacityByte(read, (read + 1023) shr 10 shl 10).put(byte.toByte())
+                        cachedByteBuffer.ensureRemainingByte(1).put(byte.toByte())
                         byte = it.read()
                     }
                 }
