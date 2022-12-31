@@ -1,6 +1,7 @@
 package dev.fastmc.graphics.terrain
 
 import dev.fastmc.common.isDoneOrNull
+import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.threadGroupMain
 import dev.fastmc.graphics.util.hasPendingUpdates
 import dev.fastmc.graphics.util.lightStorage
@@ -21,7 +22,7 @@ class OffThreadLightingProvider(
     hasBlockLight: Boolean, hasSkyLight: Boolean
 ) : LightingProvider(chunkProvider, hasBlockLight, hasSkyLight) {
     @JvmField
-    val readWriteLock = ReentrantReadWriteLock()
+    val readWriteLock = ReentrantReadWriteLock(true)
 
     private var lastLightUpdateFuture: Future<*>? = null
 
@@ -98,8 +99,14 @@ class OffThreadLightingProvider(
 
             lastLightUpdateFuture = executor.submit {
                 readWriteLock.writeLock().withLock {
-                    blockLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, true)
-                    skyLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, true)
+                    val block = FastMcCoreScope.pool.submit {
+                        blockLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, true)
+                    }
+                    val sky = FastMcCoreScope.pool.submit {
+                        skyLightProvider?.doLightUpdates(Int.MAX_VALUE, doSkylight, true)
+                    }
+                    block.get()
+                    sky.get()
                 }
             }
         }
