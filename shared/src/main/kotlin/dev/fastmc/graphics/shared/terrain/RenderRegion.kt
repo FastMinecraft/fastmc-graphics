@@ -99,7 +99,7 @@ class RenderRegion(
         }
 
         fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
-            val clientBuffer = cachedClientBuffer.ensureRemainingByte(20)
+            val clientBuffer = cachedClientBuffer.ensureCapacityByte(count * 20)
             val address = clientBuffer.address + index
 
             UNSAFE.putInt(address, indexCount / 4)
