@@ -53,6 +53,8 @@ subprojects {
         val kotlinxCoroutineVersion: String by rootProject
         val jomlVersion: String by rootProject
 
+        testImplementation(kotlin("test"))
+
         "libraryImplementation"(kotlin("stdlib-jdk8", kotlinVersion))
         "libraryImplementation"("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinxCoroutineVersion")
         "libraryImplementation"("org.joml:joml:$jomlVersion")
@@ -60,10 +62,12 @@ subprojects {
         compileOnly("org.apache.logging.log4j:log4j-api:2.8.1")
         compileOnly("it.unimi.dsi:fastutil:7.1.0")
     }
-}
 
-subprojects {
     tasks {
+        test {
+            useJUnitPlatform()
+            jvmArgs("-Xmx2G")
+        }
         compileKotlin {
             kotlinOptions {
                 freeCompilerArgs += listOf(
