@@ -9,7 +9,6 @@
         "MixinPatchMinecraftServer",
         "MixinSimpleVoxelShape",
         "MixinSlicedVoxelShape",
-        "MixinUtil",
         "render.MixinPatchBakedQuad",
         "render.MixinPatchBasicBakedModel",
         "render.MixinPatchParticleManager",
