@@ -1,4 +1,3 @@
-import me.luna.jaroptimizer.JarOptimizerPluginExtension
 import kotlin.math.max
 
 group = "dev.fastmc"
@@ -37,8 +36,7 @@ runVmOptions {
 }
 
 plugins {
-    id("me.luna.jaroptimizer").version("1.1")
-    id("dev.fastmc.modsetup.root").version("1.0-SNAPSHOT")
+    id("dev.fastmc.modsetup.root").version("1.1-SNAPSHOT")
 }
 
 subprojects {
@@ -82,21 +80,15 @@ subprojects {
 
 tasks {
     val collectJars by register<Copy>("collectJars") {
-        finalizedBy("optimizeJars")
-
         group = "build"
 
         from(
             provider {
-                subprojects.mapNotNull { it.tasks.findByName("releaseJar")?.outputs }
+                subprojects.mapNotNull { it.tasks.findByName("modLoaderJar")?.outputs }
             }
         )
 
         into(file("$buildDir/libs"))
-    }
-
-    configure<JarOptimizerPluginExtension> {
-        add(collectJars, "dev.fastmc.graphics", "org.spongepowered")
     }
 
     assemble {

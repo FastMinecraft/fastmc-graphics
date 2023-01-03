@@ -1,6 +1,5 @@
-import org.spongepowered.asm.gradle.plugins.MixinExtension
-
 forgeProject {
+    modPackage.set("dev.fastmc.graphics")
     accessTransformer = "fastmc_at.cfg"
     mixinConfig(
         "mixins.fastmc-graphics-accessor.json",
@@ -9,8 +8,4 @@ forgeProject {
     )
     coreModClass.set("dev.fastmc.graphics.FastMcGraphicsCoremod")
     devCoreModClass.set("dev.fastmc.graphics.FastMcGraphicsDevFixCoremod")
-}
-
-configure<MixinExtension> {
-    add(sourceSets["main"], "mixins.fastmc-graphics.refmap.json")
 }

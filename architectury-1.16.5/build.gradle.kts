@@ -1,4 +1,5 @@
 architecturyProject {
+    modPackage.set("dev.fastmc.graphics")
     mixinConfig(
         "mixins.fastmc-graphics-core.json",
         "mixins.fastmc-graphics-accessor.json",
