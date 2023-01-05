@@ -271,7 +271,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
                             return false
                         }
 
-                        val slicedA = SlicedVoxelShape(a, axis, (a as AccessorVoxelShape).fastmcGraphicsGetVoxels().getSize(axis) - 1)
+                        val slicedA = SlicedVoxelShape(a, axis, (a as AccessorVoxelShape).voxels.getSize(axis) - 1)
                         val slicedB = SlicedVoxelShape(b, axis, 0)
 
                         val result = if (isPositive) {
