@@ -1,7 +1,9 @@
 import kotlin.math.max
 
-group = "dev.fastmc"
-version = "0.0.2"
+allprojects {
+    group = "dev.fastmc"
+    version = "0.0.2"
+}
 
 runVmOptions {
     val threads = Runtime.getRuntime().availableProcessors()
