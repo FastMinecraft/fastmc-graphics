@@ -11,6 +11,11 @@
     "license": "MIT",
     "icon": "assets/fastmc/icon.png",
     "environment": "client",
+    "entrypoints": {
+        "main": [
+            "dev.fastmc.graphics.FastMcEntryPoint"
+        ]
+    },
     "mixins": [
         "mixins.fastmc-graphics-accessor.json",
         "mixins.fastmc-graphics-core.json",
