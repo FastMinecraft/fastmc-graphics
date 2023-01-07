@@ -4,7 +4,4 @@ import net.minecraftforge.fml.common.Mod
 
 @Mod("fastmc-graphics")
 class FastMcForgeEntryPoint {
-    init {
-        println("$javaClass: init!!!")
-    }
 }
