@@ -13,7 +13,7 @@
     "environment": "client",
     "entrypoints": {
         "main": [
-            "dev.fastmc.graphics.FastMcEntryPoint"
+            "dev.fastmc.graphics.FastMcFabricEntryFoint"
         ]
     },
     "mixins": [

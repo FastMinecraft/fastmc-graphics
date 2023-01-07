@@ -7,3 +7,7 @@ architecturyProject {
     )
     accessWidenerPath.set(file("common/src/main/resources/fastmc-graphics.accesswidener").absoluteFile)
 }
+
+modLoader {
+    forgeModClass.set("dev.fastmc.graphics.FastMcForgeEntryPoint")
+}
