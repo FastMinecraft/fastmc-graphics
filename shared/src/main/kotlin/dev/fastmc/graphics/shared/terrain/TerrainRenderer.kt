@@ -2,6 +2,7 @@ package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.common.sort.ObjectIntrosort
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.shared.FpsDisplay
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
@@ -457,10 +458,7 @@ abstract class TerrainRenderer(
             val layerCount = layerCount
             val chunkStorage = chunkStorage
             val regionArray = chunkStorage.regionArray
-            val chunkOrder = chunkStorage.chunkOrder
-            val comparator = Comparator<RenderChunk> { o1, o2 ->
-                chunkOrder[o1.index].compareTo(chunkOrder[o2.index])
-            }
+            val comparator = chunkStorage.chunkOrderComp
 
             for (regionIndex in regionArray.indices) {
                 val region = regionArray[regionIndex]
@@ -472,8 +470,7 @@ abstract class TerrainRenderer(
                     val size = list.size
 
                     if (resort) {
-                        System.arraycopy(array, 0, region.sortSuppArray, 0, size)
-                        ObjectArrays.mergeSort(array, 0, size, comparator, region.sortSuppArray)
+                        ObjectIntrosort.sort(array, 0, size, comparator)
                     }
 
                     if (refresh) {

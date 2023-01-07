@@ -4,11 +4,9 @@ package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.graphics.DistanceSort
+import dev.fastmc.common.sort.IntIntrosort
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.opengl.impl.MappedBufferPool
-import it.unimi.dsi.fastutil.ints.IntArrays
-import it.unimi.dsi.fastutil.ints.IntComparator
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -853,7 +851,7 @@ abstract class SortContext : Context() {
             indexArray[i] = i
         }
 
-        DistanceSort.sort(indexArray, distanceArray, 0, quadCount)
+        IntIntrosort.sort(indexArray, 0, quadCount, distanceArray)
 
         val newIndexData = ByteArray(quadCount * 6 * 4)
         val newQuadCenter = FloatArray(quadCount * 3)

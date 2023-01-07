@@ -23,9 +23,6 @@ class RenderRegion(
     val layerBatchArray = Array(renderer.layerCount) { LayerBatch(storage.regionChunkCount) }
 
     @JvmField
-    val sortSuppArray = arrayOfNulls<RenderChunk>(storage.regionChunkCount)
-
-    @JvmField
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(storage.regionChunkCount), 0)
 
     @JvmField

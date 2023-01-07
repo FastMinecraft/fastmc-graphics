@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.terrain
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.IntArrayFIFOQueueNoShrink
 import dev.fastmc.common.collection.StaticBitSet
+import dev.fastmc.common.sort.IntIntrosort
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
@@ -56,9 +57,9 @@ class RenderChunkStorage(
     private val sortingUpdateCounter = UpdateCounter()
     private var lastSortingJob: Future<*>? = null
     private val chunkDistanceArray = IntArray(totalChunk)
-    private val chunkSortSuppArray = IntArray(totalChunk) { it }
-    var sortedChunkIndices = chunkSortSuppArray.copyOf(); private set
-    var chunkOrder = chunkSortSuppArray.copyOf(); private set
+    var sortedChunkIndices = IntArray(totalChunk) { it }; private set
+    var chunkOrder = sortedChunkIndices.copyOf(); private set
+    var chunkOrderComp = chunkOrderComparator(chunkOrder); private set
 
     private val regionDistanceArray = IntArray(totalRegion)
     var regionIndices = IntArray(totalRegion) { it }; private set
@@ -186,7 +187,6 @@ class RenderChunkStorage(
 
     private val updateChunkIndicesRunnable = Runnable {
         val newChunkIndices = sortedChunkIndices.copyOf()
-        newChunkIndices.copyInto(chunkSortSuppArray)
 
         for (i in newChunkIndices) {
             val renderChunk = renderChunkArray[i]
@@ -196,18 +196,7 @@ class RenderChunkStorage(
             )
         }
 
-        IntArrays.mergeSort(
-            newChunkIndices,
-            0,
-            newChunkIndices.size,
-            object : IntComparator {
-                private val distanceArray = this@RenderChunkStorage.chunkDistanceArray
-                override fun compare(k1: Int, k2: Int): Int {
-                    return distanceArray[k1].compareTo(distanceArray[k2])
-                }
-            },
-            chunkSortSuppArray
-        )
+        IntIntrosort.sort(newChunkIndices, chunkDistanceArray)
 
         val newChunkOrder = IntArray(totalChunk)
         for (i in newChunkOrder.indices) {
@@ -216,6 +205,7 @@ class RenderChunkStorage(
 
         sortedChunkIndices = newChunkIndices
         chunkOrder = newChunkOrder
+        chunkOrderComp = chunkOrderComparator(newChunkOrder)
         sortingUpdateCounter.update()
 
         val newRegionIndices = regionIndices.copyOf()
@@ -230,15 +220,7 @@ class RenderChunkStorage(
             )
         }
 
-        IntArrays.mergeSort(
-            newRegionIndices,
-            object : IntComparator {
-                private val distanceArray = this@RenderChunkStorage.regionDistanceArray
-                override fun compare(k1: Int, k2: Int): Int {
-                    return distanceArray[k1].compareTo(distanceArray[k2])
-                }
-            }
-        )
+        IntIntrosort.sort(newRegionIndices, regionDistanceArray)
 
         val newRegionOrder = IntArray(totalRegion)
         for (i in newRegionIndices.indices) {
@@ -361,6 +343,12 @@ class RenderChunkStorage(
             chunkY,
             Math.floorMod(chunkZ, sizeXZ)
         )]
+    }
+
+    private fun chunkOrderComparator(chunkOrder: IntArray): Comparator<RenderChunk> {
+        return Comparator { o1, o2 ->
+            chunkOrder[o1.index].compareTo(chunkOrder[o2.index])
+        }
     }
 
     inline fun chunkPos2Index(x: Int, y: Int, z: Int): Int {

@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.terrain
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.common.sort.ObjectIntrosort
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
@@ -295,7 +296,7 @@ abstract class ChunkBuilder(
                                     sortFlag.set(true)
                                     taskQueueLock.withLock {
                                         if (taskQueue.size > 1) {
-                                            taskQueue.elements().sortWith(taskComparator, 0, taskQueue.size)
+                                            ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
                                         }
                                     }
                                 } finally {
@@ -341,7 +342,7 @@ abstract class ChunkBuilder(
             }
             if (!pendingTaskQueue.isEmpty) {
                 synchronized(pendingTaskQueue) {
-                    pendingTaskQueue.elements().sortWith(taskComparator, 0, pendingTaskQueue.size)
+                    ObjectIntrosort.sort(pendingTaskQueue.elements(), 0, pendingTaskQueue.size, taskComparator)
                 }
                 awaitLock.withLock {
                     awaitCondition.signalAll()
