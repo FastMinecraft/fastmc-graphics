@@ -3,14 +3,13 @@ package dev.fastmc.graphics.shared.terrain
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.IntArrayFIFOQueueNoShrink
 import dev.fastmc.common.collection.StaticBitSet
+import dev.fastmc.common.sort.ByteInsertionSort
 import dev.fastmc.common.sort.IntIntrosort
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.FastMcExtendScope
-import it.unimi.dsi.fastutil.ints.IntArrays
-import it.unimi.dsi.fastutil.ints.IntComparator
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.util.concurrent.Future
@@ -62,7 +61,7 @@ class RenderChunkStorage(
     var chunkOrderComp = chunkOrderComparator(chunkOrder); private set
 
     private val regionDistanceArray = IntArray(totalRegion)
-    var regionIndices = IntArray(totalRegion) { it }; private set
+    var regionIndices = ByteArray(totalRegion) { it.toByte() }; private set
     var regionOrder = regionIndices.copyOf(); private set
 
     private var caveCullingDirty = true
@@ -210,7 +209,8 @@ class RenderChunkStorage(
 
         val newRegionIndices = regionIndices.copyOf()
 
-        for (i in newRegionIndices) {
+        for (ib in newRegionIndices) {
+            val i = ib.toInt()
             val region = regionArray[i]
             val cameraRegionChunkX = renderer.cameraChunkX shr 4 shl 4
             val cameraRegionChunkZ = renderer.cameraChunkZ shr 4 shl 4
@@ -220,11 +220,11 @@ class RenderChunkStorage(
             )
         }
 
-        IntIntrosort.sort(newRegionIndices, regionDistanceArray)
+        ByteInsertionSort.sort(newRegionIndices, regionDistanceArray)
 
-        val newRegionOrder = IntArray(totalRegion)
+        val newRegionOrder = ByteArray(totalRegion)
         for (i in newRegionIndices.indices) {
-            newRegionOrder[newRegionIndices[i]] = i
+            newRegionOrder[newRegionIndices[i].toInt() and 0xFF] = i.toByte()
         }
 
         regionIndices = newRegionIndices

@@ -26,7 +26,7 @@ class RenderRegion(
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(storage.regionChunkCount), 0)
 
     @JvmField
-    val tempVisibleBits = IntArray(storage.regionChunkCount)
+    val tempVisibleBits = ByteArray(storage.regionChunkCount)
 
     @JvmField
     val vertexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())

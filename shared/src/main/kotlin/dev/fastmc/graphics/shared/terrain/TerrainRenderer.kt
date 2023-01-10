@@ -11,7 +11,6 @@ import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
 import dev.fastmc.graphics.shared.renderer.*
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.FastMcExtendScope
-import it.unimi.dsi.fastutil.objects.ObjectArrays
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -490,7 +489,7 @@ abstract class TerrainRenderer(
                     }
 
                     for (i in 0 until size) {
-                        region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i])
+                        region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i]).toByte()
                     }
 
                     for (layerIndex in 0 until layerCount) {
@@ -506,7 +505,7 @@ abstract class TerrainRenderer(
                                 layerBatch,
                                 vertexRegion.offset,
                                 indexRegion.offset,
-                                region.tempVisibleBits[i],
+                                region.tempVisibleBits[i].toInt(),
                                 (renderChunk.originX and 255 shl 20)
                                     or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
                                     or (renderChunk.originZ and 255)
@@ -641,7 +640,7 @@ abstract class TerrainRenderer(
         val shader = shaderManager.shader
 
         for (i in chunkStorage.regionIndices) {
-            val region = regionArray[i]
+            val region = regionArray[i.toInt()]
             if (!region.frustumCull.isInFrustum()) continue
             val layerBatch = region.getLayer(layerIndex)
             layerBatch.checkUpdate()
