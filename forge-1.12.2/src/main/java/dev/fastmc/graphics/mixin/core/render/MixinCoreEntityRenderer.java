@@ -32,6 +32,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.client.ForgeHooksClient;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.Project;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -42,7 +43,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
-import static org.lwjgl.opengl.GL11.*;
 
 @Mixin(value = EntityRenderer.class, priority = Integer.MAX_VALUE)
 public abstract class MixinCoreEntityRenderer {
@@ -475,7 +475,7 @@ public abstract class MixinCoreEntityRenderer {
             this.setupFog(-1, partialTicks);
             float fovModifier = this.getFOVModifier(partialTicks, true);
 
-            GlStateManager.matrixMode(GL_PROJECTION);
+            GlStateManager.matrixMode(GL11.GL_PROJECTION);
             GlStateManager.pushMatrix();
             GlStateManager.loadIdentity();
             Project.gluPerspective(
@@ -484,18 +484,18 @@ public abstract class MixinCoreEntityRenderer {
                 0.05F,
                 this.farPlaneDistance * 2.0F
             );
-            GlStateManager.matrixMode(GL_MODELVIEW);
+            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
             GlStateManager.pushMatrix();
             renderGlobal.renderSky(partialTicks, pass);
 
-            GlStateManager.matrixMode(GL_PROJECTION);
+            GlStateManager.matrixMode(GL11.GL_PROJECTION);
             GlStateManager.popMatrix();
-            GlStateManager.matrixMode(GL_MODELVIEW);
+            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
             GlStateManager.popMatrix();
         }
 
         this.setupFog(0, partialTicks);
-        GlStateManager.shadeModel(GL_SMOOTH);
+        GlStateManager.shadeModel(GL11.GL_SMOOTH);
 
         if (viewEntity.posY + (double) viewEntity.getEyeHeight() < 128.0D) {
             this.mc.profiler.endStartSection("clouds");
@@ -604,7 +604,7 @@ public abstract class MixinCoreEntityRenderer {
             RenderHelper.disableStandardItemLighting();
         }
 
-        GlStateManager.shadeModel(GL_FLAT);
+        GlStateManager.shadeModel(GL11.GL_FLAT);
         GlStateManager.depthMask(true);
         GlStateManager.enableCull();
         GlStateManager.disableBlend();
@@ -637,6 +637,10 @@ public abstract class MixinCoreEntityRenderer {
         blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
 
         int lightMapTexture = this.mc.getTextureManager().getTexture(this.locationLightMap).getGlTextureId();
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
 
         GlStateManager.disableAlpha();
@@ -670,7 +674,7 @@ public abstract class MixinCoreEntityRenderer {
         );
 
         GlStateManager.enableDepth();
-        GlStateManager.depthFunc(GL_LEQUAL);
+        GlStateManager.depthFunc(GL11.GL_LEQUAL);
 
         shader.bind();
         terrainRenderer.renderLayer(1);
