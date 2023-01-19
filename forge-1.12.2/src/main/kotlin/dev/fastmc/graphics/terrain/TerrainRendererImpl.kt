@@ -125,7 +125,6 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
         val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityRendererImpl
 
         for (y in startY..endY) {
-            task.checkCancelled()
             for (z in startZ..endZ) {
                 for (x in startX..endX) {
                     var blockState = worldSnapshot.getBlockState(x, y, z)

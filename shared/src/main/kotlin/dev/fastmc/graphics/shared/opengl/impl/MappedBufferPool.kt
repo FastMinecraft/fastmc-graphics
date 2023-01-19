@@ -89,9 +89,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                 block /= 2
             }
 
-            if (lock.withLock { condition.awaitNanos(5_000_000L) } <= 0) {
-                task.checkCancelled()
-            }
+            lock.withLock { condition.await() }
         }
     }
 
@@ -226,9 +224,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                     block /= 2
                 }
 
-                if (lock.withLock { condition.awaitNanos(1_000_000L) } <= 0) {
-                    task.checkCancelled()
-                }
+                lock.withLock { condition.await() }
             }
         }
 

@@ -4,7 +4,6 @@ import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.common.sort.ObjectIntrosort
-import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
@@ -20,7 +19,7 @@ abstract class ChunkBuilder(
     protected val renderer: TerrainRenderer
 ) {
     val taskFactoryPool = ObjectPool { TaskFactory() }
-    private val taskScheduler = TaskScheduler()
+    val taskScheduler = TaskScheduler()
 
     private val uploadTaskQueue = ConcurrentLinkedQueue<UploadTask>()
     private val pendingUploadQueueMap = FastIntMap<PendingUploadQueue>()
@@ -38,14 +37,15 @@ abstract class ChunkBuilder(
     private var distanceFlush = false
 
     inline fun scheduleTasks(block: TaskFactory.() -> Unit) {
-        val taskScheduler = synchronized(taskFactoryPool) {
+        val taskFactory = synchronized(taskFactoryPool) {
             taskFactoryPool.get()
         }
-        taskScheduler.init()
-        block.invoke(taskScheduler)
+        taskFactory.init()
+        block.invoke(taskFactory)
         synchronized(taskFactoryPool) {
-            taskFactoryPool.put(taskScheduler)
+            taskFactoryPool.put(taskFactory)
         }
+        taskScheduler.update()
     }
 
     fun update() {
@@ -105,7 +105,6 @@ abstract class ChunkBuilder(
     protected abstract fun newRebuildTask(scheduler: TaskFactory): RebuildTask
 
     internal inline fun scheduleUpload(task: ChunkBuilderTask, block: UploadTask.Builder.() -> Unit) {
-        task.checkCancelled()
         val builder = UploadTask.Builder(task).apply(block)
         task.renderChunk.onTaskFinish(task)
         uploadTaskQueue.add(builder.build())
@@ -239,73 +238,30 @@ abstract class ChunkBuilder(
         }
     }
 
-    private inner class TaskScheduler{
+    inner class TaskScheduler {
         private val active = AtomicBoolean(true)
         private val threadGroup = ThreadGroup(threadGroupMain, "ChunkBuilder")
-        private val pendingTaskQueue = FastObjectArrayList<ChunkBuilderTask>()
         private val taskQueue = FastObjectArrayList<ChunkBuilderTask>()
-        private val taskQueueLock = ReentrantLock(false)
+        @Volatile
+        private var dirty = false
         private val awaitLock = ReentrantLock(true)
         private val awaitCondition = awaitLock.newCondition()
-        private val sortFlag = AtomicBoolean(false)
-        private val sortLock = ReentrantLock(true)
-        private val sortCondition = sortLock.newCondition()
         private val activeCount = AtomicInteger(0)
+
         private val threads = run {
             val r = Runnable {
                 while (active.get()) {
                     try {
-                        if (taskQueue.isEmpty
-                            && !awaitLock.withLock { awaitCondition.await(500, TimeUnit.MILLISECONDS) }) continue
-                        if (taskQueue.isEmpty && pendingTaskQueue.isEmpty) continue
-                        var task: ChunkBuilderTask? = null
-
-                        if (sortFlag.get()) {
-                            sortLock.withLock {
-                                sortCondition.await()
-                            }
+                        while (taskQueue.isEmpty || dirty) {
+                            awaitLock.withLock { awaitCondition.await() }
                         }
+                        val task = synchronized(taskQueue) { taskQueue.removeLastOrNull() } ?: continue
 
-                        taskQueueLock.withLock {
-                            if (!taskQueue.isEmpty) {
-                                task = taskQueue.removeLast()
-                            } else if (!pendingTaskQueue.isEmpty) {
-                                synchronized(pendingTaskQueue) {
-                                    if (!pendingTaskQueue.isEmpty) {
-                                        taskQueue.addAll(pendingTaskQueue)
-                                        pendingTaskQueue.clear()
-                                    }
-                                    task = taskQueue.removeLast()
-                                }
-                                awaitLock.withLock {
-                                    awaitCondition.signalAll()
-                                }
-                            }
-                        }
-
-                        task?.let {
-                            try {
-                                activeCount.incrementAndGet()
-                                it.run()
-                            } finally {
-                                activeCount.decrementAndGet()
-                            }
-
-                            if (taskQueue.size > 1 && orderDirty.getAndSet(false)) {
-                                try {
-                                    sortFlag.set(true)
-                                    taskQueueLock.withLock {
-                                        if (taskQueue.size > 1) {
-                                            ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
-                                        }
-                                    }
-                                } finally {
-                                    sortFlag.set(false)
-                                    sortLock.withLock {
-                                        sortCondition.signal()
-                                    }
-                                }
-                            }
+                        try {
+                            activeCount.incrementAndGet()
+                            task.run()
+                        } finally {
+                            activeCount.decrementAndGet()
                         }
                     } catch (e: InterruptedException) {
                         continue
@@ -326,11 +282,12 @@ abstract class ChunkBuilder(
         private val orderDirty = AtomicBoolean(true)
 
         val activeTaskCount get() = activeCount.get()
-        val queuedTaskCount get() = pendingTaskQueue.size + taskQueue.size
+        val queuedTaskCount get() = taskQueue.size
 
         fun schedule(task: ChunkBuilderTask) {
-            synchronized(pendingTaskQueue) {
-                pendingTaskQueue.add(task)
+            synchronized(taskQueue) {
+                taskQueue.add(task)
+                dirty = true
             }
         }
 
@@ -340,9 +297,18 @@ abstract class ChunkBuilder(
             if (prev.matrixHash != taskComparator.matrixHash) {
                 orderDirty.set(true)
             }
-            if (!pendingTaskQueue.isEmpty) {
-                synchronized(pendingTaskQueue) {
-                    ObjectIntrosort.sort(pendingTaskQueue.elements(), 0, pendingTaskQueue.size, taskComparator)
+            if (!taskQueue.isEmpty) {
+                synchronized(taskQueue) {
+                    taskQueue.removeIf {
+                        if (it.isCancelled) {
+                            it.onFinish()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
+                    dirty = false
                 }
                 awaitLock.withLock {
                     awaitCondition.signalAll()
@@ -351,10 +317,7 @@ abstract class ChunkBuilder(
         }
 
         fun clear() {
-            synchronized(pendingTaskQueue) {
-                pendingTaskQueue.clear()
-            }
-            taskQueueLock.withLock {
+            synchronized(taskQueue) {
                 taskQueue.clear()
             }
             while (activeCount.get() != 0) {
@@ -372,7 +335,6 @@ abstract class ChunkBuilder(
                 it.join()
             }
         }
-
 
         private inner class TaskComparator : Comparator<ChunkBuilderTask> {
             val frustum = renderer.frustum

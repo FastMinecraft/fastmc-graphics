@@ -179,7 +179,6 @@ abstract class RebuildContextImpl : RebuildContext(3) {
         val emptyFluid = Fluids.EMPTY
 
         for (y in startY..endY) {
-            task.checkCancelled()
             for (z in startZ..endZ) {
                 for (x in startX..endX) {
                     renderBlockPos.set(x, y, z)
