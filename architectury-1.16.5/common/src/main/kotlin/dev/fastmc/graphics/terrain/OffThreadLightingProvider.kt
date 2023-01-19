@@ -126,7 +126,7 @@ class OffThreadLightingProvider(
             LinkedBlockingQueue(),
             ThreadFactory {
                 Thread(threadGroupMain, it, "FastMinecraft-Lighting").apply {
-                    priority = 7
+                    priority = 6
                 }
             }
         )
