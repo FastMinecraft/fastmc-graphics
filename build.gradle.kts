@@ -1,3 +1,4 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import kotlin.math.max
 
 allprojects {
@@ -68,7 +69,7 @@ subprojects {
             useJUnitPlatform()
             jvmArgs("-Xmx2G")
         }
-        compileKotlin {
+        withType<KotlinCompile> {
             kotlinOptions {
                 freeCompilerArgs += listOf(
                     "-opt-in=kotlin.RequiresOptIn",
