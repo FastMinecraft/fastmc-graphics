@@ -332,8 +332,8 @@ abstract class TerrainRenderer(
 
                                     if (!renderChunk.renderRegion.frustumCull.isInFrustum()) continue
                                     if (!renderChunk.checkFogRange()) continue
-                                    if (!renderChunk.checkAnyAdjBuilt()) continue
                                     if (!caveCullingBitSet.containsFast(chunkIndex)) continue
+                                    if (!renderChunk.checkAnyAdjBuilt()) continue
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
                                     if (!renderChunk.frustumCull.isInFrustum()) continue
 

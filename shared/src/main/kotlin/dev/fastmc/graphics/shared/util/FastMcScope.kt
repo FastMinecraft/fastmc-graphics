@@ -21,7 +21,7 @@ private val corePool = ScheduledThreadPoolExecutor(
 
         override fun newThread(r: Runnable): Thread {
             return Thread(group, r, "FastMinecraft-Core-${counter.incrementAndGet()}").apply {
-                priority = 7
+                priority = 6
                 isDaemon = true
             }
         }

@@ -272,7 +272,7 @@ abstract class ChunkBuilder(
             }
             Array(ParallelUtils.CPU_THREADS) {
                 Thread(threadGroup, r, "FastMinecraft-ChunkBuilder-${it + 1}").apply {
-                    priority = 4
+                    priority = 3
                     start()
                 }
             }
