@@ -129,29 +129,29 @@ public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess 
         }
     }
 
-    /**
-     * @author Luna
-     * @reason Raytrace optimization
-     */
-    @Overwrite
-    @Nullable
-    public RayTraceResult rayTraceBlocks(
-        Vec3d vec31,
-        Vec3d vec32,
-        boolean stopOnLiquid,
-        boolean ignoreBlockWithoutBoundingBox,
-        boolean returnLastUncollidableBlock
-    ) {
-        //noinspection ConstantConditions
-        return RaytraceKt.rayTrace(
-            (World) (Object) this,
-            vec31,
-            vec32,
-            stopOnLiquid,
-            ignoreBlockWithoutBoundingBox,
-            returnLastUncollidableBlock
-        );
-    }
+//    /**
+//     * @author Luna
+//     * @reason Raytrace optimization
+//     */
+//    @Overwrite
+//    @Nullable
+//    public RayTraceResult rayTraceBlocks(
+//        Vec3d vec31,
+//        Vec3d vec32,
+//        boolean stopOnLiquid,
+//        boolean ignoreBlockWithoutBoundingBox,
+//        boolean returnLastUncollidableBlock
+//    ) {
+//        //noinspection ConstantConditions
+//        return RaytraceKt.rayTrace(
+//            (World) (Object) this,
+//            vec31,
+//            vec32,
+//            stopOnLiquid,
+//            ignoreBlockWithoutBoundingBox,
+//            returnLastUncollidableBlock
+//        );
+//    }
 
     /**
      * @author Luna
