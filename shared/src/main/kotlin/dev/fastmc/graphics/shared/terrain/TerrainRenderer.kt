@@ -83,7 +83,9 @@ abstract class TerrainRenderer(
     abstract val isDebugEnabled: Boolean
     abstract val caveCulling: Boolean
 
-    abstract fun newChunkLoadingStatusCache(): ChunkLoadingStatusCache
+    private val chunkLoadingStatusCacheTimer = TickTimer()
+    protected abstract val chunkLoadingStatusCache: ChunkLoadingStatusCache<*>
+
     abstract fun update(uploadChunks: Boolean)
 
     protected fun update0(uploadChunks: Boolean) {
@@ -110,6 +112,10 @@ abstract class TerrainRenderer(
                         || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
                 val frustumUpdate = lastMatrixHash != matrixHash
                 val forceUpdate = forceUpdateTimer.tickAndReset(1000L) || !chunkStorage.cameraChunk.isBuilt
+
+                if (forceUpdate) {
+                    chunkLoadingStatusCacheTimer.reset(-500)
+                }
 
                 val updateChunk = caveCullingUpdate || viewUpdate || frustumUpdate || forceUpdate
                 var updateRegion = indicesUpdate || viewUpdate || frustumUpdate || forceUpdate
@@ -216,11 +222,11 @@ abstract class TerrainRenderer(
 
     fun reload() {
         chunkCullingResults = Array(chunkStorage.totalRegion) {
-            Array(ParallelUtils.CPU_THREADS * 2) {
+            Array(ParallelUtils.CPU_THREADS) {
                 CullingResult()
             }
         }
-        tileEntityResults = Array(ParallelUtils.CPU_THREADS * 2) {
+        tileEntityResults = Array(ParallelUtils.CPU_THREADS) {
             TileEntityResult()
         }
         lastViewDistance = viewDistance
@@ -311,9 +317,10 @@ abstract class TerrainRenderer(
         if (tileEntityResults.isEmpty()) return
 
         val chunkIndices = chunkStorage.sortedChunkIndices
-        var idCounter = ParallelUtils.CPU_THREADS * 2
+        var idCounter = ParallelUtils.CPU_THREADS
 
-        val statusCache = newChunkLoadingStatusCache()
+        val statusCache = chunkLoadingStatusCache
+        statusCache.init(cameraChunkX, cameraChunkZ, chunkStorage.sizeXZ, chunkLoadingStatusCacheTimer.tickAndReset(1000L))
         val caveCulling = caveCulling
 
         coroutineScope {
@@ -321,7 +328,7 @@ abstract class TerrainRenderer(
                 val caveCullingBitSet = chunkStorage.caveCullingBitSet
                 ParallelUtils.splitListIndex(
                     total = chunkIndices.size,
-                    parallelism = ParallelUtils.CPU_THREADS * 2,
+                    parallelism = ParallelUtils.CPU_THREADS,
                     blockForEach = { start, end ->
                         val jobID = --idCounter
                         launch {
@@ -360,7 +367,7 @@ abstract class TerrainRenderer(
             } else {
                 ParallelUtils.splitListIndex(
                     total = chunkIndices.size,
-                    parallelism = ParallelUtils.CPU_THREADS * 2,
+                    parallelism = ParallelUtils.CPU_THREADS,
                     blockForEach = { start, end ->
                         val jobID = --idCounter
                         launch {
@@ -449,7 +456,7 @@ abstract class TerrainRenderer(
         return adjacentChunk != null && adjacentChunk.isBuilt
     }
 
-    private inline fun RenderChunk.checkAdjChunkLoaded(statusCache: ChunkLoadingStatusCache): Boolean {
+    private inline fun RenderChunk.checkAdjChunkLoaded(statusCache: ChunkLoadingStatusCache<*>): Boolean {
         return statusCache.isChunkLoaded(chunkX, chunkZ + 1)
             && statusCache.isChunkLoaded(chunkX - 1, chunkZ)
             && statusCache.isChunkLoaded(chunkX, chunkZ - 1)

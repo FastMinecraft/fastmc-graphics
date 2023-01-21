@@ -10,8 +10,6 @@ import dev.fastmc.graphics.mixin.accessor.AccessorVoxelShape
 import dev.fastmc.graphics.renderer.TileEntityRendererImpl
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.terrain.*
 import dev.fastmc.graphics.util.Minecraft
 import net.minecraft.block.BlockRenderType
@@ -81,9 +79,7 @@ class TerrainRendererImpl(renderer: WorldRenderer) : TerrainRenderer(
             return !player.isSpectator || !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)
         }
 
-    override fun newChunkLoadingStatusCache(): ChunkLoadingStatusCache {
-        return ChunkLoadingStatusCacheImpl(mc.world!!, cameraChunkX, cameraChunkZ, chunkStorage.sizeXZ)
-    }
+    override val chunkLoadingStatusCache = ChunkLoadingStatusCacheImpl()
 
     override fun update(uploadChunks: Boolean) {
         val world = mc.world ?: return

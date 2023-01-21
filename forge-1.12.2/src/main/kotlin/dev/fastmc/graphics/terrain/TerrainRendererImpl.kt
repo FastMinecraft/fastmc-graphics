@@ -3,8 +3,6 @@ package dev.fastmc.graphics.terrain
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.renderer.TileEntityRendererImpl
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.terrain.*
 import net.minecraft.block.material.Material
 import net.minecraft.client.Minecraft
@@ -49,9 +47,7 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
             return !player.isSpectator || !world.getBlockState(cameraBlockPos).isOpaqueCube
         }
 
-    override fun newChunkLoadingStatusCache(): ChunkLoadingStatusCache {
-        return ChunkLoadingStatusCacheImpl(mc.world!!, cameraChunkX, cameraChunkZ, chunkStorage.sizeXZ)
-    }
+    override val chunkLoadingStatusCache = ChunkLoadingStatusCacheImpl()
 
     override fun update(uploadChunks: Boolean) {
         if (viewDistance != lastViewDistance) {
