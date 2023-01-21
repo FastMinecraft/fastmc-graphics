@@ -4,20 +4,21 @@ import dev.fastmc.common.MathUtils;
 import dev.fastmc.common.MathUtilsKt;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.shared.FpsDisplay;
+import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
-import dev.fastmc.graphics.shared.terrain.TerrainRenderer;
 import dev.fastmc.graphics.shared.terrain.TerrainShaderManager;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
-import net.minecraft.client.particle.ParticleManager;
-import net.minecraft.client.renderer.*;
-import net.minecraft.client.renderer.culling.ClippingHelperImpl;
-import net.minecraft.client.renderer.culling.Frustum;
+import net.minecraft.client.renderer.ActiveRenderInfo;
+import net.minecraft.client.renderer.EntityRenderer;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.texture.ITextureObject;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -26,6 +27,8 @@ import net.minecraft.entity.passive.EntityAnimal;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.MobEffects;
 import net.minecraft.potion.PotionEffect;
+import net.minecraft.profiler.Profiler;
+import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
@@ -33,19 +36,16 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.client.ForgeHooksClient;
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.util.glu.Project;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
-
 @Mixin(value = EntityRenderer.class, priority = Integer.MAX_VALUE)
-public abstract class MixinCoreEntityRenderer {
+public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
     @Shadow
     @Final
     private Minecraft mc;
@@ -60,11 +60,7 @@ public abstract class MixinCoreEntityRenderer {
     @Shadow
     private float fogColorBlue;
     @Shadow
-    private int frameCount;
-    @Shadow
     private boolean debugView;
-    @Shadow
-    private boolean renderHand;
     @Shadow
     private float thirdPersonDistancePrev;
     @Shadow
@@ -77,47 +73,12 @@ public abstract class MixinCoreEntityRenderer {
     private double cameraZoom;
     @Shadow
     private double cameraPitch;
-
-    @Shadow
-    protected abstract void setupCameraTransform(float partialTicks, int pass);
-
-    @Shadow
-    protected abstract void updateFogColor(float partialTicks);
-
-    @Shadow
-    protected abstract boolean isDrawBlockOutline();
-
-    @Shadow
-    protected abstract float getFOVModifier(float partialTicks, boolean useFOVSetting);
-
-    @Shadow
-    protected abstract void setupFog(int startCoords, float partialTicks);
-
-    @Shadow
-    protected abstract void renderCloudsCheck(
-        RenderGlobal renderGlobalIn,
-        float partialTicks,
-        int pass,
-        double x,
-        double y,
-        double z
-    );
-
-    @Shadow
-    public abstract void disableLightmap();
-
-    @Shadow
-    public abstract void enableLightmap();
-
-    @Shadow
-    protected abstract void renderRainSnow(float partialTicks);
-
-    @Shadow
-    protected abstract void renderHand(float partialTicks, int pass);
-
     @Shadow
     @Final
     private ResourceLocation locationLightMap;
+
+    @Shadow
+    protected abstract float getFOVModifier(float partialTicks, boolean useFOVSetting);
 
     @Inject(method = "setupCameraTransform", at = @At("RETURN"))
     private void setupCameraTransform$Inject$RETURN(float partialTicks, int pass, CallbackInfo ci) {
@@ -429,263 +390,206 @@ public abstract class MixinCoreEntityRenderer {
         );
     }
 
-    /**
-     * @author Luna
-     * @reason Render override
-     */
-    @Overwrite
-    private void renderWorldPass(int pass, float partialTicks, long finishTimeNano) {
-        RenderGlobal renderGlobal = this.mc.renderGlobal;
-        ParticleManager particleManager = this.mc.effectRenderer;
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        TerrainRenderer terrainRenderer = worldRenderer.getTerrainRenderer();
+    private int currentPass = 0;
 
-        boolean drawBlockOutline = this.isDrawBlockOutline();
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ActiveRenderInfo;updateRenderInfo(Lnet/minecraft/entity/Entity;Z)V", shift = At.Shift.AFTER))
+    private void Inject$renderWorldPass$INVOKE$ActiveRenderInfo$updateRenderInfo$AFTER(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        currentPass = pass;
+
+        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
         Entity viewEntity = this.mc.getRenderViewEntity();
         assert viewEntity != null;
-        GlStateManager.enableCull();
 
-        this.mc.profiler.endStartSection("clear");
-        GlStateManager.viewport(0, 0, this.mc.displayWidth, this.mc.displayHeight);
-        this.updateFogColor(partialTicks);
-        GlStateManager.clear(16640);
-
-        this.mc.profiler.endStartSection("camera");
-        this.setupCameraTransform(partialTicks, pass);
-        ActiveRenderInfo.updateRenderInfo(
-            viewEntity,
-            this.mc.gameSettings.thirdPersonView == 2
-        ); //Forge: MC-46445 Spectator mode particles and sounds computed from where you have been before
         Vec3d cameraPosition = ActiveRenderInfo.projectViewFromEntity(viewEntity, partialTicks);
         worldRenderer.updateCameraPos(cameraPosition.x, cameraPosition.y, cameraPosition.z);
         worldRenderer.updateFrustum();
+    }
 
-        this.mc.profiler.endStartSection("frustum");
-        ClippingHelperImpl.getInstance();
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/EntityRenderer;renderCloudsCheck(Lnet/minecraft/client/renderer/RenderGlobal;FIDDD)V", ordinal = 0))
+    private void Inject$renderWorldPass$INVOKE$EntityRenderer$renderCloudsCheck(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        this.mc.profiler.endStartSection("clouds");
+    }
 
-        this.mc.profiler.endStartSection("culling");
-        ICamera camera = new Frustum();
-        double renderPosX = viewEntity.lastTickPosX + (viewEntity.posX - viewEntity.lastTickPosX) * (double) partialTicks;
-        double renderPosY = viewEntity.lastTickPosY + (viewEntity.posY - viewEntity.lastTickPosY) * (double) partialTicks;
-        double renderPosZ = viewEntity.lastTickPosZ + (viewEntity.posZ - viewEntity.lastTickPosZ) * (double) partialTicks;
-        camera.setPosition(renderPosX, renderPosY, renderPosZ);
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;loadIdentity()V", ordinal = 0))
+    private void Inject$renderWorldPass$INVOKE$GlStateManager$loadIdentity$0(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        GlStateManager.pushMatrix();
+    }
 
-        if (this.mc.gameSettings.renderDistanceChunks >= 4) {
-            this.mc.profiler.endStartSection("sky");
-            this.setupFog(-1, partialTicks);
-            float fovModifier = this.getFOVModifier(partialTicks, true);
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;renderSky(FI)V"))
+    private void Inject$renderWorldPass$INVOKE$RenderGlobal$renderSky(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        GlStateManager.pushMatrix();
+    }
 
-            GlStateManager.matrixMode(GL11.GL_PROJECTION);
-            GlStateManager.pushMatrix();
-            GlStateManager.loadIdentity();
-            Project.gluPerspective(
-                fovModifier,
-                (float) this.mc.displayWidth / (float) this.mc.displayHeight,
-                0.05F,
-                this.farPlaneDistance * 2.0F
-            );
-            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
-            GlStateManager.pushMatrix();
-            renderGlobal.renderSky(partialTicks, pass);
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;loadIdentity()V", ordinal = 1))
+    private void Redirect$renderWorldPass$INVOKE$RenderGlobal$loadIdentity$1() {
 
-            GlStateManager.matrixMode(GL11.GL_PROJECTION);
-            GlStateManager.popMatrix();
-            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
-            GlStateManager.popMatrix();
-        }
+    }
 
-        this.setupFog(0, partialTicks);
-        GlStateManager.shadeModel(GL11.GL_SMOOTH);
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", ordinal = 1))
+    private void Redirect$renderWorldPass$INVOKE$Project$gluPerspective$1(
+        float fovy,
+        float aspect,
+        float zNear,
+        float zFar
+    ) {
+        GlStateManager.popMatrix();
+    }
 
-        if (viewEntity.posY + (double) viewEntity.getEyeHeight() < 128.0D) {
-            this.mc.profiler.endStartSection("clouds");
-            this.renderCloudsCheck(renderGlobal, partialTicks, pass, renderPosX, renderPosY, renderPosZ);
-        }
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;matrixMode(I)V", ordinal = 3, shift = At.Shift.AFTER))
+    private void Inject$renderWorldPass$INVOKE$GlStateManager$matrixMode$3$AFTER(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        GlStateManager.popMatrix();
+    }
 
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", args = "ldc=prepareterrain"))
+    private void Redirect$renderWorldPass$INVOKE_STRING$Profiler$endStartSection$prepareterrain(
+        Profiler instance,
+        String name
+    ) {
+
+    }
+
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", args = "ldc=terrain_setup"))
+    private void Redirect$renderWorldPass$INVOKE_STRING$Profiler$endStartSection$terrain_setup(
+        Profiler instance,
+        String name
+    ) {
+
+    }
+
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;setupTerrain(Lnet/minecraft/entity/Entity;DLnet/minecraft/client/renderer/culling/ICamera;IZ)V"))
+    private void Redirect$renderWorldPass$INVOKE$RenderGlobal$setupTerrain(
+        RenderGlobal instance,
+        Entity viewEntity,
+        double partialTicks,
+        ICamera camera,
+        int frameCount,
+        boolean playerSpectator
+    ) {
         this.mc.profiler.endStartSection("fog");
-        this.setupFog(0, partialTicks);
-        setupTerrainFog(partialTicks);
+        setupTerrainFogShader((float) partialTicks);
 
         this.mc.profiler.endStartSection("updateTerrain");
-        if (pass == 0 || pass == 2) {
-            terrainRenderer.update();
-        }
-
-        this.mc.profiler.endStartSection("terrain");
-        renderTerrainPass1();
-
-        this.enableLightmap();
-        GlStateManager.shadeModel(7424);
-        GlStateManager.alphaFunc(516, 0.1F);
-
-        if (!this.debugView) {
-            RenderHelper.enableStandardItemLighting();
-            net.minecraftforge.client.ForgeHooksClient.setRenderPass(0);
-            renderGlobal.renderEntities(viewEntity, camera, partialTicks);
-            net.minecraftforge.client.ForgeHooksClient.setRenderPass(0);
-            RenderHelper.disableStandardItemLighting();
-            this.disableLightmap();
-        }
-
-        if (drawBlockOutline && this.mc.objectMouseOver != null && !viewEntity.isInsideOfMaterial(Material.WATER)) {
-            EntityPlayer entityplayer = (EntityPlayer) viewEntity;
-            GlStateManager.disableAlpha();
-            this.mc.profiler.endStartSection("outline");
-            if (!net.minecraftforge.client.ForgeHooksClient.onDrawBlockHighlight(
-                renderGlobal,
-                entityplayer,
-                mc.objectMouseOver,
-                0,
-                partialTicks
-            )) {
-                renderGlobal.drawSelectionBox(entityplayer, this.mc.objectMouseOver, 0, partialTicks);
-            }
-            GlStateManager.enableAlpha();
-        }
-
-        if (this.mc.debugRenderer.shouldRender()) {
-            this.mc.debugRenderer.renderDebug(partialTicks, finishTimeNano);
-        }
-
-        this.mc.profiler.endStartSection("destroyProgress");
-        GlStateManager.enableBlend();
-        GlStateManager.tryBlendFuncSeparate(
-            GlStateManager.SourceFactor.SRC_ALPHA,
-            GlStateManager.DestFactor.ONE,
-            GlStateManager.SourceFactor.ONE,
-            GlStateManager.DestFactor.ZERO
-        );
-        ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-        blockTexture.setBlurMipmap(false, false);
-        renderGlobal.drawBlockDamageTexture(
-            Tessellator.getInstance(),
-            Tessellator.getInstance().getBuffer(),
-            viewEntity,
-            partialTicks
-        );
-        blockTexture.restoreLastBlurMipmap();
-        GlStateManager.disableBlend();
-
-        if (!this.debugView) {
-            this.mc.profiler.endStartSection("litParticles");
-            this.enableLightmap();
-            particleManager.renderLitParticles(viewEntity, partialTicks);
-            RenderHelper.disableStandardItemLighting();
-            this.setupFog(0, partialTicks);
-
-            this.mc.profiler.endStartSection("particles");
-            particleManager.renderParticles(viewEntity, partialTicks);
-            this.disableLightmap();
-        }
-
-        this.mc.profiler.endStartSection("weather");
-        GlStateManager.depthMask(false);
-        GlStateManager.enableCull();
-        this.renderRainSnow(partialTicks);
-
-        this.mc.profiler.endStartSection("worldBorder");
-        renderGlobal.renderWorldBorder(viewEntity, partialTicks);
-
-        this.mc.profiler.endStartSection("terrain");
-        renderTerrainPass2();
-
-        if (!this.debugView) {
-            RenderHelper.enableStandardItemLighting();
-            net.minecraftforge.client.ForgeHooksClient.setRenderPass(1);
-            renderGlobal.renderEntities(viewEntity, camera, partialTicks);
-            // restore blending function changed by RenderGlobal.preRenderDamagedBlocks
-            GlStateManager.tryBlendFuncSeparate(
-                GlStateManager.SourceFactor.SRC_ALPHA,
-                GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-                GlStateManager.SourceFactor.ONE,
-                GlStateManager.DestFactor.ZERO
-            );
-            net.minecraftforge.client.ForgeHooksClient.setRenderPass(-1);
-            RenderHelper.disableStandardItemLighting();
-        }
-
-        GlStateManager.shadeModel(GL11.GL_FLAT);
-        GlStateManager.depthMask(true);
-        GlStateManager.enableCull();
-        GlStateManager.disableBlend();
-        GlStateManager.disableFog();
-
-        if (viewEntity.posY + (double) viewEntity.getEyeHeight() >= 128.0D) {
-            this.mc.profiler.endStartSection("clouds");
-            this.renderCloudsCheck(renderGlobal, partialTicks, pass, renderPosX, renderPosY, renderPosZ);
-        }
-
-        this.mc.profiler.endStartSection("forgeRenderLast");
-        net.minecraftforge.client.ForgeHooksClient.dispatchRenderLast(renderGlobal, partialTicks);
-
-        this.mc.profiler.endStartSection("hand");
-        if (this.renderHand) {
-            GlStateManager.clear(256);
-            this.renderHand(partialTicks, pass);
-        }
+        getTerrainRenderer().update(currentPass == 0 || currentPass == 2);
     }
 
-    private void renderTerrainPass1() {
-        this.mc.profiler.startSection("solid");
-        TerrainRenderer terrainRenderer = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
-        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;updateChunks(J)V"))
+    private void Redirect$renderWorldPass$INVOKE$RenderGlobal$updateChunks(RenderGlobal instance, long finishTimeNano) {
 
-        RenderHelper.disableStandardItemLighting();
+    }
 
-        ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-        GlStateManager.bindTexture(blockTexture.getGlTextureId());
-        blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", args = "ldc=updatechunks"))
+    private void Redirect$renderWorldPass$INVOKE_STRING$Profiler$endStartSection$updatechunks(
+        Profiler instance,
+        String name
+    ) {
 
-        int lightMapTexture = this.mc.getTextureManager().getTexture(this.locationLightMap).getGlTextureId();
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
+    }
 
-        GlStateManager.disableAlpha();
-        GlStateManager.disableBlend();
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE_STRING", target = "Lnet/minecraft/profiler/Profiler;endStartSection(Ljava/lang/String;)V", args = "ldc=translucent"))
+    private void Redirect$renderWorldPass$INVOKE_STRING$Profiler$endStartSection$terrain(
+        Profiler instance,
+        String name
+    ) {
+        this.mc.profiler.endStartSection("terrain");
+    }
 
-        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
-        shader.bind();
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;renderBlockLayer(Lnet/minecraft/util/BlockRenderLayer;DILnet/minecraft/entity/Entity;)I"))
+    private int Redirect$renderWorldPass$INVOKE$RenderGlobal$renderBlockLayer(
+        RenderGlobal instance,
+        BlockRenderLayer layer,
+        double partialTicks,
+        int pass,
+        Entity entityIn
+    ) {
+        switch (layer) {
+            case SOLID:
+                this.mc.profiler.startSection("solid");
+                renderLayerPass(0);
+                this.mc.profiler.endSection();
+                break;
+            case TRANSLUCENT:
+                this.mc.profiler.startSection("translucent");
+                renderLayerPass(1);
+                this.mc.profiler.endSection();
+                break;
+        }
+        return 0;
+    }
 
-        terrainRenderer.renderLayer(0);
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;enableAlpha()V", ordinal = 0))
+    private void Redirect$renderWorldPass$INVOKE$GlStateManager$enableAlpha$0() {
 
+    }
+
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;alphaFunc(IF)V", ordinal = 0))
+    private void Inject$renderWorldPass$INVOKE$GlStateManager$alphaFunc$0(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
         GlStateManager.enableAlpha();
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
-        glBindVertexArray(0);
-
-        this.mc.profiler.endSection();
     }
 
-    private void renderTerrainPass2() {
-        this.mc.profiler.startSection("translucent");
-        TerrainRenderer terrainRenderer = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
-        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
-        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
-
-        this.mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
-        GlStateManager.enableBlend();
-        GlStateManager.tryBlendFuncSeparate(
-            GlStateManager.SourceFactor.SRC_ALPHA,
-            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
-            GlStateManager.SourceFactor.ONE,
-            GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
-        );
-
-        GlStateManager.enableDepth();
-        GlStateManager.depthFunc(GL11.GL_LEQUAL);
-
-        shader.bind();
-        terrainRenderer.renderLayer(1);
-        shader.unbind();
-
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
-        glBindVertexArray(0);
-        this.mc.profiler.endSection();
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/RenderGlobal;renderWorldBorder(Lnet/minecraft/entity/Entity;F)V"))
+    private void Inject$renderWorldPass$INVOKE$RenderGlobal$renderWorldBorder(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        this.mc.profiler.endStartSection("worldBorder");
     }
 
-    private void setupTerrainFog(float partialTicks) {
+    @Override
+    public void preRenderLayer(int layerIndex) {
+        ICoreWorldRenderer.super.preRenderLayer(layerIndex);
+        switch (layerIndex) {
+            case 0:
+                GlStateManager.disableBlend();
+                break;
+            case 1:
+                GlStateManager.enableBlend();
+                GlStateManager.tryBlendFuncSeparate(
+                    GlStateManager.SourceFactor.SRC_ALPHA,
+                    GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                    GlStateManager.SourceFactor.ONE,
+                    GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA
+                );
+                GlStateManager.enableDepth();
+                GlStateManager.depthFunc(GL11.GL_LEQUAL);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid layer index: " + layerIndex);
+        }
+    }
+
+    private void setupTerrainFogShader(float partialTicks) {
         EntityRenderer entityRenderer = (EntityRenderer) (Object) this;
         TerrainShaderManager fogManager = FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer().getShaderManager();
         float red = this.fogColorRed;
@@ -781,5 +685,17 @@ public abstract class MixinCoreEntityRenderer {
                 viewDistance
             );
         }
+    }
+
+    @Override
+    public int getLightMapTexture() {
+        return this.mc.getTextureManager().getTexture(this.locationLightMap).getGlTextureId();
+    }
+
+    @Override
+    public void bindBlockTexture() {
+        ITextureObject blockTexture = this.mc.getTextureManager().getTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+        GlStateManager.bindTexture(blockTexture.getGlTextureId());
+        blockTexture.setBlurMipmap(false, this.mc.gameSettings.mipmapLevels > 0);
     }
 }

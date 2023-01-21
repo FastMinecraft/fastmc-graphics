@@ -14,7 +14,6 @@ import dev.fastmc.graphics.shared.terrain.TerrainShaderManager;
 import dev.fastmc.graphics.util.AdaptersKt;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
@@ -41,7 +40,6 @@ import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.light.LightingProvider;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
@@ -52,7 +50,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
 @SuppressWarnings("deprecation")
@@ -247,7 +244,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
             MathHelper.floor(renderPosY)
         ) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
         float fogDistance = Math.max(viewDistance - 16.0F, 32.0F);
-        applyFogShader(camera, fogDistance, thickFog);
+        setupTerrainFogShader(camera, fogDistance, thickFog);
     }
 
     @Inject(method = "setupTerrain", at = @At("HEAD"), cancellable = true)
@@ -469,7 +466,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
     }
 
     @SuppressWarnings("deprecation")
-    private void applyFogShader(Camera camera, float viewDistance, boolean thickFog) {
+    private void setupTerrainFogShader(Camera camera, float viewDistance, boolean thickFog) {
         float end;
         float start;
         CameraSubmersionType cameraSubmersionType = camera.getSubmersionType();

@@ -53,7 +53,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
 import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
 @SuppressWarnings("deprecation")
@@ -241,7 +240,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
             MathHelper.floor(renderPosY)
         ) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
         float fogDistance = Math.max(viewDistance - 16.0F, 32.0F);
-        applyFogShader(camera, fogDistance, thickFog);
+        setupTerrainFogShader(camera, fogDistance, thickFog);
     }
 
     @Inject(method = "setupTerrain", at = @At("HEAD"), cancellable = true)
@@ -465,7 +464,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         }
     }
 
-    private void applyFogShader(Camera camera, float viewDistance, boolean thickFog) {
+    private void setupTerrainFogShader(Camera camera, float viewDistance, boolean thickFog) {
         float red = AccessorBackgroundRenderer.getRed();
         float green = AccessorBackgroundRenderer.getGreen();
         float blue = AccessorBackgroundRenderer.getBlue();

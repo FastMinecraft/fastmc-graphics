@@ -68,7 +68,7 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
         return ChunkLoadingStatusCacheImpl(mc.world!!, cameraChunkX, cameraChunkZ, chunkStorage.sizeXZ)
     }
 
-    override fun update() {
+    override fun update(uploadChunks: Boolean) {
         val world = mc.world ?: return
 
         if (viewDistance != lastViewDistance) {
@@ -86,7 +86,7 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
 
         (world.chunkManager.lightingProvider as OffThreadLightingProvider).doLightUpdates()
 
-        update0()
+        update0(uploadChunks)
 
         FastMcMod.profiler.end()
     }

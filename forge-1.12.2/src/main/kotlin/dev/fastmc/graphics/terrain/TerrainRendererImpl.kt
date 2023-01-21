@@ -53,13 +53,13 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
         return ChunkLoadingStatusCacheImpl(mc.world!!, cameraChunkX, cameraChunkZ, chunkStorage.sizeXZ)
     }
 
-    override fun update() {
+    override fun update(uploadChunks: Boolean) {
         if (viewDistance != lastViewDistance) {
             mc.renderGlobal.loadRenderers()
         }
 
         FastMcMod.profiler.start("pre")
-        update0()
+        update0(uploadChunks)
         FastMcMod.profiler.end()
     }
 }

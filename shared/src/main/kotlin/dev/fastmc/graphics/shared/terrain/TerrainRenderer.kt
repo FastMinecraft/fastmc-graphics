@@ -84,9 +84,9 @@ abstract class TerrainRenderer(
     abstract val caveCulling: Boolean
 
     abstract fun newChunkLoadingStatusCache(): ChunkLoadingStatusCache
-    abstract fun update()
+    abstract fun update(uploadChunks: Boolean)
 
-    protected fun update0() {
+    protected fun update0(uploadChunks: Boolean) {
         if (isDebugEnabled) {
             updateDebugInfo()
         }
@@ -115,15 +115,19 @@ abstract class TerrainRenderer(
                 var updateRegion = indicesUpdate || viewUpdate || frustumUpdate || forceUpdate
 
                 FastMcMod.profiler.swap("uploadChunk")
-                val uploadChunkJob = launch(this@runBlocking.coroutineContext) {
-                    chunkBuilder.update()
+                val uploadChunkJob = if (uploadChunks) {
+                    launch(this@runBlocking.coroutineContext) {
+                        chunkBuilder.update()
 
-                    FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
+                        FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
 
-                    if (chunkBuilder.visibleUploadCount != 0) {
-                        chunkStorage.markCaveCullingDirty()
-                        updateRegion = true
+                        if (chunkBuilder.visibleUploadCount != 0) {
+                            chunkStorage.markCaveCullingDirty()
+                            updateRegion = true
+                        }
                     }
+                } else {
+                    null
                 }
 
                 FastMcMod.profiler.swap("camera")
@@ -140,7 +144,7 @@ abstract class TerrainRenderer(
 
                 FastMcMod.profiler.swap("regionCulling")
                 val regionCullingJob = launch {
-                    uploadChunkJob.join()
+                    uploadChunkJob?.join()
                     chunkCullingJob?.join()
                     if (updateRegion) {
                         updateRegionCulling(indicesUpdate && !updateChunk, indicesUpdate || viewUpdate || forceUpdate)
@@ -151,7 +155,7 @@ abstract class TerrainRenderer(
                 sortTranslucent()
 
                 FastMcMod.profiler.swap("uploadChunk")
-                uploadChunkJob.join()
+                uploadChunkJob?.join()
                 FastMcMod.profiler.swap("chunkCulling")
                 chunkCullingJob?.join()
                 FastMcMod.profiler.swap("regionCulling")
