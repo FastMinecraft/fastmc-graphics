@@ -6,6 +6,7 @@ import dev.fastmc.common.collection.FastObjectArrayList;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.mixin.accessor.AccessorBackgroundRenderer;
 import dev.fastmc.graphics.mixin.accessor.AccessorLightmapTextureManager;
+import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import dev.fastmc.graphics.shared.terrain.RenderChunk;
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer;
@@ -42,7 +43,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.chunk.light.LightingProvider;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
@@ -58,7 +58,7 @@ import static org.lwjgl.opengl.GL11.GL_LEQUAL;
 
 @SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
-public abstract class MixinCoreWorldRenderer {
+public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
     @Shadow
     @Final
     private MinecraftClient client;
@@ -74,31 +74,23 @@ public abstract class MixinCoreWorldRenderer {
     private Long2ObjectMap<SortedSet<BlockBreakingInfo>> blockBreakingProgressions;
     @Shadow
     private @Nullable Framebuffer translucentFramebuffer;
-
     @Shadow
     @Final
     private TextureManager textureManager;
-
     @Shadow
     private boolean cloudsDirty;
-
     @Shadow
     private int viewDistance;
-
     @Shadow
     private BuiltChunkStorage chunks;
-
     @Shadow
     private ChunkBuilder chunkBuilder;
-
     @Mutable
     @Shadow
     @Final
     private Set<BlockEntity> noCullingBlockEntities;
-
     @Shadow
     private Set<ChunkBuilder.BuiltChunk> chunksToRebuild;
-
     @Mutable
     @Shadow
     @Final
@@ -222,7 +214,6 @@ public abstract class MixinCoreWorldRenderer {
         Matrix4f projection,
         CallbackInfo ci
     ) {
-
         Vec3d cameraPos = camera.getPos();
         double renderPosX = cameraPos.getX();
         double renderPosY = cameraPos.getY();
@@ -270,7 +261,6 @@ public abstract class MixinCoreWorldRenderer {
         ci.cancel();
     }
 
-
     @Inject(method = "renderLayer", at = @At("HEAD"), cancellable = true)
     private void Inject$renderLayer$HEAD(
         RenderLayer renderLayer,
@@ -283,24 +273,35 @@ public abstract class MixinCoreWorldRenderer {
         ci.cancel();
 
         if (renderLayer == RenderLayer.getSolid()) {
-            renderTerrainPass1();
+            renderLayerPass(0);
         } else if (renderLayer == RenderLayer.getTranslucent()) {
-            renderTerrainPass2();
+            renderLayerPass(1);
         } else if (renderLayer == RenderLayer.getTripwire()) {
-            renderTerrainPass3();
+            renderLayerPass(2);
         }
     }
 
-    private void renderTerrainPass1() {
-        TerrainRenderer terrainRenderer = getTerrainRenderer();
-        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+    @Override
+    public void preRenderLayer(int layerIndex) {
+        ICoreWorldRenderer.super.preRenderLayer(layerIndex);
+        switch (layerIndex) {
+            case 0:
+                preRenderSolid();
+                break;
+            case 1:
+                preRenderTranslucent();
+                setupTranslucentFbo(this.translucentFramebuffer);
+                break;
+            case 2:
+                preRenderTranslucent();
+                setupTranslucentFbo(this.weatherFramebuffer);
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid layer index: " + layerIndex);
+        }
+    }
 
-        bindLightMapTexture();
-
-        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
-        blockTexture.bindTexture();
-        blockTexture.setFilter(false, true);
-
+    private static void preRenderSolid() {
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
         RenderSystem.defaultBlendFunc();
@@ -308,27 +309,9 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.depthFunc(GL_LEQUAL);
         //noinspection deprecation
         RenderSystem.disableAlphaTest();
-
-        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
-        shader.bind();
-
-        terrainRenderer.renderLayer(0);
-
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
-        glBindVertexArray(0);
-        shader.unbind();
     }
 
-    private void renderTerrainPass2() {
-        TerrainRenderer terrainRenderer = getTerrainRenderer();
-        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
-
-        bindLightMapTexture();
-
-        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
-        blockTexture.bindTexture();
-        blockTexture.setFilter(false, true);
-
+    private static void preRenderTranslucent() {
         RenderSystem.enableCull();
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(
@@ -339,65 +322,15 @@ public abstract class MixinCoreWorldRenderer {
         );
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL_LEQUAL);
-
-        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
-        shader.bind();
-
-        Framebuffer translucent = this.translucentFramebuffer;
-        Framebuffer weather = this.weatherFramebuffer;
-
-        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && translucent != null && weather != null;
-        if (usingFbo) {
-            translucent.beginWrite(false);
-        } else {
-            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
-        }
-
-        terrainRenderer.renderLayer(1);
     }
 
-    private void renderTerrainPass3() {
-        TerrainRenderer terrainRenderer = getTerrainRenderer();
-        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
-
-        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
-        shader.bind();
-
-        Framebuffer translucent = this.translucentFramebuffer;
-        Framebuffer weather = this.weatherFramebuffer;
-
-        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && translucent != null && weather != null;
+    private static void setupTranslucentFbo(Framebuffer weather) {
+        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && weather != null;
         if (usingFbo) {
             weather.beginWrite(false);
         } else {
             MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
         }
-
-        terrainRenderer.renderLayer(2);
-
-        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
-        glBindVertexArray(0);
-        shader.unbind();
-    }
-
-    private void bindLightMapTexture() {
-        LightmapTextureManager lightmapTextureManager = this.client.gameRenderer.getLightmapTextureManager();
-        int lightMapTexture = getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
-    }
-
-    private AbstractTexture getTexture(Identifier identifier) {
-        AbstractTexture texture = textureManager.getTexture(identifier);
-        if (texture == null) {
-            texture = new ResourceTexture(identifier);
-            textureManager.registerTexture(identifier, texture);
-        }
-
-        return texture;
     }
 
 //    @SuppressWarnings("deprecation")
@@ -520,7 +453,8 @@ public abstract class MixinCoreWorldRenderer {
             matrices.pop();
         }
 
-        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getGlobalTileEntityList().get();
+        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
+            .getGlobalTileEntityList().get();
         for (int i = 0; i < globalTileEntityList.size(); i++) {
             BlockEntity blockEntity = globalTileEntityList.get(i);
             BlockPos pos = blockEntity.getPos();
@@ -529,13 +463,6 @@ public abstract class MixinCoreWorldRenderer {
             BlockEntityRenderDispatcher.INSTANCE.render(blockEntity, tickDelta, matrices, immediate);
             matrices.pop();
         }
-    }
-
-    private void renderTileEntityFastMc(float tickDelta) {
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.preRender(tickDelta);
-        worldRenderer.getTileEntityRenderer().render();
-        worldRenderer.postRender();
     }
 
     private void applyFogShader(Camera camera, float viewDistance, boolean thickFog) {
@@ -588,8 +515,26 @@ public abstract class MixinCoreWorldRenderer {
         }
     }
 
-    @NotNull
-    private TerrainRenderer getTerrainRenderer() {
-        return FastMcMod.INSTANCE.getWorldRenderer().getTerrainRenderer();
+    @Override
+    public int getLightMapTexture() {
+        LightmapTextureManager lightmapTextureManager = this.client.gameRenderer.getLightmapTextureManager();
+        return getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
+    }
+
+    @Override
+    public void bindBlockTexture() {
+        AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
+        blockTexture.bindTexture();
+        blockTexture.setFilter(false, true);
+    }
+
+    private AbstractTexture getTexture(Identifier identifier) {
+        AbstractTexture texture = textureManager.getTexture(identifier);
+        if (texture == null) {
+            texture = new ResourceTexture(identifier);
+            textureManager.registerTexture(identifier, texture);
+        }
+
+        return texture;
     }
 }
