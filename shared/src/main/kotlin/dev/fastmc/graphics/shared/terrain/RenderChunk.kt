@@ -143,27 +143,6 @@ class RenderChunk(
         }
     }
 
-    fun updateAdjacentChunk() {
-        for (i in Direction.VALUES.indices) {
-            val direction = Direction.VALUES[i]
-            var other = renderer.chunkStorage.getRenderChunkByChunk(
-                chunkX + direction.offsetX,
-                chunkY + direction.offsetY,
-                chunkZ + direction.offsetZ
-            )
-
-            if (other != null
-                && ((other.chunkX - chunkX) xor direction.offsetX)
-                or ((other.chunkY - chunkY) xor direction.offsetY)
-                or ((other.chunkZ - chunkZ) xor direction.offsetZ) != 0
-            ) {
-                other = null
-            }
-
-            adjacentRenderChunk[i] = other
-        }
-    }
-
     fun destroy() {
         isDestroyed = true
         lastTaskRef.getAndSet(null)?.cancel()

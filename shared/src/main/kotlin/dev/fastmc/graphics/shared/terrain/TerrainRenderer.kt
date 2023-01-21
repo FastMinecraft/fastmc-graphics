@@ -212,11 +212,11 @@ abstract class TerrainRenderer(
 
     fun reload() {
         chunkCullingResults = Array(chunkStorage.totalRegion) {
-            Array(FastMcCoreScope.threadCount) {
+            Array(ParallelUtils.CPU_THREADS * 2) {
                 CullingResult()
             }
         }
-        tileEntityResults = Array(FastMcCoreScope.threadCount) {
+        tileEntityResults = Array(ParallelUtils.CPU_THREADS * 2) {
             TileEntityResult()
         }
         lastViewDistance = viewDistance
@@ -307,7 +307,7 @@ abstract class TerrainRenderer(
         if (tileEntityResults.isEmpty()) return
 
         val chunkIndices = chunkStorage.sortedChunkIndices
-        var idCounter = FastMcCoreScope.threadCount
+        var idCounter = ParallelUtils.CPU_THREADS * 2
 
         val statusCache = newChunkLoadingStatusCache()
         val caveCulling = caveCulling
@@ -317,7 +317,7 @@ abstract class TerrainRenderer(
                 val caveCullingBitSet = chunkStorage.caveCullingBitSet
                 ParallelUtils.splitListIndex(
                     total = chunkIndices.size,
-                    parallelism = FastMcCoreScope.threadCount,
+                    parallelism = ParallelUtils.CPU_THREADS * 2,
                     blockForEach = { start, end ->
                         val jobID = --idCounter
                         launch {
@@ -356,7 +356,7 @@ abstract class TerrainRenderer(
             } else {
                 ParallelUtils.splitListIndex(
                     total = chunkIndices.size,
-                    parallelism = FastMcCoreScope.threadCount,
+                    parallelism = ParallelUtils.CPU_THREADS * 2,
                     blockForEach = { start, end ->
                         val jobID = --idCounter
                         launch {

@@ -157,30 +157,109 @@ class RenderChunkStorage(
                     val endX = min((blockX shr 4) + 16, endChunkX)
                     val endZ = min((blockZ shr 4) + 16, endChunkZ)
 
+                    var indexX = Math.floorMod(startX, sizeXZ)
+                    val startIndexZ = Math.floorMod(startZ, sizeXZ)
+                    var indexZ: Int
+
                     for (x in startX until endX) {
+                        indexZ = startIndexZ
                         for (z in startZ until endZ) {
-                            for (y in minChunkY until maxChunkY) {
-                                val renderChunk = getRenderChunkByChunk0(x, y, z)
+                            var renderChunk: RenderChunk
+                            var index = (indexX + indexZ * sizeXZ) * sizeY
+
+                            renderChunk = renderChunkArray[index]
+                            renderChunk.setPos(x, minChunkY, z)
+                            renderChunk.renderRegion = region
+
+                            updateAdjancentChunk(
+                                renderChunk,
+                                indexX,
+                                indexZ,
+                                startChunkX,
+                                endChunkX,
+                                startChunkZ,
+                                endChunkZ
+                            )
+
+                            renderChunk = renderChunkArray[index + sizeY - 1]
+                            renderChunk.setPos(x, maxChunkY - 1, z)
+                            renderChunk.renderRegion = region
+
+                            updateAdjancentChunk(
+                                renderChunk,
+                                indexX,
+                                indexZ,
+                                startChunkX,
+                                endChunkX,
+                                startChunkZ,
+                                endChunkZ
+                            )
+
+                            for (y in minChunkY + 1 until maxChunkY - 1) {
+                                renderChunk = renderChunkArray[++index]
                                 renderChunk.setPos(x, y, z)
                                 renderChunk.renderRegion = region
+
+                                renderChunk.adjacentRenderChunk[Direction.I_DOWN] = renderChunkArray[index - 1]
+                                renderChunk.adjacentRenderChunk[Direction.I_UP] = renderChunkArray[index + 1]
+
+                                updateAdjancentChunk(
+                                    renderChunk,
+                                    indexX,
+                                    indexZ,
+                                    startChunkX,
+                                    endChunkX,
+                                    startChunkZ,
+                                    endChunkZ
+                                )
                             }
+
+                            indexZ = (indexZ + 1) % sizeXZ
                         }
+                        indexX = (indexX + 1) % sizeXZ
                     }
                 }
             }
         }
+    }
 
-        coroutineScope {
-            ParallelUtils.splitListIndex(
-                totalChunk,
-                blockForEach = { start, end ->
-                    launch {
-                        for (i in start until end) {
-                            renderChunkArray[i].updateAdjacentChunk()
-                        }
-                    }
-                }
-            )
+    private fun updateAdjancentChunk(
+        renderChunk: RenderChunk,
+        indexX: Int,
+        indexZ: Int,
+        startChunkX: Int,
+        endChunkX: Int,
+        startChunkZ: Int,
+        endChunkZ: Int
+    ) {
+        val y = renderChunk.chunkY
+
+        if (renderChunk.chunkX > startChunkX) {
+            renderChunk.adjacentRenderChunk[Direction.I_WEST] =
+                renderChunkArray[chunkPos2Index(Math.floorMod(indexX - 1, sizeXZ), y, indexZ)]
+        } else {
+            renderChunk.adjacentRenderChunk[Direction.I_WEST] = null
+        }
+
+        if (renderChunk.chunkX < endChunkX - 1) {
+            renderChunk.adjacentRenderChunk[Direction.I_EAST] =
+                renderChunkArray[chunkPos2Index(Math.floorMod(indexX + 1, sizeXZ), y, indexZ)]
+        } else {
+            renderChunk.adjacentRenderChunk[Direction.I_EAST] = null
+        }
+
+        if (renderChunk.chunkZ > startChunkZ) {
+            renderChunk.adjacentRenderChunk[Direction.I_NORTH] =
+                renderChunkArray[chunkPos2Index(indexX, y, Math.floorMod(indexZ - 1, sizeXZ))]
+        } else {
+            renderChunk.adjacentRenderChunk[Direction.I_NORTH] = null
+        }
+
+        if (renderChunk.chunkZ < endChunkZ - 1) {
+            renderChunk.adjacentRenderChunk[Direction.I_SOUTH] =
+                renderChunkArray[chunkPos2Index(indexX, y, Math.floorMod(indexZ + 1, sizeXZ))]
+        } else {
+            renderChunk.adjacentRenderChunk[Direction.I_SOUTH] = null
         }
     }
 

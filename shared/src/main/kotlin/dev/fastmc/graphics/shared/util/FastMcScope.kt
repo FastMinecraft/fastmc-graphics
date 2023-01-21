@@ -8,13 +8,12 @@ import java.util.concurrent.ForkJoinWorkerThread
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.max
 
 @JvmField
 val threadGroupMain = ThreadGroup("fastmc-grahics")
 
 private val corePool = ScheduledThreadPoolExecutor(
-    max(ParallelUtils.CPU_THREADS - 1, 1),
+    ParallelUtils.CPU_THREADS,
     object : ThreadFactory {
         private val counter = AtomicInteger(0)
         private val group = ThreadGroup(threadGroupMain, "core")
@@ -33,11 +32,10 @@ private val coreContext = corePool.asCoroutineDispatcher()
 object FastMcCoreScope : CoroutineScope by CoroutineScope(coreContext) {
     val pool = corePool
     val context = coreContext
-    val threadCount = max(ParallelUtils.CPU_THREADS - 1, 1)
 }
 
 private val extendPool = ForkJoinPool(
-    max(ParallelUtils.CPU_THREADS - 1, 1),
+    ParallelUtils.CPU_THREADS,
     object : ForkJoinPool.ForkJoinWorkerThreadFactory {
         private val idRegistry = IDRegistry()
         override fun newThread(pool: ForkJoinPool): ForkJoinWorkerThread {
