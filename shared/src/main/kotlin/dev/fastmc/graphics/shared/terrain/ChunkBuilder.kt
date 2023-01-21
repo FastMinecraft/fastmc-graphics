@@ -240,7 +240,7 @@ abstract class ChunkBuilder(
 
     inner class TaskScheduler {
         private val active = AtomicBoolean(true)
-        private val threadGroup = ThreadGroup(threadGroupMain, "ChunkBuilder")
+        private val threadGroup = ThreadGroup(threadGroupMain, "chunk")
         private val taskQueue = FastObjectArrayList<ChunkBuilderTask>()
         @Volatile
         private var dirty = false
@@ -271,7 +271,7 @@ abstract class ChunkBuilder(
                 }
             }
             Array(ParallelUtils.CPU_THREADS) {
-                Thread(threadGroup, r, "FastMinecraft-ChunkBuilder-${it + 1}").apply {
+                Thread(threadGroup, r, "fastmc-graphics-chunk-${it + 1}").apply {
                     priority = 3
                     start()
                 }

@@ -11,16 +11,16 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.max
 
 @JvmField
-val threadGroupMain = ThreadGroup("FastMinecraft")
+val threadGroupMain = ThreadGroup("fastmc-grahics")
 
 private val corePool = ScheduledThreadPoolExecutor(
     max(ParallelUtils.CPU_THREADS - 1, 1),
     object : ThreadFactory {
         private val counter = AtomicInteger(0)
-        private val group = ThreadGroup(threadGroupMain, "Core")
+        private val group = ThreadGroup(threadGroupMain, "core")
 
         override fun newThread(r: Runnable): Thread {
-            return Thread(group, r, "FastMinecraft-Core-${counter.incrementAndGet()}").apply {
+            return Thread(group, r, "fastmc-graphics-core-${counter.incrementAndGet()}").apply {
                 priority = 6
                 isDaemon = true
             }
@@ -46,7 +46,7 @@ private val extendPool = ForkJoinPool(
 
                 init {
                     priority = 3
-                    name = "FastMinecraft-Extend-${threadID + 1}"
+                    name = "fastmc-graphics-extend-${threadID + 1}"
                 }
 
                 override fun onTermination(exception: Throwable?) {
