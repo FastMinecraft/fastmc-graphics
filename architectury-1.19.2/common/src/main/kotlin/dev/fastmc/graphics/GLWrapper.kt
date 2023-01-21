@@ -3,7 +3,9 @@ package dev.fastmc.graphics
 import com.mojang.blaze3d.platform.GlStateManager
 import dev.fastmc.common.allocateInt
 import dev.fastmc.graphics.mixin.accessor.AccessorGlStateManager
+import dev.fastmc.graphics.shared.opengl.GL_ARRAY_BUFFER
 import dev.fastmc.graphics.shared.opengl.IGLWrapper
+import net.minecraft.client.render.BufferRenderer
 import org.lwjgl.opengl.*
 import java.nio.ByteBuffer
 import java.nio.FloatBuffer
@@ -35,7 +37,10 @@ class GLWrapper : IGLWrapper {
 
     // GL15
     override fun glDeleteBuffers(buffer: Int) = GL15C.glDeleteBuffers(buffer)
-    override fun glBindBuffer(target: Int, buffer: Int) = GL15C.glBindBuffer(target, buffer)
+    override fun glBindBuffer(target: Int, buffer: Int) {
+        BufferRenderer.resetCurrentVertexBuffer()
+        GL15C.glBindBuffer(target, buffer)
+    }
 
 
     // GL20
@@ -60,7 +65,10 @@ class GLWrapper : IGLWrapper {
 
     // GL30
     override fun glDeleteVertexArrays(array: Int) = GL30C.glDeleteVertexArrays(array)
-    override fun glBindVertexArray(array: Int) = GL30C.glBindVertexArray(array)
+    override fun glBindVertexArray(array: Int) {
+        BufferRenderer.resetCurrentVertexBuffer()
+        GL30C.glBindVertexArray(array)
+    }
     override fun glGenerateMipmap(target: Int) = GL30C.glGenerateMipmap(target)
     override fun glBindBufferBase(target: Int, index: Int, buffer: Int) = GL30C.glBindBufferBase(target, index, buffer)
     override fun glBindBufferRange(target: Int, index: Int, buffer: Int, offset: Long, size: Long) =

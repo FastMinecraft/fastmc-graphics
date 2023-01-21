@@ -1,7 +1,6 @@
 package dev.fastmc.graphics.renderer
 
 import com.mojang.blaze3d.systems.RenderSystem
-import dev.fastmc.graphics.mixin.accessor.AccessorBufferRenderer
 import dev.fastmc.graphics.shared.opengl.glBindTexture
 import dev.fastmc.graphics.shared.opengl.glBindVertexArray
 import dev.fastmc.graphics.shared.opengl.glUseProgramForce
@@ -31,7 +30,6 @@ class WorldRendererImpl(private val mc: Minecraft, override val resourceManager:
     }
 
     override fun postRender() {
-        AccessorBufferRenderer.setCurrentVertexArray(0)
         glBindVertexArray(0)
         glBindTexture(0)
         glUseProgramForce(0)

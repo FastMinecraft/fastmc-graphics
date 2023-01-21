@@ -13,31 +13,25 @@ import dev.fastmc.graphics.shared.terrain.TerrainShaderManager;
 import dev.fastmc.graphics.util.AdaptersKt;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.ShaderEffect;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.option.CloudRenderMode;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRenderDispatcher;
 import net.minecraft.client.render.chunk.ChunkBuilder;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.render.model.ModelLoader;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.ResourceTexture;
 import net.minecraft.client.texture.SpriteAtlasTexture;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.client.util.math.Vector3d;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
@@ -45,11 +39,13 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.profiler.Profiler;
 import net.minecraft.util.registry.RegistryEntry;
 import net.minecraft.world.biome.Biome;
+import net.minecraft.world.chunk.light.LightingProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.*;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Set;
@@ -68,62 +64,29 @@ public abstract class MixinCoreWorldRenderer {
     private ClientWorld world;
     @Shadow
     @Final
-    private EntityRenderDispatcher entityRenderDispatcher;
-    @Shadow
-    private @Nullable Frustum capturedFrustum;
-    @Shadow
-    private int regularEntityCount;
-    @Shadow
-    private int blockEntityCount;
-    @Shadow
-    private @Nullable Framebuffer entityFramebuffer;
-    @Shadow
-    private @Nullable Framebuffer weatherFramebuffer;
-    @Shadow
-    private @Nullable Framebuffer entityOutlinesFramebuffer;
-    @Shadow
-    @Final
     private BufferBuilderStorage bufferBuilders;
-    @Shadow
-    @Final
-    private Vector3d capturedFrustumPosition;
-    @Shadow
-    private boolean shouldCaptureFrustum;
-    @Shadow
-    private @Nullable ShaderEffect entityOutlineShader;
     @Shadow
     @Final
     private Long2ObjectMap<SortedSet<BlockBreakingInfo>> blockBreakingProgressions;
     @Shadow
-    private @Nullable Framebuffer translucentFramebuffer;
-    @Shadow
-    private @Nullable Framebuffer particlesFramebuffer;
-    @Shadow
-    private @Nullable ShaderEffect transparencyShader;
-    @Shadow
-    private @Nullable Framebuffer cloudsFramebuffer;
-
-    @Shadow
     private boolean cloudsDirty;
-
     @Shadow
     private int viewDistance;
-
     @Shadow
     private BuiltChunkStorage chunks;
-
     @Shadow
     private ChunkBuilder chunkBuilder;
-
     @Mutable
     @Shadow
     @Final
     private Set<BlockEntity> noCullingBlockEntities;
-
     @Mutable
     @Shadow
     @Final
     private ObjectArrayList<Object> chunkInfos;
+    @Shadow
+    @Final
+    private BlockEntityRenderDispatcher blockEntityRenderDispatcher;
 
     @Shadow
     protected abstract void resetTransparencyShader();
@@ -131,80 +94,9 @@ public abstract class MixinCoreWorldRenderer {
     @Shadow
     protected abstract void loadTransparencyShader();
 
-    @Shadow
-    protected abstract boolean canDrawEntityOutlines();
+    @Shadow private @Nullable Framebuffer translucentFramebuffer;
 
-    @Shadow
-    protected abstract void captureFrustum(
-        Matrix4f modelMatrix,
-        Matrix4f matrix4f,
-        double x,
-        double y,
-        double z,
-        Frustum frustum
-    );
-
-    @Shadow
-    protected abstract void checkEmpty(MatrixStack matrices);
-
-    @Shadow
-    protected abstract void drawBlockOutline(
-        MatrixStack matrices,
-        VertexConsumer vertexConsumer,
-        Entity entity,
-        double d,
-        double e,
-        double f,
-        BlockPos blockPos,
-        BlockState blockState
-    );
-
-    @Shadow
-    protected abstract void renderWeather(LightmapTextureManager manager, float f, double d, double e, double g);
-
-    @Shadow
-    protected abstract void renderWorldBorder(Camera camera);
-
-    @Shadow
-    protected abstract void renderChunkDebugInfo(Camera camera);
-
-    @Shadow
-    protected abstract void renderEntity(
-        Entity entity,
-        double cameraX,
-        double cameraY,
-        double cameraZ,
-        float tickDelta,
-        MatrixStack matrices,
-        VertexConsumerProvider vertexConsumers
-    );
-
-    @Shadow
-    @Final
-    private BlockEntityRenderDispatcher blockEntityRenderDispatcher;
-
-    @Shadow
-    private Frustum frustum;
-
-    @Shadow
-    public abstract void renderClouds(
-        MatrixStack par1,
-        Matrix4f par2,
-        float par3,
-        double par4,
-        double par5,
-        double par6
-    );
-
-    @Shadow
-    public abstract void renderSky(
-        MatrixStack par1,
-        Matrix4f par2,
-        float par3,
-        Camera par4,
-        boolean par5,
-        Runnable par6
-    );
+    @Shadow private @Nullable Framebuffer weatherFramebuffer;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void Inject$init$RETURN(MinecraftClient client, BufferBuilderStorage bufferBuilders, CallbackInfo ci) {
@@ -304,12 +196,18 @@ public abstract class MixinCoreWorldRenderer {
         return getTerrainRenderer().getDebugInfoString();
     }
 
-    /**
-     * @author Luna
-     * @reason Mojang made a whole mess
-     */
-    @Overwrite
-    public void render(
+    @Redirect(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/chunk/light/LightingProvider;doLightUpdates(IZZ)I"))
+    private int Redirect$render$INVOKE$doLightUpdates(
+        LightingProvider instance,
+        int i,
+        boolean doSkylight,
+        boolean skipEdgeLightPropagation
+    ) {
+        return 8964;
+    }
+
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;setupTerrain(Lnet/minecraft/client/render/Camera;Lnet/minecraft/client/render/Frustum;ZZ)V"))
+    private void Inject$render$INVOKE$setupTerrain(
         MatrixStack matrices,
         float tickDelta,
         long limitTime,
@@ -317,26 +215,20 @@ public abstract class MixinCoreWorldRenderer {
         Camera camera,
         GameRenderer gameRenderer,
         LightmapTextureManager lightmapTextureManager,
-        Matrix4f projection
+        Matrix4f projection,
+        CallbackInfo ci
     ) {
-        assert this.client.world != null;
-        Profiler profiler = this.world.getProfiler();
-        profiler.swap("setup");
 
-        RenderSystem.setShaderGameTime(this.world.getTime(), tickDelta);
-        this.blockEntityRenderDispatcher.configure(this.world, camera, this.client.crosshairTarget);
-        this.entityRenderDispatcher.configure(this.world, camera, this.client.targetedEntity);
         Vec3d cameraPos = camera.getPos();
         double renderPosX = cameraPos.getX();
         double renderPosY = cameraPos.getY();
         double renderPosZ = cameraPos.getZ();
-        Matrix4f modelView = matrices.peek().getPositionMatrix().copy();
+        Matrix4f modelView = matrices.peek().getPositionMatrix();
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
         worldRenderer.updateScreenSize(
             client.getWindow().getFramebufferWidth(),
             client.getWindow().getFramebufferHeight()
         );
-        TerrainRenderer terrainRenderer = worldRenderer.getTerrainRenderer();
         org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
         org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
         worldRenderer.updateMatrix(projection1, modelView1);
@@ -345,297 +237,60 @@ public abstract class MixinCoreWorldRenderer {
         worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
         worldRenderer.updateFrustum();
         worldRenderer.updateGlobalUBO(tickDelta);
+        worldRenderer.getTerrainRenderer().update();
 
-        profiler.swap("light_update_queue");
-        this.world.runQueuedChunkUpdates();
-        profiler.swap("updateTerrain");
-        terrainRenderer.update();
-
-        profiler.swap("culling");
-        boolean bl = this.capturedFrustum != null;
-        Frustum frustum;
-        if (bl) {
-            frustum = this.capturedFrustum;
-            frustum.setPosition(
-                this.capturedFrustumPosition.x,
-                this.capturedFrustumPosition.y,
-                this.capturedFrustumPosition.z
-            );
-        } else {
-            frustum = this.frustum;
-        }
-
-        this.client.getProfiler().swap("captureFrustum");
-        if (this.shouldCaptureFrustum) {
-            this.captureFrustum(
-                modelView,
-                projection,
-                renderPosX,
-                renderPosY,
-                renderPosZ,
-                bl ? new Frustum(modelView, projection) : frustum
-            );
-            this.shouldCaptureFrustum = false;
-        }
-
-        profiler.swap("clear");
-        BackgroundRenderer.render(
-            camera,
-            tickDelta,
-            this.client.world,
-            this.client.options.viewDistance,
-            gameRenderer.getSkyDarkness(tickDelta)
-        );
-        RenderSystem.clear(16640, MinecraftClient.IS_SYSTEM_MAC);
         float viewDistance = gameRenderer.getViewDistance();
+        assert this.client.world != null;
         boolean thickFog = this.client.world.getDimensionEffects().useThickFog(
             MathHelper.floor(renderPosX),
             MathHelper.floor(renderPosY)
         ) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
-
-        profiler.swap("sky");
-        RenderSystem.setShader(GameRenderer::getPositionShader);
-        this.renderSky(
-            matrices,
-            projection,
-            tickDelta,
-            camera,
-            thickFog,
-            () -> BackgroundRenderer.applyFog(camera, BackgroundRenderer.FogType.FOG_SKY, viewDistance, thickFog)
-        );
-
-        profiler.swap("fog");
         float fogDistance = Math.max(viewDistance - 16.0F, 32.0F);
-        BackgroundRenderer.applyFog(
-            camera,
-            BackgroundRenderer.FogType.FOG_TERRAIN,
-            viewDistance,
-            thickFog
-        );
-        setupTerrainFog(camera, fogDistance, thickFog);
-
-        profiler.swap("terrain");
-        renderTerrainPass1(lightmapTextureManager);
-
-        if (this.world.getDimensionEffects().isDarkened()) {
-            DiffuseLighting.enableForLevel(matrices.peek().getPositionMatrix());
-        } else {
-            DiffuseLighting.disableForLevel(matrices.peek().getPositionMatrix());
-        }
-
-        profiler.swap("entities");
-        profiler.push("setup");
-        this.regularEntityCount = 0;
-        this.blockEntityCount = 0;
-
-        if (this.entityFramebuffer != null) {
-            this.entityFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
-            this.entityFramebuffer.copyDepthFrom(this.client.getFramebuffer());
-            this.client.getFramebuffer().beginWrite(false);
-        }
-
-        if (this.weatherFramebuffer != null) {
-            this.weatherFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
-        }
-
-        if (this.canDrawEntityOutlines()) {
-            assert this.entityOutlinesFramebuffer != null;
-            this.entityOutlinesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
-            this.client.getFramebuffer().beginWrite(false);
-        }
-
-        VertexConsumerProvider.Immediate immediate = this.bufferBuilders.getEntityVertexConsumers();
-
-        profiler.swap("vanilla");
-        boolean entityRendered = renderEntity(
-            matrices,
-            tickDelta,
-            camera,
-            renderPosX,
-            renderPosY,
-            renderPosZ,
-            frustum,
-            immediate
-        );
-        profiler.pop();
-
-        // Tile entities
-        profiler.swap("tileEntities");
-        profiler.push("vanilla");
-        renderTileEntityVanilla(matrices, tickDelta, renderPosX, renderPosY, renderPosZ, immediate);
-        profiler.swap("fastMinecraft");
-        renderTileEntityFastMc(tickDelta);
-        profiler.pop();
-
-        // Entity outline
-        profiler.swap("entities");
-        profiler.push("outline");
-        this.bufferBuilders.getOutlineVertexConsumers().draw();
-        if (entityRendered) {
-            assert this.entityOutlineShader != null;
-            this.entityOutlineShader.render(tickDelta);
-            this.client.getFramebuffer().beginWrite(false);
-        }
-        profiler.pop();
-
-        // Breaking progress
-        profiler.swap("destroyProgress");
-        for (Long2ObjectMap.Entry<SortedSet<BlockBreakingInfo>> blockBreakingInfoEntry : this.blockBreakingProgressions.long2ObjectEntrySet()) {
-            BlockPos blockPos3 = BlockPos.fromLong(blockBreakingInfoEntry.getLongKey());
-            double h = (double) blockPos3.getX() - renderPosX;
-            double x = (double) blockPos3.getY() - renderPosY;
-            double y = (double) blockPos3.getZ() - renderPosZ;
-            if (!(h * h + x * x + y * y > 1024.0D)) {
-                SortedSet<BlockBreakingInfo> sortedSet2 = blockBreakingInfoEntry.getValue();
-                if (sortedSet2 != null && !sortedSet2.isEmpty()) {
-                    int z = sortedSet2.last().getStage();
-                    matrices.push();
-                    matrices.translate(
-                        (double) blockPos3.getX() - renderPosX,
-                        (double) blockPos3.getY() - renderPosY,
-                        (double) blockPos3.getZ() - renderPosZ
-                    );
-                    MatrixStack.Entry entry3 = matrices.peek();
-                    VertexConsumer vertexConsumer2 = new OverlayVertexConsumer(
-                        this.bufferBuilders.getEffectVertexConsumers().getBuffer(
-                            ModelLoader.BLOCK_DESTRUCTION_RENDER_LAYERS.get(z)),
-                        entry3.getPositionMatrix(),
-                        entry3.getNormalMatrix()
-                    );
-                    this.client.getBlockRenderManager().renderDamage(
-                        this.world.getBlockState(blockPos3),
-                        blockPos3,
-                        this.world,
-                        matrices,
-                        vertexConsumer2
-                    );
-                    matrices.pop();
-                }
-            }
-        }
-
-        // Selected block outline
-        this.checkEmpty(matrices);
-        HitResult hitResult = this.client.crosshairTarget;
-        if (renderBlockOutline && hitResult != null && hitResult.getType() == HitResult.Type.BLOCK) {
-            profiler.swap("outline");
-            BlockPos blockPos4 = ((BlockHitResult) hitResult).getBlockPos();
-            BlockState blockState = this.world.getBlockState(blockPos4);
-            if (!blockState.isAir() && this.world.getWorldBorder().contains(blockPos4)) {
-                VertexConsumer vertexConsumer3 = immediate.getBuffer(RenderLayer.getLines());
-                this.drawBlockOutline(
-                    matrices,
-                    vertexConsumer3,
-                    camera.getFocusedEntity(),
-                    renderPosX,
-                    renderPosY,
-                    renderPosZ,
-                    blockPos4,
-                    blockState
-                );
-            }
-        }
-
-        // Debug renderer
-        MatrixStack matrixStack = RenderSystem.getModelViewStack();
-        matrixStack.push();
-        matrixStack.multiplyPositionMatrix(matrices.peek().getPositionMatrix());
-        RenderSystem.applyModelViewMatrix();
-        this.client.debugRenderer.render(matrices, immediate, renderPosX, renderPosY, renderPosZ);
-        matrixStack.pop();
-        RenderSystem.applyModelViewMatrix();
-        immediate.draw(TexturedRenderLayers.getEntityTranslucentCull());
-        immediate.draw(TexturedRenderLayers.getBannerPatterns());
-        immediate.draw(TexturedRenderLayers.getShieldPatterns());
-        immediate.draw(RenderLayer.getArmorGlint());
-        immediate.draw(RenderLayer.getArmorEntityGlint());
-        immediate.draw(RenderLayer.getGlint());
-        immediate.draw(RenderLayer.getDirectGlint());
-        immediate.draw(RenderLayer.getGlintTranslucent());
-        immediate.draw(RenderLayer.getEntityGlint());
-        immediate.draw(RenderLayer.getDirectEntityGlint());
-        immediate.draw(RenderLayer.getWaterMask());
-        this.bufferBuilders.getEffectVertexConsumers().draw();
-
-        profiler.swap("terrain");
-        if (this.translucentFramebuffer != null) {
-            immediate.draw(RenderLayer.getLines());
-            immediate.draw();
-            this.translucentFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
-            this.translucentFramebuffer.copyDepthFrom(this.client.getFramebuffer());
-
-            renderTerrainPass2(lightmapTextureManager);
-
-            profiler.swap("particles");
-            assert this.particlesFramebuffer != null;
-            this.particlesFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
-            this.particlesFramebuffer.copyDepthFrom(this.client.getFramebuffer());
-            ((RenderPhase) RenderPhase.PARTICLES_TARGET).startDrawing();
-            this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
-            ((RenderPhase) RenderPhase.PARTICLES_TARGET).endDrawing();
-
-        } else {
-            renderTerrainPass2(lightmapTextureManager);
-
-            immediate.draw(RenderLayer.getLines());
-            immediate.draw();
-
-            profiler.swap("particles");
-            this.client.particleManager.renderParticles(matrices, immediate, lightmapTextureManager, camera, tickDelta);
-        }
-
-        matrixStack.push();
-        matrixStack.multiplyPositionMatrix(matrices.peek().getPositionMatrix());
-        RenderSystem.applyModelViewMatrix();
-        if (this.client.options.getCloudRenderMode() != CloudRenderMode.OFF) {
-            profiler.swap("clouds");
-            if (this.transparencyShader != null) {
-                assert this.cloudsFramebuffer != null;
-                this.cloudsFramebuffer.clear(MinecraftClient.IS_SYSTEM_MAC);
-                ((RenderPhase) RenderPhase.CLOUDS_TARGET).startDrawing();
-                this.renderClouds(matrices, projection, tickDelta, renderPosX, renderPosY, renderPosZ);
-                ((RenderPhase) RenderPhase.CLOUDS_TARGET).endDrawing();
-            } else {
-                this.renderClouds(matrices, projection, tickDelta, renderPosX, renderPosY, renderPosZ);
-            }
-        }
-
-        if (this.transparencyShader != null) {
-            ((RenderPhase) RenderPhase.WEATHER_TARGET).startDrawing();
-            profiler.swap("weather");
-            this.renderWeather(lightmapTextureManager, tickDelta, renderPosX, renderPosY, renderPosZ);
-            this.renderWorldBorder(camera);
-            ((RenderPhase) RenderPhase.WEATHER_TARGET).endDrawing();
-            this.transparencyShader.render(tickDelta);
-            this.client.getFramebuffer().beginWrite(false);
-        } else {
-            RenderSystem.depthMask(false);
-            profiler.swap("weather");
-            this.renderWeather(lightmapTextureManager, tickDelta, renderPosX, renderPosY, renderPosZ);
-            this.renderWorldBorder(camera);
-            RenderSystem.depthMask(true);
-        }
-
-        this.renderChunkDebugInfo(camera);
-        RenderSystem.depthMask(true);
-        RenderSystem.disableBlend();
-        matrixStack.pop();
-        RenderSystem.applyModelViewMatrix();
-        BackgroundRenderer.clearFog();
+        applyFogShader(camera, fogDistance, thickFog);
     }
 
-    private void renderTerrainPass1(LightmapTextureManager lightmapTextureManager) {
-        this.client.getProfiler().push("solid");
+    @Inject(method = "setupTerrain", at = @At("HEAD"), cancellable = true)
+    private void Inject$setupTerrain$HEAD(
+        Camera camera,
+        Frustum frustum,
+        boolean hasForcedFrustum,
+        boolean spectator,
+        CallbackInfo ci
+    ) {
+        ci.cancel();
+    }
 
+    @Inject(method = "updateChunks", at = @At("HEAD"), cancellable = true)
+    private void Inject$updateChunks$HEAD(Camera camera, CallbackInfo ci) {
+        ci.cancel();
+    }
+
+    @Inject(method = "renderLayer", at = @At("HEAD"), cancellable = true)
+    private void Inject$renderLayer$HEAD(
+        RenderLayer renderLayer,
+        MatrixStack matrices,
+        double d,
+        double e,
+        double f,
+        Matrix4f positionMatrix,
+        CallbackInfo ci
+    ) {
+        ci.cancel();
+
+        if (renderLayer == RenderLayer.getSolid()) {
+            renderTerrainPass1();
+        } else if (renderLayer == RenderLayer.getTranslucent()) {
+            renderTerrainPass2();
+        } else if (renderLayer == RenderLayer.getTripwire()) {
+            renderTerrainPass3();
+        }
+    }
+
+    private void renderTerrainPass1() {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
 
-        int lightMapTexture = getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
+        bindLightMapTexture();
 
         AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         blockTexture.bindTexture();
@@ -647,20 +302,21 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL_LEQUAL);
 
-        TerrainShaderManager.TerrainShaderProgram deferredShader = shaderManager.getShader();
-        deferredShader.bind();
+        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
+        shader.bind();
 
         terrainRenderer.renderLayer(0);
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
-
-        this.client.getProfiler().pop();
+        shader.unbind();
     }
 
-    private void renderTerrainPass2(LightmapTextureManager lightmapTextureManager) {
-        this.client.getProfiler().push("translucent");
-        lightmapTextureManager.enable();
+    private void renderTerrainPass2() {
+        TerrainRenderer terrainRenderer = getTerrainRenderer();
+        TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
+
+        bindLightMapTexture();
 
         AbstractTexture blockTexture = getTexture(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE);
         blockTexture.bindTexture();
@@ -677,6 +333,9 @@ public abstract class MixinCoreWorldRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc(GL_LEQUAL);
 
+        TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
+        shader.bind();
+
         Framebuffer translucent = this.translucentFramebuffer;
         Framebuffer weather = this.weatherFramebuffer;
 
@@ -687,26 +346,41 @@ public abstract class MixinCoreWorldRenderer {
             MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
         }
 
+        terrainRenderer.renderLayer(1);
+    }
+
+    private void renderTerrainPass3() {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
         TerrainShaderManager shaderManager = terrainRenderer.getShaderManager();
 
         TerrainShaderManager.TerrainShaderProgram shader = shaderManager.getShader();
         shader.bind();
 
-        terrainRenderer.renderLayer(1);
+        Framebuffer translucent = this.translucentFramebuffer;
+        Framebuffer weather = this.weatherFramebuffer;
 
+        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && translucent != null && weather != null;
         if (usingFbo) {
             weather.beginWrite(false);
+        } else {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
         }
-        this.client.getProfiler().swap("tripwire");
+
         terrainRenderer.renderLayer(2);
-        this.client.getProfiler().pop();
 
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
         glBindVertexArray(0);
         shader.unbind();
+    }
 
-        lightmapTextureManager.disable();
+    private void bindLightMapTexture() {
+        LightmapTextureManager lightmapTextureManager = this.client.gameRenderer.getLightmapTextureManager();
+        int lightMapTexture = getTexture((((AccessorLightmapTextureManager) lightmapTextureManager).getTextureIdentifier())).getGlId();
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTextureUnit(FastMcMod.INSTANCE.getGlWrapper().getLightMapUnit(), lightMapTexture);
     }
 
     private AbstractTexture getTexture(Identifier identifier) {
@@ -719,78 +393,92 @@ public abstract class MixinCoreWorldRenderer {
         return texture;
     }
 
-    private boolean renderEntity(
+//    private boolean renderEntity(
+//        MatrixStack matrices,
+//        float tickDelta,
+//        Camera camera,
+//        double renderPosX,
+//        double renderPosY,
+//        double renderPosZ,
+//        Frustum frustum,
+//        VertexConsumerProvider.Immediate immediate
+//    ) {
+//        boolean entityRendered = false;
+//
+//        for (Entity entity : this.world.getEntities()) {
+//            if (entity instanceof ClientPlayerEntity && camera.getFocusedEntity() != entity) continue;
+//            if (entity == camera.getFocusedEntity() && !camera.isThirdPerson()
+//                && (!(camera.getFocusedEntity() instanceof LivingEntity) || !((LivingEntity) camera.getFocusedEntity()).isSleeping()))
+//                continue;
+//            if (!this.entityRenderDispatcher.shouldRender(entity, frustum, renderPosX, renderPosY, renderPosZ)
+//                && !entity.hasPassengerDeep(this.client.player)) continue;
+//
+//            ++this.regularEntityCount;
+//            if (entity.age == 0) {
+//                entity.lastRenderX = entity.getX();
+//                entity.lastRenderY = entity.getY();
+//                entity.lastRenderZ = entity.getZ();
+//            }
+//
+//            VertexConsumerProvider vertexConsumerProvider;
+//            if (this.canDrawEntityOutlines() && this.client.hasOutline(entity)) {
+//                entityRendered = true;
+//                OutlineVertexConsumerProvider outlineVertexConsumerProvider = this.bufferBuilders.getOutlineVertexConsumers();
+//                vertexConsumerProvider = outlineVertexConsumerProvider;
+//                int k = entity.getTeamColorValue();
+//                int t = k >> 16 & 255;
+//                int u = k >> 8 & 255;
+//                int w = k & 255;
+//                outlineVertexConsumerProvider.setColor(t, u, w, 255);
+//            } else {
+//                vertexConsumerProvider = immediate;
+//            }
+//
+//            this.renderEntity(entity, renderPosX, renderPosY, renderPosZ, tickDelta, matrices, vertexConsumerProvider);
+//        }
+//
+//        immediate.drawCurrentLayer();
+//        this.checkEmpty(matrices);
+//        immediate.draw(RenderLayer.getEntitySolid(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
+//        immediate.draw(RenderLayer.getEntityCutout(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
+//        immediate.draw(RenderLayer.getEntityCutoutNoCull(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
+//        immediate.draw(RenderLayer.getEntitySmoothCutout(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
+//
+//        return entityRendered;
+//    }
+
+    @Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;checkEmpty(Lnet/minecraft/client/util/math/MatrixStack;)V", ordinal = 1))
+    private void Inject$render$INVOKE$checkEmpty$1(
         MatrixStack matrices,
         float tickDelta,
+        long limitTime,
+        boolean renderBlockOutline,
         Camera camera,
-        double renderPosX,
-        double renderPosY,
-        double renderPosZ,
-        Frustum frustum,
-        VertexConsumerProvider.Immediate immediate
+        GameRenderer gameRenderer,
+        LightmapTextureManager lightmapTextureManager,
+        Matrix4f projection,
+        CallbackInfo ci
     ) {
-        boolean entityRendered = false;
-
-        for (Entity entity : this.world.getEntities()) {
-            if (entity instanceof ClientPlayerEntity && camera.getFocusedEntity() != entity) continue;
-            if (entity == camera.getFocusedEntity() && !camera.isThirdPerson()
-                && (!(camera.getFocusedEntity() instanceof LivingEntity) || !((LivingEntity) camera.getFocusedEntity()).isSleeping()))
-                continue;
-            if (!this.entityRenderDispatcher.shouldRender(entity, frustum, renderPosX, renderPosY, renderPosZ)
-                && !entity.hasPassengerDeep(this.client.player)) continue;
-
-            ++this.regularEntityCount;
-            if (entity.age == 0) {
-                entity.lastRenderX = entity.getX();
-                entity.lastRenderY = entity.getY();
-                entity.lastRenderZ = entity.getZ();
-            }
-
-            VertexConsumerProvider vertexConsumerProvider;
-            if (this.canDrawEntityOutlines() && this.client.hasOutline(entity)) {
-                entityRendered = true;
-                OutlineVertexConsumerProvider outlineVertexConsumerProvider = this.bufferBuilders.getOutlineVertexConsumers();
-                vertexConsumerProvider = outlineVertexConsumerProvider;
-                int k = entity.getTeamColorValue();
-                int t = k >> 16 & 255;
-                int u = k >> 8 & 255;
-                int w = k & 255;
-                outlineVertexConsumerProvider.setColor(t, u, w, 255);
-            } else {
-                vertexConsumerProvider = immediate;
-            }
-
-            this.renderEntity(entity, renderPosX, renderPosY, renderPosZ, tickDelta, matrices, vertexConsumerProvider);
-        }
-
-        immediate.drawCurrentLayer();
-        this.checkEmpty(matrices);
-        immediate.draw(RenderLayer.getEntitySolid(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
-        immediate.draw(RenderLayer.getEntityCutout(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
-        immediate.draw(RenderLayer.getEntityCutoutNoCull(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
-        immediate.draw(RenderLayer.getEntitySmoothCutout(SpriteAtlasTexture.BLOCK_ATLAS_TEXTURE));
-
-        return entityRendered;
+        Profiler profiler = this.world.getProfiler();
+        profiler.push("vanilla");
+        renderTileEntityVanilla(matrices, tickDelta, camera);
+        profiler.swap("fastmc");
+        renderTileEntityFastMc(tickDelta);
+        profiler.pop();
     }
 
-    private void renderTileEntityFastMc(float tickDelta) {
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.preRender(tickDelta);
-        worldRenderer.getTileEntityRenderer().render();
-        worldRenderer.postRender();
-    }
 
     @SuppressWarnings("unchecked")
-    public void renderTileEntityVanilla(
-        @NotNull MatrixStack matrices,
-        float tickDelta,
-        double renderPosX,
-        double renderPosY,
-        double renderPosZ,
-        @NotNull VertexConsumerProvider.Immediate immediate
-    ) {
+    private void renderTileEntityVanilla(MatrixStack matrices, float tickDelta, Camera camera) {
         TerrainRenderer terrainRenderer = getTerrainRenderer();
-        FastObjectArrayList<BlockEntity> renderTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getRenderTileEntityList().get();
+        VertexConsumerProvider.Immediate immediate = this.bufferBuilders.getEntityVertexConsumers();
+        Vec3d cameraPos = camera.getPos();
+        double renderPosX = cameraPos.getX();
+        double renderPosY = cameraPos.getY();
+        double renderPosZ = cameraPos.getZ();
+
+        FastObjectArrayList<BlockEntity> renderTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
+            .getRenderTileEntityList().get();
         VertexConsumerProvider.Immediate effectVertexConsumers = this.bufferBuilders.getEffectVertexConsumers();
 
         for (int i = 0; i < renderTileEntityList.size(); i++) {
@@ -827,7 +515,8 @@ public abstract class MixinCoreWorldRenderer {
             matrices.pop();
         }
 
-        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getGlobalTileEntityList().get();
+        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
+            .getGlobalTileEntityList().get();
         for (int i = 0; i < globalTileEntityList.size(); i++) {
             BlockEntity blockEntity = globalTileEntityList.get(i);
             BlockPos pos = blockEntity.getPos();
@@ -836,21 +525,17 @@ public abstract class MixinCoreWorldRenderer {
             blockEntityRenderDispatcher.render(blockEntity, tickDelta, matrices, immediate);
             matrices.pop();
         }
+    }
 
-        this.checkEmpty(matrices);
-        immediate.draw(RenderLayer.getSolid());
-        immediate.draw(RenderLayer.getEndPortal());
-        immediate.draw(RenderLayer.getEndGateway());
-        immediate.draw(TexturedRenderLayers.getEntitySolid());
-        immediate.draw(TexturedRenderLayers.getEntityCutout());
-        immediate.draw(TexturedRenderLayers.getBeds());
-        immediate.draw(TexturedRenderLayers.getShulkerBoxes());
-        immediate.draw(TexturedRenderLayers.getSign());
-        immediate.draw(TexturedRenderLayers.getChest());
+    private void renderTileEntityFastMc(float tickDelta) {
+        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        worldRenderer.preRender(tickDelta);
+        worldRenderer.getTileEntityRenderer().render();
+        worldRenderer.postRender();
     }
 
     @SuppressWarnings("deprecation")
-    private static void setupTerrainFog(
+    private static void applyFogShader(
         Camera camera,
         float viewDistance,
         boolean thickFog

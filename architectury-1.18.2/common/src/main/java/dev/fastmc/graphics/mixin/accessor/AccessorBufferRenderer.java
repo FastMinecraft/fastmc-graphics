@@ -8,4 +8,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 public interface AccessorBufferRenderer {
     @Accessor
     static void setCurrentVertexArray(int currentVertexArray) {throw new UnsupportedOperationException();}
+
+    @Accessor
+    static void setCurrentVertexBuffer(int currentVertexBuffer) {throw new UnsupportedOperationException();}
+
+    @Accessor
+    static void setCurrentElementBuffer(int currentElementBuffer) {throw new UnsupportedOperationException();}
 }
