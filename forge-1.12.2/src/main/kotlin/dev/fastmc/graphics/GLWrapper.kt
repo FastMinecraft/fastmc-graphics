@@ -287,7 +287,7 @@ class GLWrapper : IGLWrapper {
     private val glNamedFramebufferDrawBuffersBuffer = CachedBuffer(4)
 
     override fun glNamedFramebufferDrawBuffers(framebuffer: Int, bufs: IntArray) {
-        val buffer = glNamedFramebufferDrawBuffersBuffer.getWithCapacityInt(bufs.size, bufs.size)
+        val buffer = glNamedFramebufferDrawBuffersBuffer.getEnsureCapacityInt(bufs.size)
         buffer.put(bufs)
         buffer.flip()
         GL45.glNamedFramebufferDrawBuffers(framebuffer, buffer)

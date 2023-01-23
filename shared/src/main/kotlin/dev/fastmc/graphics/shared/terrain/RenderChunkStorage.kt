@@ -68,12 +68,8 @@ class RenderChunkStorage(
     private val caveCullingUpdateCounter = UpdateCounter()
     private var lastCaveCullingJob: Future<*>? = null
     private val caveCullingQueue = IntArrayFIFOQueueNoShrink(totalChunk)
-    private val caveCullingBitSet0 = DoubleBufferedCollection(
-        StaticBitSet(totalChunk),
-        StaticBitSet(totalChunk),
-        DoubleBufferedCollection.emptyInitAction()
-    )
-    val caveCullingBitSet get() = caveCullingBitSet0.get()
+    private val caveCullingBitSet0 = DoubleBuffered( { StaticBitSet(totalChunk) }, DoubleBuffered.CLEAR_INIT_ACTION)
+    val caveCullingBitSet get() = caveCullingBitSet0.front
 
     var cameraChunk = renderChunkArray[0]; private set
 
@@ -322,8 +318,7 @@ class RenderChunkStorage(
     }
 
     private val updateCaveCullingRunnable = Runnable {
-        val newCullingBitSet = caveCullingBitSet0.getSwap()
-        newCullingBitSet.clear()
+        val newCullingBitSet = caveCullingBitSet0.initBack().back
 
         val cameraChunk = getRenderChunkByChunk(renderer.cameraChunkX, renderer.cameraChunkY, renderer.cameraChunkZ)
         val directions = Direction.VALUES
@@ -372,7 +367,7 @@ class RenderChunkStorage(
             }
         }
 
-        caveCullingBitSet0.swapAndGet()
+        caveCullingBitSet0.swap()
         caveCullingUpdateCounter.update()
     }
 

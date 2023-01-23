@@ -416,7 +416,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         double renderPosZ = cameraPos.getZ();
 
         FastObjectArrayList<BlockEntity> renderTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
-            .getRenderTileEntityList().get();
+            .getRenderTileEntityList().getFront();
         for (int i = 0; i < renderTileEntityList.size(); i++) {
             BlockEntity blockEntity = renderTileEntityList.get(i);
             BlockPos pos = blockEntity.getPos();
@@ -453,7 +453,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         }
 
         FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
-            .getGlobalTileEntityList().get();
+            .getGlobalTileEntityList().getFront();
         for (int i = 0; i < globalTileEntityList.size(); i++) {
             BlockEntity blockEntity = globalTileEntityList.get(i);
             BlockPos pos = blockEntity.getPos();

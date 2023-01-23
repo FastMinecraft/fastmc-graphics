@@ -1,11 +1,10 @@
 package dev.fastmc.graphics.mixin.patch.world;
 
-import dev.fastmc.common.DoubleBufferedCollection;
+import dev.fastmc.common.DoubleBuffered;
 import dev.fastmc.common.collection.FastIntMap;
 import dev.fastmc.graphics.mixin.IPatchedIBlockAccess;
 import dev.fastmc.graphics.mixin.IPatchedWorld;
 import dev.fastmc.graphics.shared.util.ITypeID;
-import dev.fastmc.graphics.util.RaytraceKt;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import net.minecraft.block.material.Material;
@@ -19,8 +18,6 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ITickable;
 import net.minecraft.util.ReportedException;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.RayTraceResult;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.ForgeModContainer;
@@ -32,25 +29,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 @Mixin(World.class)
 public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess {
-    private final DoubleBufferedCollection<IntSet> removingWeatherEffects = new DoubleBufferedCollection<>(
-        new IntOpenHashSet(),
-        new IntOpenHashSet()
-    );
-    private final DoubleBufferedCollection<IntSet> removingEntities = new DoubleBufferedCollection<>(
-        new IntOpenHashSet(),
-        new IntOpenHashSet()
-    );
-    private final DoubleBufferedCollection<ArrayList<Entity>> removingEntitiesList = new DoubleBufferedCollection<>(
-        new ArrayList<>(),
-        new ArrayList<>()
-    );
+    private final DoubleBuffered<IntSet> removingWeatherEffects = new DoubleBuffered<>(IntOpenHashSet::new, DoubleBuffered.CLEAR_INIT_ACTION);
+    private final DoubleBuffered<IntSet> removingEntities = new DoubleBuffered<>(IntOpenHashSet::new, DoubleBuffered.CLEAR_INIT_ACTION);
+    private final DoubleBuffered<ArrayList<Entity>> removingEntitiesList = new DoubleBuffered<>(ArrayList::new, DoubleBuffered.CLEAR_INIT_ACTION);
     private final FastIntMap<List<TileEntity>> groupedTickableTileEntity = new FastIntMap<>();
     @Shadow
     @Final
@@ -110,10 +97,10 @@ public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess 
 
     @Override
     public void batchRemoveEntities() {
-        if (getRemovingEntities().isEmpty()) return;
+        if (getPendingRemoveEntities().isEmpty()) return;
 
-        IntSet tempSet = removingEntities.get();
-        List<Entity> tempList = removingEntitiesList.get();
+        IntSet tempSet = removingEntities.swap().initBack().getFront();
+        List<Entity> tempList = removingEntitiesList.swap().initBack().getFront();
 
         this.loadedEntityList.removeIf(it -> tempSet.contains(it.getEntityId()));
 
@@ -230,21 +217,21 @@ public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess 
 
                 if (ForgeModContainer.removeErroringEntities) {
                     FMLLog.log.fatal("{}", crashreport.getCompleteReport());
-                    removingWeatherEffects.get().add(entity.getEntityId());
+                    removingWeatherEffects.getBack().add(entity.getEntityId());
                 } else {
                     throw new ReportedException(crashreport);
                 }
             }
 
             if (entity.isDead) {
-                removingWeatherEffects.get().add(entity.getEntityId());
+                removingWeatherEffects.getBack().add(entity.getEntityId());
             }
         }
     }
 
     private void tickRemove() {
-        if (!removingWeatherEffects.get().isEmpty()) {
-            IntSet temp = removingWeatherEffects.getAndSwap();
+        IntSet temp = removingWeatherEffects.swap().initBack().getFront();
+        if (!temp.isEmpty()) {
             this.weatherEffects.removeIf(it -> temp.contains(it.getEntityId()));
         }
 
@@ -318,8 +305,8 @@ public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess 
     public void unloadEntities(Collection<Entity> entityCollection) {
         if (entityCollection.isEmpty()) return;
 
-        ArrayList<Entity> list = getRemovingEntitiesList();
-        IntSet set = getRemovingEntities();
+        ArrayList<Entity> list = getPendingRemoveEntitiesList();
+        IntSet set = getPendingRemoveEntities();
         list.ensureCapacity(list.size() + entityCollection.size());
 
         for (Entity entity : entityCollection) {
@@ -374,14 +361,14 @@ public abstract class MixinWorld implements IPatchedWorld, IPatchedIBlockAccess 
 
     @NotNull
     @Override
-    public IntSet getRemovingEntities() {
-        return this.removingEntities.get();
+    public IntSet getPendingRemoveEntities() {
+        return this.removingEntities.getBack();
     }
 
     @NotNull
     @Override
-    public ArrayList<Entity> getRemovingEntitiesList() {
-        return this.removingEntitiesList.get();
+    public ArrayList<Entity> getPendingRemoveEntitiesList() {
+        return this.removingEntitiesList.getBack();
     }
 
     @NotNull

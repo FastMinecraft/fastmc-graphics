@@ -416,7 +416,7 @@ public abstract class MixinCoreRenderGlobal {
 
     @SuppressWarnings("unchecked")
     private void renderTileEntityVanilla(ICamera camera, float partialTicks, int pass) {
-        FastObjectArrayList<TileEntity> renderTileEntityList = (FastObjectArrayList<TileEntity>) (Object) getTerrainRenderer().getRenderTileEntityList().get();
+        FastObjectArrayList<TileEntity> renderTileEntityList = (FastObjectArrayList<TileEntity>) (Object) getTerrainRenderer().getRenderTileEntityList().getFront();
 
         RenderHelper.enableStandardItemLighting();
         TileEntityRendererDispatcher.instance.preDrawBatch();
@@ -428,7 +428,7 @@ public abstract class MixinCoreRenderGlobal {
             TileEntityRendererDispatcher.instance.render(tileEntity, partialTicks, -1);
         }
 
-        FastObjectArrayList<TileEntity> globalTileEntityList = (FastObjectArrayList<TileEntity>) (Object) getTerrainRenderer().getGlobalTileEntityList().get();
+        FastObjectArrayList<TileEntity> globalTileEntityList = (FastObjectArrayList<TileEntity>) (Object) getTerrainRenderer().getGlobalTileEntityList().getFront();
         for (int i = 0; i < globalTileEntityList.size(); i++) {
             TileEntity tileEntity = globalTileEntityList.get(i);
             if (!tileEntity.shouldRenderInPass(pass)) continue;

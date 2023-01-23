@@ -24,13 +24,13 @@ interface IPatchedWorld : IPatchedIBlockAccess {
     var tileEntitiesToBeRemoved: MutableList<TileEntity>
     var addedTileEntityList: MutableList<TileEntity>
 
-    val removingEntities: IntSet
-    val removingEntitiesList: ArrayList<Entity>
+    val pendingRemoveEntities: IntSet
+    val pendingRemoveEntitiesList: ArrayList<Entity>
     val groupedTickableTileEntity: FastIntMap<MutableList<TileEntity>>
 
     fun markRemoving(entity: Entity) {
-        removingEntities.add(entity.entityId)
-        removingEntitiesList.add(entity)
+        pendingRemoveEntities.add(entity.entityId)
+        pendingRemoveEntitiesList.add(entity)
     }
 
     fun batchRemoveEntities()

@@ -40,16 +40,8 @@ abstract class TerrainRenderer(
     abstract val chunkBuilder: ChunkBuilder
     abstract val contextProvider: ContextProvider
 
-    val renderTileEntityList = DoubleBufferedCollection<FastObjectArrayList<ITileEntityInfo<*>>>(
-        FastObjectArrayList(),
-        FastObjectArrayList(),
-        DoubleBufferedCollection.emptyInitAction()
-    )
-    val globalTileEntityList = DoubleBufferedCollection<FastObjectArrayList<ITileEntityInfo<*>>>(
-        FastObjectArrayList(),
-        FastObjectArrayList(),
-        DoubleBufferedCollection.emptyInitAction()
-    )
+    val renderTileEntityList = DoubleBuffered<FastObjectArrayList<ITileEntityInfo<*>>>(::FastObjectArrayList)
+    val globalTileEntityList = DoubleBuffered<FastObjectArrayList<ITileEntityInfo<*>>>(::FastObjectArrayList)
 
     private var lastSortScheduleTask: Future<*>? = null
     private var lastRebuildScheduleTask: Future<*>? = null
@@ -189,11 +181,11 @@ abstract class TerrainRenderer(
         lastSortScheduleTask = null
         lastRebuildScheduleTask = null
 
-        renderTileEntityList.get().clearAndTrim()
-        renderTileEntityList.getSwap().clearAndTrim()
+        renderTileEntityList.front.clearAndTrim()
+        renderTileEntityList.back.clearAndTrim()
 
-        globalTileEntityList.get().clearAndTrim()
-        globalTileEntityList.getSwap().clearAndTrim()
+        globalTileEntityList.front.clearAndTrim()
+        globalTileEntityList.back.clearAndTrim()
 
         chunkCullingResults = emptyArray()
         tileEntityResults = emptyArray()
@@ -301,10 +293,10 @@ abstract class TerrainRenderer(
     private suspend fun updateChunkCulling() {
         val chunkStorage = chunkStorage
 
-        val renderTileEntityList0 = renderTileEntityList.getSwap()
+        val renderTileEntityList0 = renderTileEntityList.back
         renderTileEntityList0.clear()
 
-        val globalTileEntityList0 = globalTileEntityList.getSwap()
+        val globalTileEntityList0 = globalTileEntityList.back
         globalTileEntityList0.clear()
 
         val chunkArray = chunkStorage.renderChunkArray
@@ -438,8 +430,8 @@ abstract class TerrainRenderer(
             }
         }
 
-        renderTileEntityList.getAndSwap()
-        globalTileEntityList.getAndSwap()
+        renderTileEntityList.swap()
+        globalTileEntityList.swap()
     }
 
     private inline fun RenderChunk.checkAnyAdjBuilt(): Boolean {
