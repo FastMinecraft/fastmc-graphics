@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.shared.terrain
 
-import dev.fastmc.common.CachedBuffer
+import java.nio.IntBuffer
 
 sealed interface FaceData {
     val dataSize: Int
@@ -14,7 +14,7 @@ sealed interface FaceData {
     )
 
     fun addToBuffer(
-        buffer: CachedBuffer,
+        buffer: IntBuffer,
         vertexRegionOffset: Int,
         indexRegionOffset: Int
     )
@@ -32,19 +32,18 @@ sealed interface FaceData {
             chunkOffsetData: Int
         ) {
             batch.put(
-                vertexRegionOffset,
-                indexRegionOffset,
+                vertexRegionOffset / 16,
+                indexRegionOffset / 4,
                 indexCount,
                 chunkOffsetData
             )
         }
 
-        override fun addToBuffer(buffer: CachedBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
-            val intBuffer = buffer.ensureRemainingInt(4)
-            intBuffer.put(0b11_11_11)
-            intBuffer.put(vertexRegionOffset)
-            intBuffer.put(indexRegionOffset)
-            intBuffer.put(indexCount)
+        override fun addToBuffer(buffer: IntBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
+            buffer.put(0b11_11_11)
+            buffer.put(vertexRegionOffset / 16)
+            buffer.put(indexRegionOffset / 4)
+            buffer.put(indexCount)
         }
     }
 
@@ -72,20 +71,31 @@ sealed interface FaceData {
         ) {
             if (visibleFaceBit and allFaceBits == 0) return
 
+            val vertexBaseOffset = vertexRegionOffset / 16
+            val indexBaseOffset = indexRegionOffset / 4
+
             for (i in dataArray.indices step 4) {
                 if ((dataArray[i]) and visibleFaceBit == 0) continue
 
                 batch.put(
-                    vertexRegionOffset + dataArray[i + 1],
-                    indexRegionOffset + dataArray[i + 2],
+                    vertexBaseOffset + dataArray[i + 1],
+                    indexBaseOffset + dataArray[i + 2],
                     dataArray[i + 3],
                     chunkOffsetData
                 )
             }
         }
 
-        override fun addToBuffer(buffer: CachedBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
-            buffer.ensureRemainingInt(dataArray.size).put(dataArray)
+        override fun addToBuffer(buffer: IntBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
+            val vertexBaseOffset = vertexRegionOffset / 16
+            val indexBaseOffset = indexRegionOffset / 4
+
+            for (i in dataArray.indices step 4) {
+                buffer.put(dataArray[i])
+                buffer.put(vertexBaseOffset + dataArray[i + 1])
+                buffer.put(indexBaseOffset + dataArray[i + 2])
+                buffer.put(dataArray[i + 3])
+            }
         }
     }
 

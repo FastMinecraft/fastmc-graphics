@@ -304,8 +304,8 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
 
                 dataArrayList.ensureCapacity(dataArrayList.size + 4)
                 dataArrayList.add(i + 1)
-                dataArrayList.add(vertexOffset)
-                dataArrayList.add(indexOffset)
+                dataArrayList.add(vertexOffset / 16)
+                dataArrayList.add(indexOffset / 4)
                 dataArrayList.add(indexLength / 4)
 
                 vertexOffset += vertexLength

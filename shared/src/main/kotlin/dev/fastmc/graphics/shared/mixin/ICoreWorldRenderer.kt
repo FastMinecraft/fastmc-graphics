@@ -16,7 +16,6 @@ interface ICoreWorldRenderer {
     }
 
     fun preRenderLayer(layerIndex: Int) {
-        terrainRenderer.shaderManager.shader.bind()
         bindLightMapTexture()
         bindBlockTexture()
     }

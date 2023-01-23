@@ -6,13 +6,20 @@ import dev.fastmc.common.ceilToInt
 import dev.fastmc.common.sq
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.shared.opengl.*
-import dev.fastmc.graphics.shared.opengl.ShaderSource.Companion.invoke
 import java.util.*
 import kotlin.math.ln
 import kotlin.math.sqrt
 
 class TerrainShaderManager(private val renderer: TerrainRenderer) {
-    val shader get() = activeShaderGroup
+    val drawShader get() = activeDrawShader
+    val cullShader = TerrainShaderProgram(
+        ShaderSource.Vertex("/assets/shaders/terrain/Cull.vert"),
+        ShaderSource.Fragment("/assets/shaders/terrain/Cull.frag"),
+        fog = false
+    )
+    val indirectShader = Array(3) {
+        IndirectComputeShaderProgram(it)
+    }
 
     var fogRangeSq = Int.MAX_VALUE; private set
 
@@ -20,7 +27,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
     private val shaderMap = EnumMap<FogShape, EnumMap<FogType, TerrainShaderProgram>>()
     private var activeFogShape = FogShape.SPHERE
-    private var activeShaderGroup = getShader(FogShape.SPHERE, FogType.LINEAR)
+    private var activeDrawShader = getShader(FogShape.SPHERE, FogType.LINEAR)
 
     fun checkFogRange(x: Int, y: Int, z: Int): Boolean {
         return activeFogShape.distanceSq(
@@ -51,7 +58,16 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
     fun updateActiveShader(fogShape: FogShape, fogType: FogType) {
         activeFogShape = fogShape
-        activeShaderGroup = getShader(fogShape, fogType)
+        activeDrawShader = getShader(fogShape, fogType)
+        indirectShader.forEach {
+            glProgramUniform1i(it.id, it.minChunkYUniform, renderer.minChunkY)
+        }
+    }
+
+    fun destroy() {
+        fogParametersUBO.destroy()
+        shaderMap.values.forEach { map -> map.values.forEach { it.destroy() } }
+        indirectShader.forEach { it.destroy() }
     }
 
     private fun getShader(
@@ -69,9 +85,11 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
                 define("FOG_SHAPE", fogShape)
                 define("FOG_TYPE", fogType)
             }
-            val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.frag")
+            val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.frag") {
+                define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit)
+            }
 
-            TerrainShaderProgram(this, vertex, fragment)
+            TerrainShaderProgram(vertex, fragment)
         }
     }
 
@@ -97,26 +115,27 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         }
     }
 
-    fun destroy() {
-        fogParametersUBO.destroy()
+    inner class IndirectComputeShaderProgram(pass: Int) : TerrainShaderProgram(
+        ShaderSource.Compute("/assets/shaders/terrain/IndirectCompute.comp") {
+            define("PASS", pass)
+        },
+        global = false,
+        fog = false
+    ) {
+        internal val minChunkYUniform = glGetUniformLocation(id, "minChunkY")
     }
 
-    class TerrainShaderProgram(
-        private val manager: TerrainShaderManager,
-        vertex: ShaderSource.Vertex,
-        fragment: ShaderSource.Fragment
-    ) : ShaderProgram(
-        vertex,
-        fragment {
-            define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit)
-        }
-    ) {
+    open inner class TerrainShaderProgram(
+        vararg sources: ShaderSource,
+        private val global: Boolean = true,
+        private val fog: Boolean = true
+    ) : ShaderProgram(*sources) {
         private val regionOffsetUniform = glGetUniformLocation(id, "regionOffset")
 
         override fun bind() {
             super.bind()
-            attachBuffer(GL_UNIFORM_BUFFER, manager.renderer.globalUBO, "Global")
-            attachBuffer(GL_UNIFORM_BUFFER, manager.fogParametersUBO, "FogParameters")
+            if (global) attachBuffer(GL_UNIFORM_BUFFER, renderer.globalUBO, "Global")
+            if (fog) attachBuffer(GL_UNIFORM_BUFFER, fogParametersUBO, "FogParameters")
         }
 
         internal fun setRegionOffset(x: Float, y: Float, z: Float) {

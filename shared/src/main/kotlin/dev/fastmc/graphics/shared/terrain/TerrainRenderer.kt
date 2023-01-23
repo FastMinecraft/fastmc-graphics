@@ -81,6 +81,11 @@ abstract class TerrainRenderer(
     private val chunkLoadingStatusCacheTimer = TickTimer()
     protected abstract val chunkLoadingStatusCache: ChunkLoadingStatusCache<*>
 
+    private val renderBatches = DoubleBuffered<FastObjectArrayList<RenderRegion.ILayerBatch>>(
+        ::FastObjectArrayList,
+        DoubleBuffered.CLEAR_INIT_ACTION
+    )
+
     abstract fun update(uploadChunks: Boolean)
 
     protected fun update0(uploadChunks: Boolean) {
@@ -658,23 +663,31 @@ abstract class TerrainRenderer(
 
     fun renderLayer(layerIndex: Int) {
         val regionArray = chunkStorage.regionArray
-        val shader = shaderManager.shader
+        var front = renderBatches.front
 
         for (i in chunkStorage.regionIndices) {
             val region = regionArray[i.toInt()]
             if (!region.frustumCull.isInFrustum()) continue
-            val layerBatch = region.getLayer(layerIndex)
-            layerBatch.endUpdate()
-            if (!layerBatch.bind()) continue
+            front.add(region.getLayer(layerIndex))
+        }
 
-            shader.setRegionOffset(
-                (region.originX - renderPosX).toFloat(),
-                (region.originY - renderPosY).toFloat(),
-                (region.originZ - renderPosZ).toFloat()
-            )
+        var pass = 0
+        val renderPosX = renderPosX
+        val renderPosY = renderPosY
+        val renderPosZ = renderPosZ
 
-            region.vao.bind()
-            glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, 0L, layerBatch.count, 0)
+        while (front.isNotEmpty()) {
+            val back = renderBatches.back
+
+            for (i in front.indices) {
+                val batch = front[i]
+                if (batch.render(pass, renderPosX, renderPosY, renderPosZ)) {
+                    back.add(batch)
+                }
+            }
+
+            front = renderBatches.swap().initBack().front
+            pass++
         }
     }
 

@@ -1,0 +1,111 @@
+#version 460
+
+layout(local_size_x = 16, local_size_y = 1, local_size_z = 16) in;
+
+struct IndirectDrawCommand {
+    uint count;
+    uint instanceCount;
+    uint firstIndex;
+    int baseVertex;
+    uint baseInstance;
+};
+
+struct FaceData {
+    uint faceBits;
+    int vertexOffset;
+    uint indexOffset;
+    uint indexCount;
+};
+
+layout(std430) buffer VisibleBuffer {
+    uint visible[];
+} visibleBuffer;
+
+layout(std430) buffer FaceDataIndicesBuffer {
+    uint indices[];
+} faceDataIndicesBuffer;
+
+layout(std430) buffer FaceDataBuffer {
+    FaceData faceData[];
+} faceDataBuffer;
+
+layout(std430) buffer IndirectBuffer {
+    uint counter;
+    IndirectDrawCommand cmds[];
+} indirectBuffer;
+
+uniform int minChunkY;
+uniform vec3 regionOffset;
+
+const uint B_DOWN = 1u << 0;
+const uint B_UP = 1u << 1;
+const uint B_NORTH = 1u << 2;
+const uint B_SOUTH = 1u << 3;
+const uint B_WEST = 1u << 4;
+const uint B_EAST = 1u << 5;
+
+const float FLOOR_F = 4194304.0;
+const int FLOOR_I = 4194304;
+
+int fastFloor(float x) {
+    return int(x + FLOOR_F) - FLOOR_I;
+}
+
+void main() {
+    uint prevVisibleOffset = gl_NumWorkGroups.y * gl_WorkGroupSize.x * gl_WorkGroupSize.z;
+    uint chunkIndex = (gl_LocalInvocationID.x << 4) | (gl_WorkGroupID.y << 8) | (gl_LocalInvocationID.z);
+
+    #if PASS == 0
+    uint last = visibleBuffer.visible[chunkIndex];
+    visibleBuffer.visible[chunkIndex] = 0u;
+    visibleBuffer.visible[chunkIndex + prevVisibleOffset] = last;
+    if (!bool(last)) {
+        return;
+    }
+    #elif PASS == 1
+    bool prev = bool(visibleBuffer.visible[chunkIndex + prevVisibleOffset]);
+    bool curr = bool(visibleBuffer.visible[chunkIndex]);
+    if (prev || !curr) {
+        return;
+    }
+    #else
+    uint last = visibleBuffer.visible[chunkIndex];
+    if (!bool(last)) {
+        return;
+    }
+    #endif
+
+    uint faceDataIndex = faceDataIndicesBuffer.indices[chunkIndex];
+    if (faceDataIndex == -1) {
+        return;
+    }
+
+    vec3 chunkOffset = vec3(gl_LocalInvocationID.x, gl_WorkGroupID.y, gl_LocalInvocationID.z) * 16.0 + regionOffset;
+    uint chunkOffsetData =
+        ((gl_LocalInvocationID.x) << 12) |
+        ((gl_WorkGroupID.y - minChunkY) << 20) |
+        ((gl_LocalInvocationID.z) << 4);
+    uint visibleFaceBits =
+        (B_EAST * (fastFloor(chunkOffset.x) >> 31u)) |
+        (B_WEST * (fastFloor(-chunkOffset.x - 16u) >> 31u)) |
+        (B_UP * (fastFloor(chunkOffset.y) >> 31u)) |
+        (B_DOWN * (fastFloor(-chunkOffset.y - 16u) >> 31u)) |
+        (B_SOUTH * (fastFloor(chunkOffset.z) >> 31u)) |
+        (B_NORTH * (fastFloor(-chunkOffset.z - 16u) >> 31u));
+
+    uint faceDataStart = faceDataIndex & 0x3FFFFFFu;
+    uint faceDataEnd = faceDataStart + (faceDataIndex >> 26u);
+    for (uint i = faceDataStart; i < faceDataEnd; i++) {
+        FaceData faceData = faceDataBuffer.faceData[i];
+        if ((faceData.faceBits & visibleFaceBits) != 0u) {
+            uint index = atomicAdd(indirectBuffer.counter, 1);
+            indirectBuffer.cmds[index] = IndirectDrawCommand(
+                faceData.indexCount,
+                1u,
+                faceData.indexOffset,
+                faceData.vertexOffset,
+                chunkOffsetData
+            );
+        }
+    }
+}

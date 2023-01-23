@@ -103,14 +103,14 @@ open class ShaderProgram(
     private enum class BindingTarget {
         UNIFORM_BUFFER {
             override fun addBinding(id: Int, blockName: String, bindingIndex: Int) {
-                val index = glGetProgramResourceIndex(id, GL_UNIFORM_BLOCK, blockName)
-                glUniformBlockBinding(id, index, bindingIndex)
+                val blockIndex = glGetProgramResourceIndex(id, GL_UNIFORM_BLOCK, blockName)
+                glUniformBlockBinding(id, blockIndex, bindingIndex)
             }
         },
         SHADER_STORAGE_BUFFER {
             override fun addBinding(id: Int, blockName: String, bindingIndex: Int) {
-                val index = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, blockName)
-                glShaderStorageBlockBinding(id, index, bindingIndex)
+                val blockIndex = glGetProgramResourceIndex(id, GL_SHADER_STORAGE_BLOCK, blockName)
+                glShaderStorageBlockBinding(id, blockIndex, bindingIndex)
             }
         };
 
