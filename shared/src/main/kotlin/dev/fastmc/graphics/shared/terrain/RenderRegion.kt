@@ -120,7 +120,7 @@ class RenderRegion(
 
         private val clientFaceDataIndicesByteBuffer = allocateByte(storage.regionChunkCount * 4)
         private val clientFaceDataIndicesIntBuffer = clientFaceDataIndicesByteBuffer.asIntBuffer()
-        private val clientFaceDataBuffer = CachedBuffer(storage.regionChunkCount * 16)
+        private val clientFaceDataBuffer = CachedBuffer(storage.regionChunkCount * 12)
 
         private var isDirty = false
         private var frameCounter = 0
@@ -154,12 +154,13 @@ class RenderRegion(
 
             val faceData = layer.faceData ?: return
 
-            clientFaceDataIndicesIntBuffer.put(chunk.regionIndex, (faceData.dataSize shl 26) or count)
-            val buffer = clientFaceDataBuffer.ensureCapacityInt((count + faceData.dataSize) * 4)
-            buffer.position(count * 4)
-            faceData.addToBuffer(buffer, vertexRegion.offset, indexRegion.offset)
+            val buffer = clientFaceDataBuffer.ensureCapacityInt((count + faceData.dataSize) * 3)
+            buffer.position(count * 3)
+            val added = faceData.addToBuffer(buffer, vertexRegion.offset, indexRegion.offset, tempVisibleBits[chunk.regionIndex].toInt())
 
-            count += faceData.dataSize
+            clientFaceDataIndicesIntBuffer.put(chunk.regionIndex, (added shl 26) or count)
+
+            count += added
         }
 
         override fun endUpdate() {
@@ -168,7 +169,7 @@ class RenderRegion(
                 glNamedBufferSubData(faceDataIndicesBuffer.id, 0, clientFaceDataIndicesByteBuffer)
 
                 val clientFaceData = clientFaceDataBuffer.getByte()
-                clientFaceData.limit(count * 16)
+                clientFaceData.limit(count * 12)
                 val faceDataBuffer = faceDataBuffer
                 if (faceDataBuffer == null || faceDataBuffer.size < clientFaceData.remaining()) {
                     faceDataBuffer?.destroy()
@@ -307,7 +308,7 @@ class RenderRegion(
             )
 
             shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, indirectBuffer, "IndirectBuffer", 0,  4 + count * 20)
-            shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, faceDataBuffer, "FaceDataBuffer", 0, count * 16)
+            shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, faceDataBuffer, "FaceDataBuffer", 0, count * 12)
             shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, faceDataIndicesBuffer, "FaceDataIndicesBuffer")
             shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, visibleBuffer, "VisibleBuffer")
 

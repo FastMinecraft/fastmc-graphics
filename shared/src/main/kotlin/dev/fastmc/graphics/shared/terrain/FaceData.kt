@@ -16,8 +16,9 @@ sealed interface FaceData {
     fun addToBuffer(
         buffer: IntBuffer,
         vertexRegionOffset: Int,
-        indexRegionOffset: Int
-    )
+        indexRegionOffset: Int,
+        visibleFaceBit: Int
+    ): Int
 
     class Singleton(indexBufferLength: Int) : FaceData {
         override val dataSize: Int
@@ -39,11 +40,16 @@ sealed interface FaceData {
             )
         }
 
-        override fun addToBuffer(buffer: IntBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
-            buffer.put(0b11_11_11)
+        override fun addToBuffer(
+            buffer: IntBuffer,
+            vertexRegionOffset: Int,
+            indexRegionOffset: Int,
+            visibleFaceBit: Int
+        ): Int {
             buffer.put(vertexRegionOffset / 16)
             buffer.put(indexRegionOffset / 4)
             buffer.put(indexCount)
+            return 1
         }
     }
 
@@ -86,16 +92,27 @@ sealed interface FaceData {
             }
         }
 
-        override fun addToBuffer(buffer: IntBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
+        override fun addToBuffer(
+            buffer: IntBuffer,
+            vertexRegionOffset: Int,
+            indexRegionOffset: Int,
+            visibleFaceBit: Int
+        ): Int {
             val vertexBaseOffset = vertexRegionOffset / 16
             val indexBaseOffset = indexRegionOffset / 4
 
+            var count = 0
+
             for (i in dataArray.indices step 4) {
-                buffer.put(dataArray[i])
+                if ((dataArray[i]) and visibleFaceBit == 0) continue
+
                 buffer.put(vertexBaseOffset + dataArray[i + 1])
                 buffer.put(indexBaseOffset + dataArray[i + 2])
                 buffer.put(dataArray[i + 3])
+                count++
             }
+
+            return count
         }
     }
 
