@@ -14,7 +14,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.minecraft.block.BlockChest
 import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.tileentity.*
 import org.lwjgl.opengl.GL11.*
 import kotlin.coroutines.CoroutineContext
@@ -48,12 +47,6 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
                 }
             }
         }
-    }
-
-    override fun render() {
-        GlStateManager.disableCull()
-        GlStateManager.tryBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
-        super.render()
     }
 
     private inner class ChestRenderEntry : AbstractRenderEntry<TileEntityChest, ChestInfo>() {

@@ -1,6 +1,5 @@
 package dev.fastmc.graphics.renderer
 
-import com.mojang.blaze3d.systems.RenderSystem
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.tileentity.*
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IChestInfo
@@ -50,15 +49,9 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
         }
     }
 
-    @Suppress("DEPRECATION")
     override fun render() {
         mc.gameRenderer.lightmapTextureManager.enable()
-        RenderSystem.disableCull()
-        RenderSystem.enableDepthTest()
-        RenderSystem.enableBlend()
-
         super.render()
-
         mc.gameRenderer.lightmapTextureManager.disable()
     }
 

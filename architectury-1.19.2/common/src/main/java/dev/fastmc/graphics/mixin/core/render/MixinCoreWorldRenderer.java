@@ -6,6 +6,7 @@ import dev.fastmc.common.collection.FastObjectArrayList;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.mixin.accessor.AccessorLightmapTextureManager;
 import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
+import dev.fastmc.graphics.shared.opengl.GLWrapperKt;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import dev.fastmc.graphics.shared.terrain.RenderChunk;
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer;
@@ -298,24 +299,23 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
     }
 
     private static void preRenderSolid() {
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL_LEQUAL);
+        glEnable(GL_CULL_FACE);
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GLWrapperKt.GL_LEQUAL);
     }
 
     private static void preRenderTranslucent() {
-        RenderSystem.enableCull();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-            GlStateManager.SrcFactor.SRC_ALPHA,
-            GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
-            GlStateManager.SrcFactor.ONE,
-            GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(
+            GL_SRC_ALPHA,
+            GL_ONE_MINUS_SRC_ALPHA,
+            GL_ONE,
+            GL_ONE_MINUS_SRC_ALPHA
         );
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL_LEQUAL);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GLWrapperKt.GL_LEQUAL);
     }
 
     private static void setupTranslucentFbo(Framebuffer weather) {

@@ -11,6 +11,9 @@ interface IGLWrapper {
     val lightMapUnit: Int
 
     // GL11
+    fun glEnable(cap: Int)
+    fun glDisable(cap: Int)
+
     fun glClear(mask: Int)
     fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float)
     fun glClearDepth(depth: Double)
@@ -20,8 +23,15 @@ interface IGLWrapper {
     fun glDrawArrays(mode: Int, first: Int, count: Int)
     fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long)
 
+    fun glColorMask(red: Boolean, green: Boolean, blue: Boolean, alpha: Boolean)
+    fun glDepthMask(flag: Boolean)
+
+    fun glDepthFunc(func: Int)
+    fun glBlendFunc(src: Int, dst: Int)
 
     // GL14
+    fun glBlendFuncSeparate(srcRGB: Int, dstRGB: Int, srcAlpha: Int, dstAlpha: Int)
+
     fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer)
 
 
@@ -103,7 +113,7 @@ interface IGLWrapper {
 
     fun glShaderStorageBlockBinding(program: Int, storageBlockIndex: Int, storageBlockBinding: Int)
     fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int
-
+    fun glDispatchCompute(num_groups_x: Int, num_groups_y: Int, num_groups_z: Int)
 
     // GL45
     fun glCreateVertexArrays(): Int
@@ -220,6 +230,38 @@ const val GL_QUADS = 0x7
 const val GL_QUAD_STRIP = 0x8
 const val GL_POLYGON = 0x9
 
+const val GL_NEVER = 0x200
+const val GL_LESS = 0x201
+const val GL_EQUAL = 0x202
+const val GL_LEQUAL = 0x203
+const val GL_GREATER = 0x204
+const val GL_NOTEQUAL = 0x205
+const val GL_GEQUAL = 0x206
+const val GL_ALWAYS = 0x207
+
+const val GL_ZERO = 0
+const val GL_ONE = 1
+const val GL_SRC_COLOR = 0x300
+const val GL_ONE_MINUS_SRC_COLOR = 0x301
+const val GL_SRC_ALPHA = 0x302
+const val GL_ONE_MINUS_SRC_ALPHA = 0x303
+const val GL_DST_ALPHA = 0x304
+const val GL_ONE_MINUS_DST_ALPHA = 0x305
+
+const val GL_DST_COLOR = 0x306
+const val GL_ONE_MINUS_DST_COLOR = 0x307
+const val GL_SRC_ALPHA_SATURATE = 0x308
+
+const val GL_CULL_FACE = 0xB44
+const val GL_LIGHTING = 0xB50
+const val GL_COLOR_MATERIAL = 0xB57
+const val GL_FOG = 0xB60
+const val GL_DEPTH_TEST = 0xB71
+const val GL_NORMALIZE = 0xBA1
+const val GL_ALPHA_TEST = 0xBC0
+const val GL_BLEND = 0xBE2
+const val GL_COLOR_LOGIC_OP = 0xBF2
+const val GL_SCISSOR_TEST = 0xC11
 const val GL_TEXTURE_2D = 0xDE1
 
 const val GL_BYTE = 0x1400
@@ -251,6 +293,11 @@ const val GL_DEPTH_BUFFER_BIT = 0x100
 const val GL_STENCIL_BUFFER_BIT = 0x400
 const val GL_COLOR_BUFFER_BIT = 0x4000
 
+const val GL_POLYGON_OFFSET_FILL = 0x8037
+
+inline fun glEnable(cap: Int) = glWrapper.glEnable(cap)
+inline fun glDisable(cap: Int) = glWrapper.glDisable(cap)
+
 inline fun glClear(mask: Int) = glWrapper.glClear(mask)
 inline fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float) =
     glWrapper.glClearColor(red, green, blue, alpha)
@@ -263,10 +310,20 @@ inline fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArr
 inline fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) =
     glWrapper.glDrawElements(mode, count, type, indices)
 
+inline fun glColorMask(red: Boolean, green: Boolean, blue: Boolean, alpha: Boolean) =
+    glWrapper.glColorMask(red, green, blue, alpha)
+
+inline fun glDepthMask(flag: Boolean) = glWrapper.glDepthMask(flag)
+
+inline fun glDepthFunc(func: Int) = glWrapper.glDepthFunc(func)
+inline fun glBlendFunc(src: Int, dst: Int) = glWrapper.glBlendFunc(src, dst)
+
 
 // GL12
 const val GL_RED = 0x1903
 const val GL_BGRA = 0x80E1
+
+const val GL_RESCALE_NORMAL = 0x803A
 
 const val GL_CLAMP_TO_EDGE = 0x812F
 const val GL_TEXTURE_MIN_LOD = 0x813A
@@ -320,6 +377,9 @@ const val GL_TEXTURE_LOD_BIAS = 0x8501
 const val GL_DEPTH_COMPONENT16 = 0x81A5
 const val GL_DEPTH_COMPONENT24 = 0x81A6
 const val GL_DEPTH_COMPONENT32 = 0x81A7
+
+inline fun glBlendFuncSeparate(srcRGB: Int, dstRGB: Int, srcAlpha: Int, dstAlpha: Int) =
+    glWrapper.glBlendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha)
 
 inline fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
     glWrapper.glMultiDrawArrays(mode, first, count)
@@ -610,6 +670,9 @@ inline fun glShaderStorageBlockBinding(program: Int, storageBlockIndex: Int, sto
 
 inline fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int =
     glWrapper.glGetProgramResourceIndex(program, programInterface, name)
+
+inline fun glDispatchCompute(num_groups_x: Int, num_groups_y: Int, num_groups_z: Int) =
+    glWrapper.glDispatchCompute(num_groups_x, num_groups_y, num_groups_z)
 
 
 // GL44

@@ -3,7 +3,6 @@ package dev.fastmc.graphics
 import com.mojang.blaze3d.platform.GlStateManager
 import dev.fastmc.common.allocateInt
 import dev.fastmc.graphics.mixin.accessor.AccessorGlStateManager
-import dev.fastmc.graphics.shared.opengl.GL_ARRAY_BUFFER
 import dev.fastmc.graphics.shared.opengl.IGLWrapper
 import net.minecraft.client.render.BufferRenderer
 import org.lwjgl.opengl.*
@@ -17,6 +16,32 @@ class GLWrapper : IGLWrapper {
 
 
     // GL11
+    override fun glEnable(cap: Int) {
+        when (cap) {
+            GL11C.GL_SCISSOR_TEST -> GlStateManager._enableScissorTest()
+            GL11C.GL_DEPTH_TEST -> GlStateManager._enableDepthTest()
+            GL11C.GL_BLEND -> GlStateManager._enableBlend()
+            GL11C.GL_CULL_FACE -> GlStateManager._enableCull()
+            GL11C.GL_POLYGON_OFFSET_FILL -> GlStateManager._enablePolygonOffset()
+            GL11C.GL_COLOR_LOGIC_OP -> GlStateManager._enableColorLogicOp()
+            GL11C.GL_TEXTURE_2D -> GlStateManager._enableTexture()
+            else -> GL11.glEnable(cap)
+        }
+    }
+
+    override fun glDisable(cap: Int) {
+        when (cap) {
+            GL11C.GL_SCISSOR_TEST -> GlStateManager._disableScissorTest()
+            GL11C.GL_DEPTH_TEST -> GlStateManager._disableDepthTest()
+            GL11C.GL_BLEND -> GlStateManager._disableBlend()
+            GL11C.GL_CULL_FACE -> GlStateManager._disableCull()
+            GL11C.GL_POLYGON_OFFSET_FILL -> GlStateManager._disablePolygonOffset()
+            GL11C.GL_COLOR_LOGIC_OP -> GlStateManager._disableColorLogicOp()
+            GL11C.GL_TEXTURE_2D -> GlStateManager._disableTexture()
+            else -> GL11.glDisable(cap)
+        }
+    }
+
     override fun glClear(mask: Int) = GL11C.glClear(mask)
     override fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float) =
         GL11C.glClearColor(red, green, blue, alpha)
@@ -29,8 +54,19 @@ class GLWrapper : IGLWrapper {
     override fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) =
         GL11C.glDrawElements(mode, count, type, indices)
 
+    override fun glColorMask(red: Boolean, green: Boolean, blue: Boolean, alpha: Boolean) =
+        GlStateManager._colorMask(red, green, blue, alpha)
+
+    override fun glDepthMask(flag: Boolean) = GlStateManager._depthMask(flag)
+
+    override fun glDepthFunc(func: Int) = GlStateManager._depthFunc(func)
+    override fun glBlendFunc(src: Int, dst: Int) = GlStateManager._blendFunc(src, dst)
+
 
     // GL14
+    override fun glBlendFuncSeparate(srcRGB: Int, dstRGB: Int, srcAlpha: Int, dstAlpha: Int) =
+        GlStateManager._blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha)
+
     override fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
         GL14C.glMultiDrawArrays(mode, first, count)
 
@@ -154,6 +190,9 @@ class GLWrapper : IGLWrapper {
 
     override fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int =
         GL43C.glGetProgramResourceIndex(program, programInterface, name)
+
+    override fun glDispatchCompute(num_groups_x: Int, num_groups_y: Int, num_groups_z: Int) =
+        GL43C.glDispatchCompute(num_groups_x, num_groups_y, num_groups_z)
 
 
     // GL45

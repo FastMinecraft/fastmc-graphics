@@ -22,6 +22,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
+import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.glClearColor;
+
 @Mixin(BackgroundRenderer.class)
 public class MixinPatchBackgroundRenderer {
     @Shadow
@@ -86,7 +88,7 @@ public class MixinPatchBackgroundRenderer {
             green = 0.734f;
             blue = 0.785f;
             lastWaterFogColorUpdateTime = -1L;
-            RenderSystem.clearColor(red, green, blue, 0.0f);
+            glClearColor(red, green, blue, 0.0f);
         } else {
             float h;
             float r;
@@ -183,7 +185,7 @@ public class MixinPatchBackgroundRenderer {
             blue = blue * (1.0f - z) + blue * u * z;
         }
 
-        RenderSystem.clearColor(red, green, blue, 0.0f);
+        glClearColor(red, green, blue, 0.0f);
     }
 
 }

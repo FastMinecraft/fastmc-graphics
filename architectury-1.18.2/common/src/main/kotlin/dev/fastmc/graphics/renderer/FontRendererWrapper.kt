@@ -5,12 +5,10 @@ import dev.fastmc.common.ColorARGB
 import dev.fastmc.graphics.resource.toBufferedImage
 import dev.fastmc.graphics.shared.font.FontRenderer
 import dev.fastmc.graphics.shared.font.IFontRendererWrapper
-import dev.fastmc.graphics.shared.opengl.glUseProgramForce
+import dev.fastmc.graphics.shared.opengl.*
 import dev.fastmc.graphics.util.ResourceLocation
 import net.minecraft.resource.ResourceManager
 import org.joml.Matrix4f
-import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
-import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 
 class FontRendererWrapper(resourceManager: ResourceManager) : IFontRendererWrapper {
     override val wrapped: FontRenderer
@@ -45,9 +43,9 @@ class FontRendererWrapper(resourceManager: ResourceManager) : IFontRendererWrapp
         var adjustedColor = color
         if (adjustedColor and -67108864 == 0) adjustedColor = color or -16777216
 
-        RenderSystem.blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        RenderSystem.enableBlend()
-        RenderSystem.enableTexture()
+        glEnable(GL_TEXTURE_2D)
+        glEnable(GL_BLEND)
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
         wrapped.drawString(projection, modelView, string, posX, posY, ColorARGB(adjustedColor), scale, drawShadow)
 

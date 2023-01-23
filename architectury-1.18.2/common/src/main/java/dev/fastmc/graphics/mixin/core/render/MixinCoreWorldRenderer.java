@@ -1,7 +1,5 @@
 package dev.fastmc.graphics.mixin.core.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
 import dev.fastmc.common.collection.FastObjectArrayList;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.mixin.accessor.AccessorBackgroundRenderer;
@@ -50,7 +48,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static org.lwjgl.opengl.GL11.GL_LEQUAL;
+import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
 
 @SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
@@ -302,24 +300,23 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
     }
 
     private static void preRenderSolid() {
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL_LEQUAL);
+        glEnable(GL_CULL_FACE);
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
     }
 
     private static void preRenderTranslucent() {
-        RenderSystem.enableCull();
-        RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(
-            GlStateManager.SrcFactor.SRC_ALPHA,
-            GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
-            GlStateManager.SrcFactor.ONE,
-            GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(
+            GL_SRC_ALPHA,
+            GL_ONE_MINUS_SRC_ALPHA,
+            GL_ONE,
+            GL_ONE_MINUS_SRC_ALPHA
         );
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(GL_LEQUAL);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
     }
 
     private static void setupTranslucentFbo(Framebuffer weather) {

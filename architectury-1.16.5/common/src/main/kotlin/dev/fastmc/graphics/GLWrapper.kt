@@ -9,12 +9,51 @@ import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 import java.nio.IntBuffer
 
+@Suppress("DEPRECATION")
 class GLWrapper : IGLWrapper {
     override val lightMapUnit: Int
         get() = 2
 
 
     // GL11
+    override fun glEnable(cap: Int) {
+        when (cap) {
+            GL11.GL_ALPHA_TEST -> GlStateManager.enableAlphaTest()
+            GL11.GL_LIGHTING -> GlStateManager.enableLighting()
+            GL11.GL_COLOR_MATERIAL -> GlStateManager.enableColorMaterial()
+            GL11C.GL_SCISSOR_TEST -> GlStateManager.method_31319()
+            GL11C.GL_DEPTH_TEST -> GlStateManager.enableDepthTest()
+            GL11C.GL_BLEND -> GlStateManager.enableBlend()
+            GL11.GL_FOG -> GlStateManager.enableFog()
+            GL11C.GL_CULL_FACE -> GlStateManager.enableCull()
+            GL11C.GL_POLYGON_OFFSET_FILL -> GlStateManager.enablePolygonOffset()
+            GL11C.GL_POLYGON_OFFSET_LINE -> GlStateManager.enableLineOffset()
+            GL11C.GL_COLOR_LOGIC_OP -> GlStateManager.enableColorLogicOp()
+            GL11C.GL_TEXTURE_2D -> GlStateManager.enableTexture()
+            GL12.GL_RESCALE_NORMAL -> GlStateManager.enableRescaleNormal()
+            else -> GL11.glEnable(cap)
+        }
+    }
+
+    override fun glDisable(cap: Int) {
+        when (cap) {
+            GL11.GL_ALPHA_TEST -> GlStateManager.disableAlphaTest()
+            GL11.GL_LIGHTING -> GlStateManager.disableLighting()
+            GL11.GL_COLOR_MATERIAL -> GlStateManager.disableColorMaterial()
+            GL11C.GL_SCISSOR_TEST -> GlStateManager.method_31318()
+            GL11C.GL_DEPTH_TEST -> GlStateManager.disableDepthTest()
+            GL11C.GL_BLEND -> GlStateManager.disableBlend()
+            GL11.GL_FOG -> GlStateManager.disableFog()
+            GL11C.GL_CULL_FACE -> GlStateManager.disableCull()
+            GL11C.GL_POLYGON_OFFSET_FILL -> GlStateManager.disablePolygonOffset()
+            GL11C.GL_POLYGON_OFFSET_LINE -> GlStateManager.disableLineOffset()
+            GL11C.GL_COLOR_LOGIC_OP -> GlStateManager.disableColorLogicOp()
+            GL11C.GL_TEXTURE_2D -> GlStateManager.disableTexture()
+            GL12.GL_RESCALE_NORMAL -> GlStateManager.disableRescaleNormal()
+            else -> GL11.glDisable(cap)
+        }
+    }
+
     override fun glClear(mask: Int) = GL11C.glClear(mask)
     override fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float) =
         GL11C.glClearColor(red, green, blue, alpha)
@@ -27,8 +66,19 @@ class GLWrapper : IGLWrapper {
     override fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) =
         GL11C.glDrawElements(mode, count, type, indices)
 
+    override fun glColorMask(red: Boolean, green: Boolean, blue: Boolean, alpha: Boolean) =
+        GlStateManager.colorMask(red, green, blue, alpha)
+
+    override fun glDepthMask(flag: Boolean) = GlStateManager.depthMask(flag)
+
+    override fun glDepthFunc(func: Int) = GlStateManager.depthFunc(func)
+    override fun glBlendFunc(src: Int, dst: Int) = GlStateManager.blendFunc(src, dst)
+
 
     // GL14
+    override fun glBlendFuncSeparate(srcRGB: Int, dstRGB: Int, srcAlpha: Int, dstAlpha: Int) =
+        GlStateManager.blendFuncSeparate(srcRGB, dstRGB, srcAlpha, dstAlpha)
+
     override fun glMultiDrawArrays(mode: Int, first: IntBuffer, count: IntBuffer) =
         GL14C.glMultiDrawArrays(mode, first, count)
 
@@ -146,6 +196,9 @@ class GLWrapper : IGLWrapper {
 
     override fun glGetProgramResourceIndex(program: Int, programInterface: Int, name: CharSequence): Int =
         GL43C.glGetProgramResourceIndex(program, programInterface, name)
+
+    override fun glDispatchCompute(num_groups_x: Int, num_groups_y: Int, num_groups_z: Int) =
+        GL43C.glDispatchCompute(num_groups_x, num_groups_y, num_groups_z)
 
 
     // GL45

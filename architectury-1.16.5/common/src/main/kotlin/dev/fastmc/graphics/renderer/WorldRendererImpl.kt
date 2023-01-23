@@ -1,8 +1,8 @@
 package dev.fastmc.graphics.renderer
 
-import com.mojang.blaze3d.systems.RenderSystem
 import dev.fastmc.graphics.shared.opengl.glBindTexture
 import dev.fastmc.graphics.shared.opengl.glBindVertexArray
+import dev.fastmc.graphics.shared.opengl.glBlendFuncSeparate
 import dev.fastmc.graphics.shared.opengl.glUseProgramForce
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.resource.IResourceManager
@@ -26,7 +26,7 @@ class WorldRendererImpl(private val mc: Minecraft, override val resourceManager:
     }
 
     override fun preRender(partialTicks: Float) {
-        RenderSystem.blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
     }
 
     override fun postRender() {

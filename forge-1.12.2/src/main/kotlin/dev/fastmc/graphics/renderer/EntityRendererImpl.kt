@@ -47,7 +47,4 @@ class EntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer
         }
     }
 
-    override fun render() {
-        super.render()
-    }
 }

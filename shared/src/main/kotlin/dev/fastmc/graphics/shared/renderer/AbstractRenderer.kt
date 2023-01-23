@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.renderer
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.IInfo
+import dev.fastmc.graphics.shared.opengl.*
 import dev.fastmc.graphics.shared.util.ClassIDRegistry
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.ITypeID
@@ -64,6 +65,11 @@ abstract class AbstractRenderer<ET : Any>(
     }
 
     open fun render() {
+        glDisable(GL_CULL_FACE)
+        glEnable(GL_DEPTH_TEST)
+        glEnable(GL_BLEND)
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+
         renderEntryList.forEach {
             it.render(this)
         }

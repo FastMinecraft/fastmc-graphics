@@ -1,12 +1,10 @@
 package dev.fastmc.graphics.renderer
 
-import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.tileentity.*
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IChestInfo
-import dev.fastmc.graphics.shared.opengl.GL_TEXTURE0
-import dev.fastmc.graphics.shared.opengl.GL_TEXTURE2
+import dev.fastmc.graphics.shared.opengl.glBindTextureUnit
 import dev.fastmc.graphics.shared.renderer.IRenderer
 import dev.fastmc.graphics.shared.renderer.TileEntityRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
@@ -53,18 +51,10 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
         }
     }
 
-    @Suppress("DEPRECATION")
     override fun render() {
         mc.gameRenderer.lightmapTextureManager.enable()
-        GlStateManager._activeTexture(GL_TEXTURE2)
-        GlStateManager._bindTexture(RenderSystem.getShaderTexture(2))
-        GlStateManager._activeTexture(GL_TEXTURE0)
-        RenderSystem.disableCull()
-        RenderSystem.enableDepthTest()
-        RenderSystem.enableBlend()
-
+        glBindTextureUnit(2, RenderSystem.getShaderTexture(2))
         super.render()
-
         mc.gameRenderer.lightmapTextureManager.disable()
     }
 

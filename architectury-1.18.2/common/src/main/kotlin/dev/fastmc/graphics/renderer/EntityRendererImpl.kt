@@ -1,6 +1,5 @@
 package dev.fastmc.graphics.renderer
 
-import com.mojang.blaze3d.systems.RenderSystem
 import dev.fastmc.graphics.shared.renderer.EntityRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
@@ -11,7 +10,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.minecraft.entity.Entity
-import org.lwjgl.opengl.GL11.*
 import kotlin.coroutines.CoroutineContext
 
 class EntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
@@ -50,9 +48,4 @@ class EntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer
         }
     }
 
-    override fun render() {
-        RenderSystem.disableCull()
-        RenderSystem.blendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO)
-        super.render()
-    }
 }
