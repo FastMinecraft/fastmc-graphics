@@ -231,7 +231,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
         worldRenderer.updateFrustum();
         worldRenderer.updateGlobalUBO(tickDelta);
-        worldRenderer.getTerrainRenderer().update();
+        worldRenderer.getTerrainRenderer().update(true);
 
         float viewDistance = gameRenderer.getViewDistance();
         assert this.client.world != null;

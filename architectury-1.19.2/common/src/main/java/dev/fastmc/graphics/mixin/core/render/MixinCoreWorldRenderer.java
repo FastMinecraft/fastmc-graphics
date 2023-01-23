@@ -240,7 +240,7 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
         worldRenderer.updateFrustum();
         worldRenderer.updateGlobalUBO(tickDelta);
-        worldRenderer.getTerrainRenderer().update();
+        worldRenderer.getTerrainRenderer().update(true);
     }
 
     @Inject(method = "setupTerrain", at = @At("HEAD"), cancellable = true)
