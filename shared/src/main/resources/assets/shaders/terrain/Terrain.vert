@@ -35,12 +35,14 @@ out FragData {
 const float euler = 2.71828174591064453125;
 #endif
 
-const ivec3 shiftVec = ivec3(20, 10, 0);
+const ivec3 shiftVec = ivec3(8, 16, 0);
+const ivec3 maskVec = ivec3(255, 65535, 255);
 const vec3 coordConvert = vec3(2.51773861295491E-4);
 
 void main() {
     // gl_BaseInstance exploit
-    vec3 coord = fma(pos, coordConvert, ((ivec3(gl_BaseInstance) >> shiftVec) & 1023) + regionOffset);
+    ivec3 chunkOffset = ivec3(gl_BaseInstance) >> shiftVec & maskVec;
+    vec3 coord = fma(pos, coordConvert, chunkOffset + regionOffset);
     gl_Position = projection * modelView * vec4(coord, 1.0);
 
     fragData.color = vec4(color, 1.0);

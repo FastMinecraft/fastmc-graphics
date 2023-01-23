@@ -91,7 +91,7 @@ class RenderChunkStorage(
 
         for (renderChunk in renderChunkArray) {
             val region = getRegionByBlock(renderChunk.originX, renderChunk.originZ)
-            renderChunk.renderRegion = region
+            renderChunk.region = region
         }
     }
 
@@ -164,7 +164,7 @@ class RenderChunkStorage(
 
                             renderChunk = renderChunkArray[index]
                             renderChunk.setPos(x, minChunkY, z)
-                            renderChunk.renderRegion = region
+                            renderChunk.region = region
 
                             renderChunk.adjacentRenderChunk[Direction.I_UP] = renderChunkArray[index + 1]
 
@@ -181,7 +181,7 @@ class RenderChunkStorage(
                             for (y in minChunkY + 1 until maxChunkY - 1) {
                                 renderChunk = renderChunkArray[++index]
                                 renderChunk.setPos(x, y, z)
-                                renderChunk.renderRegion = region
+                                renderChunk.region = region
 
                                 renderChunk.adjacentRenderChunk[Direction.I_DOWN] = renderChunkArray[index - 1]
                                 renderChunk.adjacentRenderChunk[Direction.I_UP] = renderChunkArray[index + 1]
@@ -199,7 +199,7 @@ class RenderChunkStorage(
 
                             renderChunk = renderChunkArray[++index]
                             renderChunk.setPos(x, maxChunkY - 1, z)
-                            renderChunk.renderRegion = region
+                            renderChunk.region = region
 
                             renderChunk.adjacentRenderChunk[Direction.I_DOWN] = renderChunkArray[index - 1]
 

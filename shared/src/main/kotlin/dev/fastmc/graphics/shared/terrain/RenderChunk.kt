@@ -1,21 +1,16 @@
 package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.Cancellable
-import dev.fastmc.common.Direction
 import dev.fastmc.common.UpdateCounter
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.common.distanceSq
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkY
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import org.joml.FrustumIntersection
 import java.util.concurrent.atomic.AtomicReference
 
 class RenderChunk(
     private val renderer: TerrainRenderer,
-    @JvmField var renderRegion: RenderRegion,
+    @JvmField var region: RenderRegion,
     @JvmField val index: Int
 ) : Cancellable {
     private val updateCounter = UpdateCounter()
@@ -38,7 +33,7 @@ class RenderChunk(
     inline val maxZ get() = originZ + bound.maxZ
 
     @JvmField
-    var bound: RenderChunk.Bound = Bound.Default
+    var bound: Bound = Bound.Default
 
     @JvmField
     var regionIndex = 0
@@ -126,7 +121,7 @@ class RenderChunk(
             this.chunkZ = chunkZ
 
             bound = Bound.Default
-            regionIndex = (chunkY shl 8) or (chunkZ shl 4) or chunkX
+            regionIndex = (chunkY shl 8) or ((chunkZ and 15) shl 4) or (chunkX and 15)
 
             lastTaskRef.getAndSet(null)?.cancel()
             occlusionData = ChunkOcclusionData.EMPTY

@@ -359,7 +359,7 @@ abstract class TerrainRenderer(
                                 if (renderChunk !== cameraChunk) {
                                     renderChunk.isVisible = false
 
-                                    if (!renderChunk.renderRegion.frustumCull.isInFrustum()) continue
+                                    if (!renderChunk.region.frustumCull.isInFrustum()) continue
                                     if (!renderChunk.checkFogRange()) continue
                                     if (!caveCullingBitSet.containsFast(chunkIndex)) continue
                                     if (!renderChunk.checkAnyAdjBuilt()) continue
@@ -367,14 +367,14 @@ abstract class TerrainRenderer(
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
 
                                     renderChunk.isVisible = true
-                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    val result = results[renderChunk.region.index][jobID]
                                     result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 } else {
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache))
                                         continue
                                     renderChunk.isVisible = true
-                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    val result = results[renderChunk.region.index][jobID]
                                     result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 }
@@ -398,21 +398,21 @@ abstract class TerrainRenderer(
                                 if (renderChunk !== cameraChunk) {
                                     renderChunk.isVisible = false
 
-                                    if (!renderChunk.renderRegion.frustumCull.isInFrustum()) continue
+                                    if (!renderChunk.region.frustumCull.isInFrustum()) continue
                                     if (!renderChunk.checkFogRange()) continue
                                     if (!renderChunk.checkAnyAdjBuilt()) continue
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
                                     if (!renderChunk.frustumCull.isInFrustum()) continue
 
                                     renderChunk.isVisible = true
-                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    val result = results[renderChunk.region.index][jobID]
                                     result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 } else {
                                     if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache))
                                         continue
                                     renderChunk.isVisible = true
-                                    val result = results[renderChunk.renderRegion.index][jobID]
+                                    val result = results[renderChunk.region.index][jobID]
                                     result.array[result.size++] = renderChunk
                                     tileEntityResult.add(renderChunk)
                                 }
@@ -521,28 +521,16 @@ abstract class TerrainRenderer(
                     bbBuffer.update()
 
                     for (i in 0 until size) {
-                        region.tempVisibleBits[i] = calculateVisibleFaceBit(array[i]).toByte()
-                        bbBuffer.put(array[i])
+                        val chunk = array[i]
+                        region.tempVisibleBits[chunk.regionIndex] = calculateVisibleFaceBit(chunk).toByte()
+                        bbBuffer.put(chunk)
                     }
 
                     for (layerIndex in 0 until layerCount) {
                         val layerBatch = region.getLayer(layerIndex)
-                        layerBatch.update()
-
+                        layerBatch.startUpdate()
                         for (i in 0 until size) {
-                            val renderChunk = array[i]
-                            val layer = renderChunk.layers[layerIndex]
-                            val vertexRegion = layer.vertexRegion ?: continue
-                            val indexRegion = layer.indexRegion ?: continue
-                            layer.faceData?.addToBatch(
-                                layerBatch,
-                                vertexRegion.offset,
-                                indexRegion.offset,
-                                region.tempVisibleBits[i].toInt(),
-                                (renderChunk.originX and 255 shl 20)
-                                    or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
-                                    or (renderChunk.originZ and 255)
-                            )
+                            layerBatch.put(array[i])
                         }
                     }
                 }
@@ -676,8 +664,8 @@ abstract class TerrainRenderer(
             val region = regionArray[i.toInt()]
             if (!region.frustumCull.isInFrustum()) continue
             val layerBatch = region.getLayer(layerIndex)
-            layerBatch.checkUpdate()
-            if (layerBatch.isEmpty) continue
+            layerBatch.endUpdate()
+            if (!layerBatch.bind()) continue
 
             shader.setRegionOffset(
                 (region.originX - renderPosX).toFloat(),
@@ -686,7 +674,6 @@ abstract class TerrainRenderer(
             )
 
             region.vao.bind()
-            glBindBuffer(GL_DRAW_INDIRECT_BUFFER, layerBatch.bufferID)
             glMultiDrawElementsIndirect(GL_TRIANGLES, GL_UNSIGNED_INT, 0L, layerBatch.count, 0)
         }
     }

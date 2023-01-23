@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.terrain
 import dev.fastmc.common.Cancellable
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -256,9 +257,9 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
         return if (bufferGroup.vertexBuffers.size == 1) {
             val vertexBuffer = bufferGroup.vertexBuffers[0]!!
             val indexBuffer = bufferGroup.indexBuffers[0]!!
-            Triple(FaceData.Singleton(indexBuffer.region.buffer.remaining()), vertexBuffer, indexBuffer)
+            Triple(FaceData.Singleton(indexBuffer.region.buffer.remaining() / 4), vertexBuffer, indexBuffer)
         } else {
-            var dataArray: IntArray? = null
+            var dataArrayList: IntArrayList? = null
 
             var vertexOffset = 0
             var indexOffset = 0
@@ -297,23 +298,25 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                     indexBuffer.release(this)
                 }
 
-                if (dataArray == null) {
-                    dataArray = IntArray(63 * 3) { -1 }
+                if (dataArrayList == null) {
+                    dataArrayList = IntArrayList(4)
                 }
 
-                val dataIndex = i * 3
-                dataArray[dataIndex] = vertexOffset
-                dataArray[dataIndex + 1] = indexOffset
-                dataArray[dataIndex + 2] = indexLength
+                dataArrayList.ensureCapacity(dataArrayList.size + 4)
+                dataArrayList.add(i + 1)
+                dataArrayList.add(vertexOffset)
+                dataArrayList.add(indexOffset)
+                dataArrayList.add(indexLength / 4)
 
                 vertexOffset += vertexLength
                 indexOffset += indexLength
             }
 
-            if (dataArray != null) {
+            if (dataArrayList != null) {
                 resultVertexBuffer!!.region.buffer.flip()
                 resultIndexBuffer!!.region.buffer.flip()
-                Triple(FaceData.Multiple(dataArray), resultVertexBuffer, resultIndexBuffer)
+                dataArrayList.trim()
+                Triple(FaceData.Multiple(dataArrayList.elements()), resultVertexBuffer, resultIndexBuffer)
             } else {
                 null
             }

@@ -65,7 +65,7 @@ abstract class ChunkBuilder(
                     return@removeIf true
                 }
 
-                val region = it.renderChunk.renderRegion
+                val region = it.renderChunk.region
                 var queue = pendingUploadQueueMap[region.index]
                 if (queue == null || queue.vertexBufferPool !== region.vertexBufferPool) {
                     queue?.clear()

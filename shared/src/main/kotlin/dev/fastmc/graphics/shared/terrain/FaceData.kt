@@ -1,21 +1,31 @@
 package dev.fastmc.graphics.shared.terrain
 
-import it.unimi.dsi.fastutil.ints.IntArrayList
+import dev.fastmc.common.CachedBuffer
 
 sealed interface FaceData {
+    val dataSize: Int
+
     fun addToBatch(
-        batch: RenderRegion.LayerBatch,
+        batch: RenderRegion.DefaultLayerBatch,
         vertexRegionOffset: Int,
         indexRegionOffset: Int,
         visibleFaceBit: Int,
         chunkOffsetData: Int
     )
 
+    fun addToBuffer(
+        buffer: CachedBuffer,
+        vertexRegionOffset: Int,
+        indexRegionOffset: Int
+    )
+
     class Singleton(indexBufferLength: Int) : FaceData {
+        override val dataSize: Int
+            get() = 1
         private val indexCount = indexBufferLength
 
         override fun addToBatch(
-            batch: RenderRegion.LayerBatch,
+            batch: RenderRegion.DefaultLayerBatch,
             vertexRegionOffset: Int,
             indexRegionOffset: Int,
             visibleFaceBit: Int,
@@ -28,30 +38,33 @@ sealed interface FaceData {
                 chunkOffsetData
             )
         }
+
+        override fun addToBuffer(buffer: CachedBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
+            val intBuffer = buffer.ensureRemainingInt(4)
+            intBuffer.put(0b11_11_11)
+            intBuffer.put(vertexRegionOffset)
+            intBuffer.put(indexRegionOffset)
+            intBuffer.put(indexCount)
+        }
     }
 
     class Multiple(private val dataArray: IntArray) : FaceData {
-        private val visibleIndices: IntArray
+        override val dataSize: Int
+            get() = dataArray.size / 4
         private val allFaceBits: Int
 
         init {
             var bits = 0
-            val visibleIndexList = IntArrayList()
 
-            for (i in 0 until MAX_COUNT) {
-                if (dataArray[i * 3] != -1) {
-                    visibleIndexList.add(i)
-                    bits = bits or (i + 1)
-                }
+            for (i in dataArray.indices step 4) {
+                bits = bits or (dataArray[i] + 1)
             }
 
-            visibleIndexList.trim()
-            visibleIndices = visibleIndexList.elements()
             allFaceBits = bits
         }
 
         override fun addToBatch(
-            batch: RenderRegion.LayerBatch,
+            batch: RenderRegion.DefaultLayerBatch,
             vertexRegionOffset: Int,
             indexRegionOffset: Int,
             visibleFaceBit: Int,
@@ -59,18 +72,20 @@ sealed interface FaceData {
         ) {
             if (visibleFaceBit and allFaceBits == 0) return
 
-            for (i in visibleIndices.indices) {
-                val dataIndex = visibleIndices[i]
-                val index = dataIndex * 3
-                if ((dataIndex + 1) and visibleFaceBit == 0) continue
+            for (i in dataArray.indices step 4) {
+                if ((dataArray[i]) and visibleFaceBit == 0) continue
 
                 batch.put(
-                    vertexRegionOffset + dataArray[index],
-                    indexRegionOffset + dataArray[index + 1],
-                    dataArray[index + 2],
+                    vertexRegionOffset + dataArray[i + 1],
+                    indexRegionOffset + dataArray[i + 2],
+                    dataArray[i + 3],
                     chunkOffsetData
                 )
             }
+        }
+
+        override fun addToBuffer(buffer: CachedBuffer, vertexRegionOffset: Int, indexRegionOffset: Int) {
+            buffer.ensureRemainingInt(dataArray.size).put(dataArray)
         }
     }
 

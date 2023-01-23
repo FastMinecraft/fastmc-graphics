@@ -165,7 +165,7 @@ internal class UploadTask(
                 var region = layer.indexRegion
 
                 if (region == null) {
-                    region = task.renderChunk.renderRegion.indexBufferPool.allocate(updateSize)
+                    region = task.renderChunk.region.indexBufferPool.allocate(updateSize)
                     layer.indexRegion = region
                 } else {
                     region.invalidate()
@@ -217,7 +217,7 @@ internal class UploadTask(
                 var region = layer.vertexRegion
 
                 if (region == null) {
-                    region = task.renderChunk.renderRegion.vertexBufferPool.allocate(updateSize)
+                    region = task.renderChunk.region.vertexBufferPool.allocate(updateSize)
                     layer.vertexRegion = region
                 } else {
                     region.invalidate()

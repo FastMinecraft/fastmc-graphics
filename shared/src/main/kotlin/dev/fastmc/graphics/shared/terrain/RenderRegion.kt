@@ -21,8 +21,17 @@ class RenderRegion(
     @JvmField
     val frustumCull: FrustumCull = FrustumCullImpl()
 
+//    @JvmField
+//    val cullingLayerBatch = CullingLayerBatch()
+
     @JvmField
-    val layerBatchArray = Array(renderer.layerCount) { LayerBatch() }
+    val layerBatchArray = Array(renderer.layerCount) {
+//        if (it == 0) {
+//            cullingLayerBatch
+//        } else {
+            DefaultLayerBatch(storage, it)
+//        }
+    }
 
     @JvmField
     val visibleRenderChunkList = FastObjectArrayList.wrap(arrayOfNulls<RenderChunk>(storage.regionChunkCount), 0)
@@ -63,7 +72,7 @@ class RenderRegion(
         }
     }
 
-    inline fun getLayer(index: Int): LayerBatch {
+    inline fun getLayer(index: Int): ILayerBatch {
         return layerBatchArray[index]
     }
 
@@ -84,6 +93,155 @@ class RenderRegion(
             layer.destroy()
         }
     }
+
+    interface ILayerBatch {
+        val layerIndex: Int
+        val count: Int
+
+        fun startUpdate()
+        fun put(chunk: RenderChunk)
+        fun endUpdate()
+        fun bind(): Boolean
+
+        fun destroy()
+    }
+
+//    inner class CullingLayerBatch : ILayerBatch {
+//        private val visibleShaderBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 8, 0)
+//        private val faceDataIndicesBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 4, 0)
+//        private var faceDataBuffer: BufferObject? = null
+//        private var indirectBuffer: BufferObject? = null
+//
+//        private val clientFaceDataIndicesBuffer = allocateInt(storage.regionChunkCount)
+//        private val clientFaceDataBuffer = CachedBuffer(
+//            storage.regionChunkCount * 16,
+//            CachedBuffer.SizingStrategy.AtLeastDouble,
+//            CachedBuffer.ShrinkStrategy.HalfEmpty
+//        )
+//
+//        private var isDirty = false
+//
+//        override val layerIndex: Int get() = 0
+//        override var count = 0; private set
+//
+//        override fun startUpdate() {
+//            count = 0
+//            isDirty = true
+//
+//            for (i in 0 until clientFaceDataIndicesBuffer.capacity()) {
+//                clientFaceDataIndicesBuffer.put(i, -1)
+//            }
+//        }
+//
+//        override fun put(chunk: RenderChunk) {
+//            val layer = chunk.layers[layerIndex]
+//            val vertexRegion = layer.vertexRegion ?: return
+//            val indexRegion = layer.indexRegion ?: return
+//            val faceData = layer.faceData ?: return
+//            faceData.addToBuffer(
+//                clientFaceDataBuffer,
+//                vertexRegion.offset,
+//                indexRegion.offset
+//            )
+//            clientFaceDataIndicesBuffer.put(chunk.regionIndex, faceData.dataSize)
+//        }
+//
+//        override fun bind() {
+//            val indirectBuffer = indirectBuffer ?: return
+//            glBindBuffer(GL_DRAW_INDIRECT_BUFFER, indirectBuffer.id)
+//        }
+//
+//        override fun destroy() {
+//            visibleShaderBuffer.destroy()
+//            faceDataIndicesBuffer.destroy()
+//            faceDataBuffer?.destroy()
+//            indirectBuffer?.destroy()
+//
+//            clientFaceDataBuffer.free()
+//            clientFaceDataBuffer.free()
+//        }
+//    }
+
+    class DefaultLayerBatch(
+        private val storage: RenderChunkStorage,
+        override val layerIndex: Int
+    ) : ILayerBatch {
+        private var serverBuffer: BufferObject? = null
+        private val cachedClientBuffer = CachedBuffer(storage.regionChunkCount * 20)
+        private var index = 0
+        private var isDirty = false
+
+        override var count = 0; private set
+
+        override fun startUpdate() {
+            index = 0
+            isDirty = true
+            count = 0
+        }
+
+        override fun put(chunk: RenderChunk) {
+            val layer = chunk.layers[layerIndex]
+            val vertexRegion = layer.vertexRegion ?: return
+            val indexRegion = layer.indexRegion ?: return
+            layer.faceData?.addToBatch(
+                this,
+                vertexRegion.offset,
+                indexRegion.offset,
+                chunk.region.tempVisibleBits[chunk.regionIndex].toInt(),
+                (chunk.originX and 255 shl 8)
+                    or ((chunk.chunkY - storage.minChunkY) shl 20)
+                    or (chunk.originZ and 255)
+            )
+        }
+
+        fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
+            val clientBuffer = cachedClientBuffer.ensureRemainingByte(20)
+            val address = clientBuffer.address + index
+
+            UNSAFE.putInt(address, indexCount)
+            UNSAFE.putInt(address + 4L, 1)
+            UNSAFE.putInt(address + 8L, indexOffset / 4)
+            UNSAFE.putInt(address + 12L, vertexOffset / 16)
+            UNSAFE.putInt(address + 16L, baseInstance)
+
+            index += 20
+            count++
+        }
+
+        override fun endUpdate() {
+            if (isDirty && count != 0) {
+                val clientBuffer = cachedClientBuffer.getByte()
+                clientBuffer.limit(index)
+                var buffer = serverBuffer
+                if (buffer == null || buffer.size < clientBuffer.remaining() || buffer.size - clientBuffer.remaining() > 1024 * 1024) {
+                    buffer?.destroy()
+                    val newSize = min(clientBuffer.remaining() * 2, storage.regionChunkCount * FaceData.MAX_COUNT * 20)
+                    buffer = BufferObject.Immutable().allocate(newSize, GL_DYNAMIC_STORAGE_BIT)
+                    glNamedBufferSubData(buffer.id, 0L, clientBuffer)
+                    serverBuffer = buffer
+                } else {
+                    glInvalidateBufferData(buffer.id)
+                    glNamedBufferSubData(buffer.id, 0L, clientBuffer)
+                }
+            }
+
+            isDirty = false
+
+        }
+
+        override fun bind(): Boolean {
+            if (count == 0) return false
+            val buffer = serverBuffer ?: return false
+            buffer.bind(GL_DRAW_INDIRECT_BUFFER)
+            return true
+        }
+
+        override fun destroy() {
+            serverBuffer?.destroy()
+            cachedClientBuffer.free()
+        }
+    }
+
 
     class BoundingBoxBuffer(storage: RenderChunkStorage) {
         private val vao = VertexArrayObject()
@@ -202,61 +360,6 @@ class RenderRegion(
                 float(2, 3, GLDataType.GL_UNSIGNED_BYTE, false)
                 float(3, 3, GLDataType.GL_UNSIGNED_BYTE, false)
             }
-        }
-    }
-
-    inner class LayerBatch {
-        private var serverBuffer: BufferObject? = null
-        private val cachedClientBuffer = CachedBuffer(storage.regionChunkCount * 20)
-        private var index = 0
-        private var isDirty = false
-
-        val bufferID get() = serverBuffer?.id ?: 0
-        var count = 0; private set
-        val isEmpty get() = count == 0
-
-        fun update() {
-            index = 0
-            isDirty = true
-            count = 0
-        }
-
-        fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
-            val clientBuffer = cachedClientBuffer.ensureCapacityByte((count + 1) * 20)
-            val address = clientBuffer.address + index
-
-            UNSAFE.putInt(address, indexCount / 4)
-            UNSAFE.putInt(address + 4L, 1)
-            UNSAFE.putInt(address + 8L, indexOffset / 4)
-            UNSAFE.putInt(address + 12L, vertexOffset / 16)
-            UNSAFE.putInt(address + 16L, baseInstance)
-
-            index += 20
-            this.count++
-        }
-
-        fun checkUpdate() {
-            if (isDirty && count != 0) {
-                val clientBuffer = cachedClientBuffer.getByte()
-                clientBuffer.limit(index)
-                var buffer = serverBuffer
-                if (buffer == null || buffer.size < clientBuffer.remaining() || buffer.size - clientBuffer.remaining() > 1024 * 1024) {
-                    buffer?.destroy()
-                    val newSize = min(clientBuffer.remaining() * 2, storage.regionChunkCount * FaceData.MAX_COUNT * 20)
-                    buffer = BufferObject.Immutable().allocate(newSize, GL_DYNAMIC_STORAGE_BIT)
-                    glNamedBufferSubData(buffer.id, 0L, clientBuffer)
-                    serverBuffer = buffer
-                } else {
-                    glInvalidateBufferData(buffer.id)
-                    glNamedBufferSubData(buffer.id, 0L, clientBuffer)
-                }
-            }
-            isDirty = false
-        }
-
-        fun destroy() {
-            serverBuffer?.destroy()
-            cachedClientBuffer.free()
         }
     }
 
