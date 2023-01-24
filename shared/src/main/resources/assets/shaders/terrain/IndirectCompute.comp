@@ -36,20 +36,6 @@ layout(std430) buffer IndirectBuffer {
 uniform int minChunkY;
 uniform vec3 regionOffset;
 
-const uint B_DOWN = 1u << 0;
-const uint B_UP = 1u << 1;
-const uint B_NORTH = 1u << 2;
-const uint B_SOUTH = 1u << 3;
-const uint B_WEST = 1u << 4;
-const uint B_EAST = 1u << 5;
-
-const float FLOOR_F = 4194304.0;
-const int FLOOR_I = 4194304;
-
-int fastFloor(float x) {
-    return int(x + FLOOR_F) - FLOOR_I;
-}
-
 void main() {
     uint prevVisibleOffset = gl_NumWorkGroups.y * gl_WorkGroupSize.x * gl_WorkGroupSize.z;
     uint chunkIndex = (gl_LocalInvocationID.x << 4) | (gl_WorkGroupID.y << 8) | (gl_LocalInvocationID.z);
@@ -84,20 +70,15 @@ void main() {
         ((gl_LocalInvocationID.x) << 12) |
         ((gl_WorkGroupID.y - minChunkY) << 20) |
         ((gl_LocalInvocationID.z) << 4);
-    uint visibleFaceBits =
-        (B_EAST * (fastFloor(chunkOffset.x) >> 31u)) |
-        (B_WEST * (fastFloor(-chunkOffset.x - 16u) >> 31u)) |
-        (B_UP * (fastFloor(chunkOffset.y) >> 31u)) |
-        (B_DOWN * (fastFloor(-chunkOffset.y - 16u) >> 31u)) |
-        (B_SOUTH * (fastFloor(chunkOffset.z) >> 31u)) |
-        (B_NORTH * (fastFloor(-chunkOffset.z - 16u) >> 31u));
 
+    uint faceDataCount = faceDataIndex >> 26u;
     uint faceDataStart = faceDataIndex & 0x3FFFFFFu;
-    uint faceDataEnd = faceDataStart + (faceDataIndex >> 26u);
+    uint faceDataEnd = faceDataStart + faceDataCount;
+    uint index = atomicAdd(indirectBuffer.counter, faceDataCount);
+
     for (uint i = faceDataStart; i < faceDataEnd; i++) {
         FaceData faceData = faceDataBuffer.faceData[i];
-        uint index = atomicAdd(indirectBuffer.counter, 1);
-        indirectBuffer.cmds[index] = IndirectDrawCommand(
+        indirectBuffer.cmds[index++] = IndirectDrawCommand(
             faceData.indexCount,
             1u,
             faceData.indexOffset,

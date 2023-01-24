@@ -6,6 +6,7 @@ import dev.fastmc.graphics.shared.opengl.*
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
 import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
 import org.joml.FrustumIntersection
+import java.nio.ByteBuffer
 import kotlin.math.min
 
 @Suppress("NOTHING_TO_INLINE")
@@ -114,9 +115,11 @@ class RenderRegion(
 
     inner class CullingLayerBatch : ILayerBatch {
         private val visibleBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 8, 0)
-        private val faceDataIndicesBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 4, GL_DYNAMIC_STORAGE_BIT)
+        private val faceDataIndicesBuffer =
+            BufferObject.Immutable().allocate(storage.regionChunkCount * 4, GL_DYNAMIC_STORAGE_BIT)
         private var faceDataBuffer: BufferObject? = null
         private var indirectBuffer: BufferObject? = null
+        private var indirectBufferPtr: ByteBuffer? = null
 
         private val clientFaceDataIndicesByteBuffer = allocateByte(storage.regionChunkCount * 4)
         private val clientFaceDataIndicesIntBuffer = clientFaceDataIndicesByteBuffer.asIntBuffer()
@@ -124,6 +127,7 @@ class RenderRegion(
 
         private var isDirty = false
         private var frameCounter = 0
+        private var sync = -1L
 
         override val layerIndex: Int get() = 0
         override var count = 0; private set
@@ -156,7 +160,12 @@ class RenderRegion(
 
             val buffer = clientFaceDataBuffer.ensureCapacityInt((count + faceData.dataSize) * 3)
             buffer.position(count * 3)
-            val added = faceData.addToBuffer(buffer, vertexRegion.offset, indexRegion.offset, tempVisibleBits[chunk.regionIndex].toInt())
+            val added = faceData.addToBuffer(
+                buffer,
+                vertexRegion.offset,
+                indexRegion.offset,
+                tempVisibleBits[chunk.regionIndex].toInt()
+            )
 
             clientFaceDataIndicesIntBuffer.put(chunk.regionIndex, (added shl 26) or count)
 
@@ -179,10 +188,19 @@ class RenderRegion(
                     glNamedBufferSubData(faceDataBuffer.id, 0, clientFaceData)
                 }
 
-                val indirectBuffer = indirectBuffer
-                if (indirectBuffer == null || indirectBuffer.size < 4 + count * 20) {
+                var indirectBuffer = indirectBuffer
+                val newSize = 4 + count * 20
+                if (indirectBuffer == null || indirectBuffer.size < newSize) {
                     indirectBuffer?.destroy()
-                    this.indirectBuffer = BufferObject.Immutable().allocate(4 + count * 20, 0)
+                    indirectBuffer =
+                        BufferObject.Immutable().allocate(newSize, GL_MAP_READ_BIT or GL_MAP_PERSISTENT_BIT)
+                    indirectBufferPtr = glMapNamedBufferRange(
+                        indirectBuffer.id,
+                        0,
+                        newSize.toLong(),
+                        GL_MAP_READ_BIT or GL_MAP_PERSISTENT_BIT
+                    )!!
+                    this.indirectBuffer = indirectBuffer
                 }
             }
 
@@ -195,31 +213,6 @@ class RenderRegion(
             }
 
             when (frameCounter) {
-                3 -> {
-                    when (pass) {
-                        0 -> drawIndirect(renderPosX, renderPosY, renderPosZ)
-                        else -> return false
-                    }
-                }
-                2 -> {
-                    when (pass) {
-                        0 -> {
-                            dispatchIndirectCompute(
-                                renderer.shaderManager.indirectShader[2],
-                                faceDataBuffer ?: return false,
-                                indirectBuffer ?: return false,
-                                renderPosX,
-                                renderPosY,
-                                renderPosZ
-                            )
-                        }
-                        1 -> {
-                            drawIndirect(renderPosX, renderPosY, renderPosZ)
-                            frameCounter++
-                        }
-                        else -> return false
-                    }
-                }
                 0, 1 -> {
                     when (pass) {
                         0 -> {
@@ -256,6 +249,48 @@ class RenderRegion(
                         else -> return false
                     }
 
+                }
+                2 -> {
+                    when (pass) {
+                        0 -> {
+                            dispatchIndirectCompute(
+                                renderer.shaderManager.indirectShader[2],
+                                faceDataBuffer ?: return false,
+                                indirectBuffer ?: return false,
+                                renderPosX,
+                                renderPosY,
+                                renderPosZ
+                            )
+                            sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
+                        }
+                        1 -> {
+                            drawIndirect(renderPosX, renderPosY, renderPosZ)
+                            frameCounter++
+                        }
+                        else -> return false
+                    }
+                }
+                3 -> {
+                    when (pass) {
+                        0 -> {
+                            drawIndirect(renderPosX, renderPosY, renderPosZ)
+                            if (sync == -1L) {
+                                sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
+                            } else if (glGetSynciv(sync, GL_SYNC_STATUS) == GL_SIGNALED) {
+                                count = indirectBufferPtr!!.getInt(0)
+                                glDeleteSync(sync)
+                                sync = -1L
+                                frameCounter++
+                            }
+                        }
+                        else -> return false
+                    }
+                }
+                4 -> {
+                    when (pass) {
+                        0 -> drawIndirect(renderPosX, renderPosY, renderPosZ)
+                        else -> return false
+                    }
                 }
             }
 
@@ -307,7 +342,7 @@ class RenderRegion(
                 (originZ - renderPosZ).toFloat()
             )
 
-            shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, indirectBuffer, "IndirectBuffer", 0,  4 + count * 20)
+            shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, indirectBuffer, "IndirectBuffer", 0, 4 + count * 20)
             shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, faceDataBuffer, "FaceDataBuffer", 0, count * 12)
             shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, faceDataIndicesBuffer, "FaceDataIndicesBuffer")
             shader.attachBuffer(GL_SHADER_STORAGE_BUFFER, visibleBuffer, "VisibleBuffer")
@@ -447,7 +482,8 @@ class RenderRegion(
 
     class BoundingBoxBuffer(storage: RenderChunkStorage) {
         private val vao = VertexArrayObject()
-        private val serverBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 8, GL_DYNAMIC_STORAGE_BIT)
+        private val serverBuffer =
+            BufferObject.Immutable().allocate(storage.regionChunkCount * 8, GL_DYNAMIC_STORAGE_BIT)
         private val clientBuffer = allocateByte(storage.regionChunkCount * 8)
 
         init {
@@ -620,7 +656,7 @@ class RenderRegion(
     }
 
     private companion object {
-       private var memBarrierFlag = 0
+        private var memBarrierFlag = 0
 
         fun setMemBarrierFlag(bits: Int) {
             memBarrierFlag = memBarrierFlag or bits
