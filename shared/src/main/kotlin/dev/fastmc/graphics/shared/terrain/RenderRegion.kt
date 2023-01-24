@@ -377,7 +377,7 @@ class RenderRegion(
             faceDataBuffer?.destroy()
             indirectBuffer?.destroy()
 
-            clientFaceDataBuffer.free()
+            clientFaceDataIndicesByteBuffer.free()
             clientFaceDataBuffer.free()
         }
     }
