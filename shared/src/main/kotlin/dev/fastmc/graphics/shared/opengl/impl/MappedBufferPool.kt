@@ -31,7 +31,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     private val usedSectorCount0 = AtomicInteger(0)
     private val unusedRegionCount0 = AtomicInteger(maxRegions)
 
-    private val lock = ReentrantLock()
+    private val lock = ReentrantLock(false)
     private val condition = lock.newCondition()
 
     private val pendingRelease = ConcurrentLinkedQueue<Region>()

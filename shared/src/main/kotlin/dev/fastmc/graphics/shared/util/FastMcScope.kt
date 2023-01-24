@@ -20,7 +20,7 @@ private val corePool = ScheduledThreadPoolExecutor(
 
         override fun newThread(r: Runnable): Thread {
             return Thread(group, r, "fastmc-graphics-core-${counter.incrementAndGet()}").apply {
-                priority = 8
+                priority = 6
                 isDaemon = true
             }
         }
@@ -43,7 +43,7 @@ private val extendPool = ForkJoinPool(
                 private val threadID = idRegistry.register()
 
                 init {
-                    priority = 3
+                    priority = 4
                     name = "fastmc-graphics-extend-${threadID + 1}"
                 }
 

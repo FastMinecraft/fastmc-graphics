@@ -22,7 +22,7 @@ class OffThreadLightingProvider(
     hasBlockLight: Boolean, hasSkyLight: Boolean
 ) : LightingProvider(chunkProvider, hasBlockLight, hasSkyLight) {
     @JvmField
-    val readWriteLock = ReentrantReadWriteLock(true)
+    val readWriteLock = ReentrantReadWriteLock()
 
     private var lastLightUpdateFuture: Future<*>? = null
 
@@ -126,7 +126,7 @@ class OffThreadLightingProvider(
             LinkedBlockingQueue(),
             ThreadFactory {
                 Thread(threadGroupMain, it, "FastMinecraft-Lighting").apply {
-                    priority = 6
+                    priority = 5
                 }
             }
         )

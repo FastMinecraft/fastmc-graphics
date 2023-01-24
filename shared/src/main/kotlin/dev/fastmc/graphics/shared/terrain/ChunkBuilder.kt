@@ -9,11 +9,9 @@ import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.util.threadGroupMain
 import java.util.concurrent.*
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
+import java.util.concurrent.atomic.AtomicReferenceArray
 
 abstract class ChunkBuilder(
     protected val renderer: TerrainRenderer
@@ -242,18 +240,23 @@ abstract class ChunkBuilder(
         private val active = AtomicBoolean(true)
         private val threadGroup = ThreadGroup(threadGroupMain, "chunk")
         private val taskQueue = FastObjectArrayList<ChunkBuilderTask>()
+
         @Volatile
         private var dirty = false
-        private val awaitLock = ReentrantLock(true)
-        private val awaitCondition = awaitLock.newCondition()
         private val activeCount = AtomicInteger(0)
 
-        private val threads = run {
-            val r = Runnable {
+        private val threads = Array(ParallelUtils.CPU_THREADS) {
+            Thread(threadGroup, {
+                val self = Thread.currentThread()
                 while (active.get()) {
                     try {
                         while (taskQueue.isEmpty || dirty) {
-                            awaitLock.withLock { awaitCondition.await() }
+                            try {
+                                awaitArray[it] = self
+                                UNSAFE.park(false, 1145141919810L)
+                            } finally {
+                                awaitArray[it] = null
+                            }
                         }
                         val task = synchronized(taskQueue) { taskQueue.removeLastOrNull() } ?: continue
 
@@ -269,14 +272,12 @@ abstract class ChunkBuilder(
                         e.printStackTrace()
                     }
                 }
-            }
-            Array(ParallelUtils.CPU_THREADS) {
-                Thread(threadGroup, r, "fastmc-graphics-chunk-${it + 1}").apply {
-                    priority = 3
-                    start()
-                }
+            }, "fastmc-graphics-chunk-${it + 1}").apply {
+                priority = 3
+                start()
             }
         }
+        private val awaitArray = AtomicReferenceArray<Thread?>(ParallelUtils.CPU_THREADS)
 
         private var taskComparator = TaskComparator()
         private val orderDirty = AtomicBoolean(true)
@@ -310,8 +311,8 @@ abstract class ChunkBuilder(
                     ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
                     dirty = false
                 }
-                awaitLock.withLock {
-                    awaitCondition.signalAll()
+                for (i in 0 until awaitArray.length()) {
+                    awaitArray.getAndSet(i, null)?.let { UNSAFE.unpark(it) }
                 }
             }
         }

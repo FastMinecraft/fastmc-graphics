@@ -40,7 +40,7 @@ public abstract class MixinUtil {
     private static ExecutorService clinit$INVOKE$createIoWorker() {
         return Executors.newCachedThreadPool((runnable) -> {
             Thread thread = new Thread(runnable);
-            thread.setPriority(4);
+            thread.setPriority(3);
             thread.setName("IO-Worker-" + NEXT_WORKER_ID.getAndIncrement());
             thread.setUncaughtExceptionHandler(MixinUtil::uncaughtExceptionHandler);
             return thread;
