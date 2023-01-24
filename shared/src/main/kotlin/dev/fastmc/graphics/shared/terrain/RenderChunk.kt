@@ -121,7 +121,7 @@ class RenderChunk(
             this.chunkZ = chunkZ
 
             bound = Bound.Default
-            regionIndex = (chunkY shl 8) or (chunkX and 15 shl 4) or (chunkZ and 15)
+            regionIndex = ((chunkY - renderer.minChunkY) shl 8) or (chunkX and 15 shl 4) or (chunkZ and 15)
 
             lastTaskRef.getAndSet(null)?.cancel()
             occlusionData = ChunkOcclusionData.EMPTY
