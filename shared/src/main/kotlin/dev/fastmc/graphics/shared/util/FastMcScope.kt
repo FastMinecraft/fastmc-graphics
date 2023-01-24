@@ -20,7 +20,7 @@ private val corePool = ScheduledThreadPoolExecutor(
 
         override fun newThread(r: Runnable): Thread {
             return Thread(group, r, "fastmc-graphics-core-${counter.incrementAndGet()}").apply {
-                priority = 6
+                priority = 7
                 isDaemon = true
             }
         }

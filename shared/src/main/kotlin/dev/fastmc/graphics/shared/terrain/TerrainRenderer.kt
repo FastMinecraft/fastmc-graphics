@@ -11,12 +11,12 @@ import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
 import dev.fastmc.graphics.shared.renderer.*
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.FastMcExtendScope
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import java.lang.Runnable
 import java.util.*
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Future
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Suppress("NOTHING_TO_INLINE")
 abstract class TerrainRenderer(
@@ -88,8 +88,17 @@ abstract class TerrainRenderer(
         val chunkStorage = chunkStorage
         val chunkBuilder = chunkBuilder
 
-        runBlocking {
-            withContext(FastMcCoreScope.context) {
+        val uploadChunkJob = if (uploadChunks) {
+            CompletableDeferred()
+        } else {
+            CompletableDeferred(Unit)
+        }
+
+        val updateRegion = AtomicBoolean(false)
+        val semaphore = CountDownLatch(1)
+
+        FastMcCoreScope.launch {
+            coroutineScope {
                 FastMcMod.profiler.swap("checkUpdate")
                 val cameraPosX0 = cameraBlockX shr 1
                 val cameraPosY0 = cameraBlockY shr 1
@@ -110,23 +119,7 @@ abstract class TerrainRenderer(
                 }
 
                 val updateChunk = caveCullingUpdate || viewUpdate || frustumUpdate || forceUpdate
-                var updateRegion = indicesUpdate || viewUpdate || frustumUpdate || forceUpdate
-
-                FastMcMod.profiler.swap("uploadChunk")
-                val uploadChunkJob = if (uploadChunks) {
-                    launch(this@runBlocking.coroutineContext) {
-                        chunkBuilder.update()
-
-                        FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
-
-                        if (chunkBuilder.visibleUploadCount != 0) {
-                            chunkStorage.markCaveCullingDirty()
-                            updateRegion = true
-                        }
-                    }
-                } else {
-                    null
-                }
+                updateRegion.compareAndSet(false, indicesUpdate || viewUpdate || frustumUpdate || forceUpdate)
 
                 FastMcMod.profiler.swap("camera")
                 chunkStorage.update(forceUpdate)
@@ -142,9 +135,9 @@ abstract class TerrainRenderer(
 
                 FastMcMod.profiler.swap("regionCulling")
                 val regionCullingJob = launch {
-                    uploadChunkJob?.join()
+                    uploadChunkJob.join()
                     chunkCullingJob?.join()
-                    if (updateRegion) {
+                    if (updateRegion.get()) {
                         updateRegionCulling(indicesUpdate && !updateChunk, indicesUpdate || viewUpdate || forceUpdate)
                     }
                 }
@@ -153,7 +146,7 @@ abstract class TerrainRenderer(
                 sortTranslucent()
 
                 FastMcMod.profiler.swap("uploadChunk")
-                uploadChunkJob?.join()
+                uploadChunkJob.join()
                 FastMcMod.profiler.swap("chunkCulling")
                 chunkCullingJob?.join()
                 FastMcMod.profiler.swap("regionCulling")
@@ -163,7 +156,7 @@ abstract class TerrainRenderer(
                 scheduleRebuild()
 
                 FastMcMod.profiler.swap("post")
-                if (updateRegion || updateChunk) {
+                if (updateRegion.get() || updateChunk) {
                     lastMatrixHash = matrixHash
                     lastCameraX0 = cameraPosX0
                     lastCameraY0 = cameraPosY0
@@ -172,7 +165,23 @@ abstract class TerrainRenderer(
                     lastCameraPitch0 = cameraPitch0
                 }
             }
+
+            semaphore.countDown()
         }
+
+        if (uploadChunks) {
+            chunkBuilder.update()
+
+            FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
+
+            if (chunkBuilder.visibleUploadCount != 0) {
+                chunkStorage.markCaveCullingDirty()
+                updateRegion.set(true)
+            }
+            uploadChunkJob.complete(Unit)
+        }
+
+        semaphore.await()
     }
 
     fun clear() {
@@ -312,7 +321,12 @@ abstract class TerrainRenderer(
         var idCounter = ParallelUtils.CPU_THREADS
 
         val statusCache = chunkLoadingStatusCache
-        statusCache.init(cameraChunkX, cameraChunkZ, chunkStorage.sizeXZ, chunkLoadingStatusCacheTimer.tickAndReset(1000L))
+        statusCache.init(
+            cameraChunkX,
+            cameraChunkZ,
+            chunkStorage.sizeXZ,
+            chunkLoadingStatusCacheTimer.tickAndReset(1000L)
+        )
         val caveCulling = caveCulling
 
         coroutineScope {

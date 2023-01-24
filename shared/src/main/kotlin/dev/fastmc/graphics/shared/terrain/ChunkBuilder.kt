@@ -241,28 +241,61 @@ abstract class ChunkBuilder(
         private val threadGroup = ThreadGroup(threadGroupMain, "chunk")
         private val taskQueue = FastObjectArrayList<ChunkBuilderTask>()
 
-        @Volatile
-        private var dirty = false
+        private val dirty = AtomicBoolean(false)
+        private val sortFlag = AtomicBoolean(true)
         private val activeCount = AtomicInteger(0)
 
-        private val threads = Array(ParallelUtils.CPU_THREADS) {
+        private val awaitArray = AtomicReferenceArray<Thread?>(ParallelUtils.CPU_THREADS)
+        private val threads = Array(awaitArray.length()) { id ->
             Thread(threadGroup, {
                 val self = Thread.currentThread()
                 while (active.get()) {
                     try {
-                        while (taskQueue.isEmpty || dirty) {
-                            try {
-                                awaitArray[it] = self
-                                UNSAFE.park(false, 1145141919810L)
-                            } finally {
-                                awaitArray[it] = null
+                        var task: ChunkBuilderTask? = null
+
+                        while (taskQueue.isEmpty || dirty.get()) {
+                            if (!taskQueue.isEmpty && dirty.get() && sortFlag.getAndSet(false)) {
+                                try {
+                                    if (!taskQueue.isEmpty) {
+                                        synchronized(taskQueue) {
+                                            taskQueue.removeIf {
+                                                if (it.isCancelled) {
+                                                    it.onFinish()
+                                                    true
+                                                } else {
+                                                    false
+                                                }
+                                            }
+                                            ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
+                                            task = taskQueue.removeLast()
+                                        }
+                                        for (i in 0 until awaitArray.length()) {
+                                            awaitArray.getAndSet(i, null)?.let { UNSAFE.unpark(it) }
+                                        }
+                                    }
+
+                                    dirty.set(false)
+                                } finally {
+                                    sortFlag.set(true)
+                                }
+                                if (task != null) break
+                            } else {
+                                try {
+                                    awaitArray[id] = self
+                                    UNSAFE.park(false, 1145141919810L)
+                                } finally {
+                                    awaitArray[id] = null
+                                }
                             }
                         }
-                        val task = synchronized(taskQueue) { taskQueue.removeLastOrNull() } ?: continue
+
+                        if (task == null) {
+                            task = synchronized(taskQueue) { taskQueue.removeLastOrNull() } ?: continue
+                        }
 
                         try {
                             activeCount.incrementAndGet()
-                            task.run()
+                            task!!.run()
                         } finally {
                             activeCount.decrementAndGet()
                         }
@@ -272,12 +305,11 @@ abstract class ChunkBuilder(
                         e.printStackTrace()
                     }
                 }
-            }, "fastmc-graphics-chunk-${it + 1}").apply {
+            }, "fastmc-graphics-chunk-${id + 1}").apply {
                 priority = 3
                 start()
             }
         }
-        private val awaitArray = AtomicReferenceArray<Thread?>(ParallelUtils.CPU_THREADS)
 
         private var taskComparator = TaskComparator()
         private val orderDirty = AtomicBoolean(true)
@@ -288,7 +320,7 @@ abstract class ChunkBuilder(
         fun schedule(task: ChunkBuilderTask) {
             synchronized(taskQueue) {
                 taskQueue.add(task)
-                dirty = true
+                dirty.set(true)
             }
         }
 
@@ -298,21 +330,11 @@ abstract class ChunkBuilder(
             if (prev.matrixHash != taskComparator.matrixHash) {
                 orderDirty.set(true)
             }
-            if (!taskQueue.isEmpty) {
-                synchronized(taskQueue) {
-                    taskQueue.removeIf {
-                        if (it.isCancelled) {
-                            it.onFinish()
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
-                    dirty = false
-                }
+            if (taskQueue.isNotEmpty()) {
                 for (i in 0 until awaitArray.length()) {
-                    awaitArray.getAndSet(i, null)?.let { UNSAFE.unpark(it) }
+                    val thread = awaitArray.getAndSet(i, null) ?: continue
+                    UNSAFE.unpark(thread)
+                    break
                 }
             }
         }
