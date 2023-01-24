@@ -445,7 +445,7 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
 
     }
 
-    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", ordinal = 1))
+    @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", ordinal = 1, remap = false))
     private void Redirect$renderWorldPass$INVOKE$Project$gluPerspective$1(
         float fovy,
         float aspect,
