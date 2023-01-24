@@ -21,13 +21,17 @@ public abstract class MixinUtil {
 
     @Shadow
     private static void method_18347(Thread par1, Throwable par2) {}
+    @Shadow
+    private static ExecutorService createWorker(String name) {
+        return null;
+    }
 
     @Redirect(method = "<clinit>", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Util;createWorker(Ljava/lang/String;)Ljava/util/concurrent/ExecutorService;"))
     private static ExecutorService clinit$INVOKE$createWorker(String name) {
-        if (name.equals("Bootstrap")) {
-            return FastMcCoreScope.INSTANCE.getPool();
-        } else {
+        if (name.equals("Main")) {
             return FastMcExtendScope.INSTANCE.getPool();
+        } else {
+            return createWorker(name);
         }
     }
 
