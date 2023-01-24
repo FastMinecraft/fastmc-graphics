@@ -115,11 +115,12 @@ class RenderRegion(
 
     inner class CullingLayerBatch : ILayerBatch {
         private val visibleBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 8, 0)
-        private val faceDataIndicesBuffer =
-            BufferObject.Immutable().allocate(storage.regionChunkCount * 4, GL_DYNAMIC_STORAGE_BIT)
+        private val faceDataIndicesBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 4, GL_DYNAMIC_STORAGE_BIT)
         private var faceDataBuffer: BufferObject? = null
         private var indirectBuffer: BufferObject? = null
-        private var indirectBufferPtr: ByteBuffer? = null
+
+        private var tempTransferBuffer: BufferObject? = null
+        private var tempTransferBufferPtr: ByteBuffer? = null
 
         private val clientFaceDataIndicesByteBuffer = allocateByte(storage.regionChunkCount * 4)
         private val clientFaceDataIndicesIntBuffer = clientFaceDataIndicesByteBuffer.asIntBuffer()
@@ -193,13 +194,7 @@ class RenderRegion(
                 if (indirectBuffer == null || indirectBuffer.size < newSize) {
                     indirectBuffer?.destroy()
                     indirectBuffer =
-                        BufferObject.Immutable().allocate(newSize, GL_MAP_READ_BIT or GL_MAP_PERSISTENT_BIT)
-                    indirectBufferPtr = glMapNamedBufferRange(
-                        indirectBuffer.id,
-                        0,
-                        newSize.toLong(),
-                        GL_MAP_READ_BIT or GL_MAP_PERSISTENT_BIT
-                    )!!
+                        BufferObject.Immutable().allocate(newSize, 0)
                     this.indirectBuffer = indirectBuffer
                 }
             }
@@ -261,7 +256,8 @@ class RenderRegion(
                                 renderPosY,
                                 renderPosZ
                             )
-                            sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
+                            tempTransferBuffer = BufferObject.Immutable().allocate(4, GL_MAP_READ_BIT)
+                            addSync()
                         }
                         1 -> {
                             drawIndirect(renderPosX, renderPosY, renderPosZ)
@@ -274,12 +270,15 @@ class RenderRegion(
                     when (pass) {
                         0 -> {
                             drawIndirect(renderPosX, renderPosY, renderPosZ)
-                            if (sync == -1L) {
-                                sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
-                            } else if (glGetSynciv(sync, GL_SYNC_STATUS) == GL_SIGNALED) {
-                                count = indirectBufferPtr!!.getInt(0)
-                                glDeleteSync(sync)
-                                sync = -1L
+                            if (checkSync()) {
+                                glCopyNamedBufferSubData(
+                                    indirectBuffer!!.id,
+                                    tempTransferBuffer!!.id,
+                                    0,
+                                    0,
+                                    4L
+                                )
+                                addSync()
                                 frameCounter++
                             }
                         }
@@ -288,13 +287,58 @@ class RenderRegion(
                 }
                 4 -> {
                     when (pass) {
+                        0 -> {
+                            drawIndirect(renderPosX, renderPosY, renderPosZ)
+                            if (checkSync()) {
+                                tempTransferBufferPtr = glMapNamedBuffer(tempTransferBuffer!!.id, GL_READ_ONLY, null)!!
+                                addSync()
+                                frameCounter++
+                            }
+                        }
+                        else -> return false
+                    }
+                }
+                5 -> {
+                    when (pass) {
+                        0 -> {
+                            drawIndirect(renderPosX, renderPosY, renderPosZ)
+                            if (checkSync()) {
+                                count = tempTransferBufferPtr!!.getInt(0)
+                                tempTransferBufferPtr = null
+                                tempTransferBuffer!!.destroy()
+                                tempTransferBuffer = null
+                                frameCounter++
+                            }
+                        }
+                        else -> return false
+                    }
+                }
+                6 -> {
+                    when (pass) {
                         0 -> drawIndirect(renderPosX, renderPosY, renderPosZ)
                         else -> return false
                     }
                 }
+                else -> return false
             }
 
             return true
+        }
+
+        private inline fun checkSync(): Boolean {
+            if (sync == -1L) {
+                addSync()
+            } else if (glGetSynciv(sync, GL_SYNC_STATUS) == GL_SIGNALED) {
+                glDeleteSync(sync)
+                sync = -1L
+                return true
+            }
+
+            return false
+        }
+
+        private fun addSync() {
+            sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
         }
 
         private fun drawBoundingBox(renderPosX: Double, renderPosY: Double, renderPosZ: Double) {
