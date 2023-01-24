@@ -18,7 +18,13 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         fog = false
     )
     val indirectShader = Array(3) {
-        IndirectComputeShaderProgram(it)
+        TerrainShaderProgram(
+            ShaderSource.Compute("/assets/shaders/terrain/IndirectCompute.comp") {
+                define("PASS", it)
+            },
+            global = false,
+            fog = false
+        )
     }
 
     var fogRangeSq = Int.MAX_VALUE; private set
@@ -59,9 +65,6 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
     fun updateActiveShader(fogShape: FogShape, fogType: FogType) {
         activeFogShape = fogShape
         activeDrawShader = getShader(fogShape, fogType)
-        indirectShader.forEach {
-            glProgramUniform1i(it.id, it.minChunkYUniform, renderer.minChunkY)
-        }
     }
 
     fun destroy() {
@@ -113,16 +116,6 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
                 glNamedBufferSubData(fogParametersUBO.id, 0, it)
             }
         }
-    }
-
-    inner class IndirectComputeShaderProgram(pass: Int) : TerrainShaderProgram(
-        ShaderSource.Compute("/assets/shaders/terrain/IndirectCompute.comp") {
-            define("PASS", pass)
-        },
-        global = false,
-        fog = false
-    ) {
-        internal val minChunkYUniform = glGetUniformLocation(id, "minChunkY")
     }
 
     open inner class TerrainShaderProgram(

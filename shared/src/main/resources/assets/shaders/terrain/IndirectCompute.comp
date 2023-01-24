@@ -33,7 +33,6 @@ layout(std430) buffer IndirectBuffer {
     IndirectDrawCommand cmds[];
 } indirectBuffer;
 
-uniform int minChunkY;
 uniform vec3 regionOffset;
 
 void main() {
@@ -67,9 +66,9 @@ void main() {
 
     vec3 chunkOffset = vec3(gl_LocalInvocationID.x, gl_WorkGroupID.y, gl_LocalInvocationID.z) * 16.0 + regionOffset;
     uint chunkOffsetData =
-        ((gl_LocalInvocationID.x) << 12) |
-        ((gl_WorkGroupID.y - minChunkY) << 20) |
-        ((gl_LocalInvocationID.z) << 4);
+        (gl_LocalInvocationID.x << 12) |
+        (gl_WorkGroupID.y << 20) |
+        (gl_LocalInvocationID.z << 4);
 
     uint faceDataCount = faceDataIndex >> 26u;
     uint faceDataStart = faceDataIndex & 0x3FFFFFFu;

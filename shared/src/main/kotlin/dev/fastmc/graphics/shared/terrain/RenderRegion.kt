@@ -23,12 +23,9 @@ class RenderRegion(
     val frustumCull: FrustumCull = FrustumCullImpl()
 
     @JvmField
-    val cullingLayerBatch = CullingLayerBatch()
-
-    @JvmField
     val layerBatchArray = Array(renderer.layerCount) {
         if (it == 0) {
-            cullingLayerBatch
+            CullingLayerBatch()
         } else {
             DefaultLayerBatch(storage, it)
         }
@@ -47,7 +44,7 @@ class RenderRegion(
     val indexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())
 
     @JvmField
-    val boundingBoxBuffer = BoundingBoxBuffer(storage)
+    val boundingBoxBuffer = BoundingBoxBuffer()
 
     private var vbo = vertexBufferPool.bufferObject
     private var ibo = indexBufferPool.bufferObject
@@ -115,7 +112,8 @@ class RenderRegion(
 
     inner class CullingLayerBatch : ILayerBatch {
         private val visibleBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 8, 0)
-        private val faceDataIndicesBuffer = BufferObject.Immutable().allocate(storage.regionChunkCount * 4, GL_DYNAMIC_STORAGE_BIT)
+        private val faceDataIndicesBuffer =
+            BufferObject.Immutable().allocate(storage.regionChunkCount * 4, GL_DYNAMIC_STORAGE_BIT)
         private var faceDataBuffer: BufferObject? = null
         private var indirectBuffer: BufferObject? = null
 
@@ -358,7 +356,7 @@ class RenderRegion(
             glColorMask(false, false, false, false)
             glDepthMask(false)
 
-            glDrawArraysInstanced(GL_TRIANGLES, 0, BoundingBoxBuffer.BOX_VERTEX_COUNT, boundingBoxBuffer.count)
+            glDrawArraysInstanced(GL_TRIANGLES, 0, BOX_VERTEX_COUNT, boundingBoxBuffer.count)
 
             glEnable(GL_CULL_FACE)
             glColorMask(true, true, true, true)
@@ -524,7 +522,7 @@ class RenderRegion(
     }
 
 
-    class BoundingBoxBuffer(storage: RenderChunkStorage) {
+    inner class BoundingBoxBuffer {
         private val vao = VertexArrayObject()
         private val serverBuffer =
             BufferObject.Immutable().allocate(storage.regionChunkCount * 8, GL_DYNAMIC_STORAGE_BIT)
@@ -556,7 +554,7 @@ class RenderRegion(
             )
             UNSAFE.putByte(
                 address + 3,
-                (renderChunk.chunkY).toByte()
+                ((renderChunk.chunkY - storage.minChunkY)).toByte()
             )
             UNSAFE.putByte(
                 address + 4,
@@ -612,82 +610,6 @@ class RenderRegion(
             serverBuffer.destroy()
             clientBuffer.free()
         }
-
-        companion object {
-            const val BOX_VERTEX_COUNT = 36
-
-            @JvmField
-            val BOX_BUFFER = run {
-                MemoryStack.use {
-                    withMalloc(144) {
-                        // Down
-                        it.put(0).put(0).put(0).skip(1)
-                        it.put(1).put(0).put(1).skip(1)
-                        it.put(0).put(0).put(1).skip(1)
-                        it.put(0).put(0).put(0).skip(1)
-                        it.put(1).put(0).put(0).skip(1)
-                        it.put(1).put(0).put(1).skip(1)
-
-                        // Up
-                        it.put(0).put(1).put(1).skip(1)
-                        it.put(1).put(1).put(0).skip(1)
-                        it.put(0).put(1).put(0).skip(1)
-                        it.put(0).put(1).put(1).skip(1)
-                        it.put(1).put(1).put(1).skip(1)
-                        it.put(1).put(1).put(0).skip(1)
-
-                        // West
-                        it.put(0).put(1).put(1).skip(1)
-                        it.put(0).put(0).put(0).skip(1)
-                        it.put(0).put(0).put(1).skip(1)
-                        it.put(0).put(1).put(1).skip(1)
-                        it.put(0).put(1).put(0).skip(1)
-                        it.put(0).put(0).put(0).skip(1)
-
-                        // East
-                        it.put(1).put(1).put(0).skip(1)
-                        it.put(1).put(0).put(1).skip(1)
-                        it.put(1).put(0).put(0).skip(1)
-                        it.put(1).put(1).put(0).skip(1)
-                        it.put(1).put(1).put(1).skip(1)
-                        it.put(1).put(0).put(1).skip(1)
-
-                        // North
-                        it.put(0).put(1).put(0).skip(1)
-                        it.put(1).put(0).put(0).skip(1)
-                        it.put(0).put(0).put(0).skip(1)
-                        it.put(0).put(1).put(0).skip(1)
-                        it.put(1).put(1).put(0).skip(1)
-                        it.put(1).put(0).put(0).skip(1)
-
-                        // South
-                        it.put(1).put(1).put(1).skip(1)
-                        it.put(0).put(0).put(1).skip(1)
-                        it.put(1).put(0).put(1).skip(1)
-                        it.put(1).put(1).put(1).skip(1)
-                        it.put(0).put(1).put(1).skip(1)
-                        it.put(0).put(0).put(1).skip(1)
-
-                        it.flip()
-
-                        BufferObject.Immutable().allocate(it, 0)
-                    }
-                }
-            }
-
-            @JvmField
-            val BOX_VERTEX_ARRTIBUTE = buildAttribute(4) {
-                float(0, 3, GLDataType.GL_BYTE, false)
-                padding(1)
-            }
-
-            @JvmField
-            val INSTANCE_ATTRIBUTE = buildAttribute(8, 1) {
-                int(1, 1, GLDataType.GL_UNSIGNED_SHORT)
-                float(2, 3, GLDataType.GL_UNSIGNED_BYTE, false)
-                float(3, 3, GLDataType.GL_UNSIGNED_BYTE, false)
-            }
-        }
     }
 
     private inner class FrustumCullImpl : FrustumCull(renderer) {
@@ -712,6 +634,80 @@ class RenderRegion(
                 glMemoryBarrier(bits)
                 memBarrierFlag = flag and bits.inv()
             }
+        }
+
+        const val BOX_VERTEX_COUNT = 36
+
+        @JvmField
+        val BOX_BUFFER = run {
+            MemoryStack.use {
+                withMalloc(144) {
+                    // Down
+                    it.put(0).put(0).put(0).skip(1)
+                    it.put(1).put(0).put(1).skip(1)
+                    it.put(0).put(0).put(1).skip(1)
+                    it.put(0).put(0).put(0).skip(1)
+                    it.put(1).put(0).put(0).skip(1)
+                    it.put(1).put(0).put(1).skip(1)
+
+                    // Up
+                    it.put(0).put(1).put(1).skip(1)
+                    it.put(1).put(1).put(0).skip(1)
+                    it.put(0).put(1).put(0).skip(1)
+                    it.put(0).put(1).put(1).skip(1)
+                    it.put(1).put(1).put(1).skip(1)
+                    it.put(1).put(1).put(0).skip(1)
+
+                    // West
+                    it.put(0).put(1).put(1).skip(1)
+                    it.put(0).put(0).put(0).skip(1)
+                    it.put(0).put(0).put(1).skip(1)
+                    it.put(0).put(1).put(1).skip(1)
+                    it.put(0).put(1).put(0).skip(1)
+                    it.put(0).put(0).put(0).skip(1)
+
+                    // East
+                    it.put(1).put(1).put(0).skip(1)
+                    it.put(1).put(0).put(1).skip(1)
+                    it.put(1).put(0).put(0).skip(1)
+                    it.put(1).put(1).put(0).skip(1)
+                    it.put(1).put(1).put(1).skip(1)
+                    it.put(1).put(0).put(1).skip(1)
+
+                    // North
+                    it.put(0).put(1).put(0).skip(1)
+                    it.put(1).put(0).put(0).skip(1)
+                    it.put(0).put(0).put(0).skip(1)
+                    it.put(0).put(1).put(0).skip(1)
+                    it.put(1).put(1).put(0).skip(1)
+                    it.put(1).put(0).put(0).skip(1)
+
+                    // South
+                    it.put(1).put(1).put(1).skip(1)
+                    it.put(0).put(0).put(1).skip(1)
+                    it.put(1).put(0).put(1).skip(1)
+                    it.put(1).put(1).put(1).skip(1)
+                    it.put(0).put(1).put(1).skip(1)
+                    it.put(0).put(0).put(1).skip(1)
+
+                    it.flip()
+
+                    BufferObject.Immutable().allocate(it, 0)
+                }
+            }
+        }
+
+        @JvmField
+        val BOX_VERTEX_ARRTIBUTE = buildAttribute(4) {
+            float(0, 3, GLDataType.GL_BYTE, false)
+            padding(1)
+        }
+
+        @JvmField
+        val INSTANCE_ATTRIBUTE = buildAttribute(8, 1) {
+            int(1, 1, GLDataType.GL_UNSIGNED_SHORT)
+            float(2, 3, GLDataType.GL_UNSIGNED_BYTE, false)
+            float(3, 3, GLDataType.GL_UNSIGNED_BYTE, false)
         }
     }
 }
