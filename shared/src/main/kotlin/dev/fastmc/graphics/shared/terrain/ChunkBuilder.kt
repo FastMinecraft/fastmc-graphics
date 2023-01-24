@@ -1,14 +1,17 @@
 package dev.fastmc.graphics.shared.terrain
 
-import dev.fastmc.common.*
+import dev.fastmc.common.ObjectPool
+import dev.fastmc.common.ParallelUtils
+import dev.fastmc.common.UNSAFE
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.common.distanceSq
 import dev.fastmc.common.sort.ObjectIntrosort
 import dev.fastmc.graphics.shared.renderer.cameraChunkX
 import dev.fastmc.graphics.shared.renderer.cameraChunkY
 import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.util.threadGroupMain
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
@@ -251,51 +254,11 @@ abstract class ChunkBuilder(
                 val self = Thread.currentThread()
                 while (active.get()) {
                     try {
-                        var task: ChunkBuilderTask? = null
-
-                        while (taskQueue.isEmpty || dirty.get()) {
-                            if (!taskQueue.isEmpty && dirty.get() && sortFlag.getAndSet(false)) {
-                                try {
-                                    if (!taskQueue.isEmpty) {
-                                        synchronized(taskQueue) {
-                                            taskQueue.removeIf {
-                                                if (it.isCancelled) {
-                                                    it.onFinish()
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            }
-                                            ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
-                                            task = taskQueue.removeLast()
-                                        }
-                                        for (i in 0 until awaitArray.length()) {
-                                            awaitArray.getAndSet(i, null)?.let { UNSAFE.unpark(it) }
-                                        }
-                                    }
-
-                                    dirty.set(false)
-                                } finally {
-                                    sortFlag.set(true)
-                                }
-                                if (task != null) break
-                            } else {
-                                try {
-                                    awaitArray[id] = self
-                                    UNSAFE.park(false, 1145141919810L)
-                                } finally {
-                                    awaitArray[id] = null
-                                }
-                            }
-                        }
-
-                        if (task == null) {
-                            task = synchronized(taskQueue) { taskQueue.removeLastOrNull() } ?: continue
-                        }
+                        val task = awaitTask(id, self) ?: continue
 
                         try {
                             activeCount.incrementAndGet()
-                            task!!.run()
+                            task.run()
                         } finally {
                             activeCount.decrementAndGet()
                         }
@@ -309,6 +272,63 @@ abstract class ChunkBuilder(
                 priority = 3
                 start()
             }
+        }
+
+        private fun awaitTask(
+            id: Int,
+            self: Thread
+        ): ChunkBuilderTask? {
+            var task: ChunkBuilderTask? = null
+
+            while (taskQueue.isEmpty || dirty.get()) {
+                if (!taskQueue.isEmpty && dirty.get() && sortFlag.getAndSet(false)) {
+                    try {
+                        task = updateTaskQueue()
+                        dirty.set(false)
+                    } finally {
+                        sortFlag.set(true)
+                    }
+                } else {
+                    try {
+                        awaitArray[id] = self
+                        UNSAFE.park(false, 1145141919810L)
+                    } finally {
+                        awaitArray[id] = null
+                    }
+                }
+            }
+
+            return task ?: synchronized(taskQueue) { taskQueue.removeLastOrNull() }
+        }
+
+        private fun updateTaskQueue(): ChunkBuilderTask? {
+            if (taskQueue.isEmpty) return null
+
+            var task: ChunkBuilderTask? = null
+
+            synchronized(taskQueue) {
+                if (taskQueue.isEmpty) return null
+
+                taskQueue.removeIf {
+                    if (it.isCancelled) {
+                        it.onFinish()
+                        true
+                    } else {
+                        false
+                    }
+                }
+
+                if (taskQueue.isEmpty) return null
+
+                ObjectIntrosort.sort(taskQueue.elements(), 0, taskQueue.size, taskComparator)
+                task = taskQueue.removeLast()
+            }
+
+            for (i in 0 until awaitArray.length()) {
+                awaitArray.getAndSet(i, null)?.let { UNSAFE.unpark(it) }
+            }
+
+            return task
         }
 
         private var taskComparator = TaskComparator()
