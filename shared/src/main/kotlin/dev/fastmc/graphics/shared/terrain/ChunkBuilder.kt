@@ -244,8 +244,12 @@ abstract class ChunkBuilder(
         private val threadGroup = ThreadGroup(threadGroupMain, "chunk")
         private val taskQueue = FastObjectArrayList<ChunkBuilderTask>()
 
-        private val dirty = AtomicBoolean(false)
+        val activeTaskCount get() = activeCount.get()
+        val queuedTaskCount get() = taskQueue.size
+
+        private val dirtyFlag = AtomicBoolean(false)
         private val sortFlag = AtomicBoolean(true)
+        private var taskComparator = TaskComparator()
         private val activeCount = AtomicInteger(0)
 
         private val awaitArray = AtomicReferenceArray<Thread?>(ParallelUtils.CPU_THREADS)
@@ -262,8 +266,6 @@ abstract class ChunkBuilder(
                         } finally {
                             activeCount.decrementAndGet()
                         }
-                    } catch (e: InterruptedException) {
-                        continue
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
@@ -278,13 +280,12 @@ abstract class ChunkBuilder(
             id: Int,
             self: Thread
         ): ChunkBuilderTask? {
-            var task: ChunkBuilderTask? = null
-
-            while (taskQueue.isEmpty || dirty.get()) {
-                if (!taskQueue.isEmpty && dirty.get() && sortFlag.getAndSet(false)) {
+            while (taskQueue.isEmpty || dirtyFlag.get()) {
+                if (!taskQueue.isEmpty && dirtyFlag.get() && sortFlag.getAndSet(false)) {
                     try {
-                        task = updateTaskQueue()
-                        dirty.set(false)
+                        updateTaskQueueOrder()?.let {
+                            return it
+                        }
                     } finally {
                         sortFlag.set(true)
                     }
@@ -298,12 +299,15 @@ abstract class ChunkBuilder(
                 }
             }
 
-            return task ?: synchronized(taskQueue) { taskQueue.removeLastOrNull() }
+            if (dirtyFlag.get()) return null
+            return synchronized(taskQueue) {
+                taskQueue.removeLastOrNull()
+            }
         }
 
-        private fun updateTaskQueue(): ChunkBuilderTask? {
+        private fun updateTaskQueueOrder(): ChunkBuilderTask? {
+            dirtyFlag.set(false)
             if (taskQueue.isEmpty) return null
-
             var task: ChunkBuilderTask? = null
 
             synchronized(taskQueue) {
@@ -331,26 +335,20 @@ abstract class ChunkBuilder(
             return task
         }
 
-        private var taskComparator = TaskComparator()
-        private val orderDirty = AtomicBoolean(true)
-
-        val activeTaskCount get() = activeCount.get()
-        val queuedTaskCount get() = taskQueue.size
-
         fun schedule(task: ChunkBuilderTask) {
+            dirtyFlag.set(true)
             synchronized(taskQueue) {
                 taskQueue.add(task)
-                dirty.set(true)
             }
         }
 
         fun update() {
             val prev = taskComparator
             taskComparator = TaskComparator()
-            if (prev.matrixHash != taskComparator.matrixHash) {
-                orderDirty.set(true)
+            if (prev != taskComparator) {
+                dirtyFlag.set(true)
             }
-            if (taskQueue.isNotEmpty()) {
+            if (taskQueue.isNotEmpty() && dirtyFlag.get()) {
                 for (i in 0 until awaitArray.length()) {
                     val thread = awaitArray.getAndSet(i, null) ?: continue
                     UNSAFE.unpark(thread)
@@ -404,7 +402,26 @@ abstract class ChunkBuilder(
                 )
                 return distance2.compareTo(distance1)
             }
-        }
 
+            override fun equals(other: Any?): Boolean {
+                if (this === other) return true
+                if (other !is TaskComparator) return false
+
+                if (matrixHash != other.matrixHash) return false
+                if (cameraChunkX != other.cameraChunkX) return false
+                if (cameraChunkY != other.cameraChunkY) return false
+                if (cameraChunkZ != other.cameraChunkZ) return false
+
+                return true
+            }
+
+            override fun hashCode(): Int {
+                var result = matrixHash.hashCode()
+                result = 31 * result + cameraChunkX
+                result = 31 * result + cameraChunkY
+                result = 31 * result + cameraChunkZ
+                return result
+            }
+        }
     }
 }

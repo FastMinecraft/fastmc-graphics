@@ -351,8 +351,8 @@ abstract class TerrainRenderer(
                                     if (!renderChunk.checkFogRange()) continue
                                     if (!caveCullingBitSet.containsFast(chunkIndex)) continue
                                     if (!renderChunk.checkAnyAdjBuilt()) continue
-                                    if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
                                     if (!renderChunk.frustumCull.isInFrustum()) continue
+                                    if (!renderChunk.isBuilt && !renderChunk.checkAdjChunkLoaded(statusCache)) continue
 
                                     renderChunk.isVisible = true
                                     val result = results[renderChunk.renderRegion.index][jobID]
