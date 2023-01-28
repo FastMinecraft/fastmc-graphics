@@ -15,6 +15,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+import kotlin.math.max
 
 abstract class ChunkBuilder(
     protected val renderer: TerrainRenderer
@@ -252,7 +255,7 @@ abstract class ChunkBuilder(
         private var taskComparator = TaskComparator()
         private val activeCount = AtomicInteger(0)
 
-        private val awaitArray = AtomicReferenceArray<Thread?>(ParallelUtils.CPU_THREADS)
+        private val awaitArray = AtomicReferenceArray<Thread?>(max(ParallelUtils.CPU_THREADS - 1, 1))
         private val threads = Array(awaitArray.length()) { id ->
             Thread(threadGroup, {
                 val self = Thread.currentThread()
@@ -271,7 +274,7 @@ abstract class ChunkBuilder(
                     }
                 }
             }, "fastmc-graphics-chunk-${id + 1}").apply {
-                priority = 3
+                priority = 1
                 start()
             }
         }
