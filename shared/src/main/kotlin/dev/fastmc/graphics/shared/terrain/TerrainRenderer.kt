@@ -68,6 +68,9 @@ abstract class TerrainRenderer(
     private val rebuildTimer = TickTimer()
     private var lastMatrixHash = 0L
 
+    private var updateCount = 0
+    private var updateTimer = TickTimer()
+
     private var lastDebugUpdateTask: Future<*>? = null
     var debugInfoString = ""; private set
 
@@ -174,8 +177,14 @@ abstract class TerrainRenderer(
 
             FpsDisplay.onChunkUpdate(chunkBuilder.uploadCount)
 
-            if (chunkBuilder.visibleUploadCount != 0) {
+            updateCount += chunkBuilder.visibleUploadCount
+
+            if (updateCount > 0 && (updateTimer.tickAndReset(50L) || chunkBuilder.totalTaskCount < ParallelUtils.CPU_THREADS * 4)) {
                 chunkStorage.markCaveCullingDirty()
+                updateCount = 0
+            }
+
+            if (chunkBuilder.visibleUploadCount != 0) {
                 updateRegion.set(true)
             }
             uploadChunkJob.complete(Unit)
@@ -215,6 +224,9 @@ abstract class TerrainRenderer(
         forceUpdateTimer.reset(-999L)
         rebuildTimer.reset(-999L)
         lastMatrixHash = 0
+
+        updateCount = 0
+        updateTimer.reset(-999L)
 
         debugInfoString = ""
 
