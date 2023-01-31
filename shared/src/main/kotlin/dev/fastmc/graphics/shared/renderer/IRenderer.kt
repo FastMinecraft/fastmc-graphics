@@ -34,7 +34,6 @@ interface IRenderer {
     val globalUBO: BufferObject
 
     val frustum: FrustumIntersection
-    val matrixHash: Long
     val matrixPosHash: Long
 }
 

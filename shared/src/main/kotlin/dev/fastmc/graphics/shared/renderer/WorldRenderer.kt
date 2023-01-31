@@ -11,6 +11,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.joml.FrustumIntersection
 import org.joml.Matrix4f
 import kotlin.coroutines.CoroutineContext
+import kotlin.math.round
 
 abstract class WorldRenderer : IRenderer {
     lateinit var tileEntityRenderer: TileEntityRenderer<*>; private set
@@ -43,7 +44,6 @@ abstract class WorldRenderer : IRenderer {
     final override val globalUBO = BufferObject.Immutable().allocate(268, GL_DYNAMIC_STORAGE_BIT)
 
     final override var frustum = FrustumIntersection()
-    final override var matrixHash = 0L
     final override var matrixPosHash = 0L
 
     fun init(
@@ -117,29 +117,39 @@ abstract class WorldRenderer : IRenderer {
         val multiplied = projectionMatrix.mul(modelViewMatrix, multiplied)
         frustum = FrustumIntersection(multiplied, false)
 
-        var hash = 1L
-        hash = 31L * hash + multiplied.m00().toRawBits()
-        hash = 31L * hash + multiplied.m01().toRawBits()
-        hash = 31L * hash + multiplied.m02().toRawBits()
-        hash = 31L * hash + multiplied.m03().toRawBits()
-        hash = 31L * hash + multiplied.m10().toRawBits()
-        hash = 31L * hash + multiplied.m11().toRawBits()
-        hash = 31L * hash + multiplied.m12().toRawBits()
-        hash = 31L * hash + multiplied.m13().toRawBits()
-        hash = 31L * hash + multiplied.m20().toRawBits()
-        hash = 31L * hash + multiplied.m21().toRawBits()
-        hash = 31L * hash + multiplied.m22().toRawBits()
-        hash = 31L * hash + multiplied.m23().toRawBits()
-        hash = 31L * hash + multiplied.m30().toRawBits()
-        hash = 31L * hash + multiplied.m31().toRawBits()
-        hash = 31L * hash + multiplied.m32().toRawBits()
-        hash = 31L * hash + multiplied.m33().toRawBits()
-        matrixHash = hash
+        var hash = roundEps(multiplied.m00()).toRawBits().toLong()
+        hash = 31L * hash + roundEps(multiplied.m01()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m02()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m03()).toRawBits()
 
-        hash = 31L * hash + cameraX.toRawBits()
-        hash = 31L * hash + cameraY.toRawBits()
-        hash = 31L * hash + cameraZ.toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m10()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m11()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m12()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m13()).toRawBits()
+
+        hash = 31L * hash + roundEps(multiplied.m20()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m21()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m22()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m23()).toRawBits()
+
+        hash = 31L * hash + roundEps(multiplied.m30()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m31()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m32()).toRawBits()
+        hash = 31L * hash + roundEps(multiplied.m33()).toRawBits()
+
+        hash = 31L * hash + roundEps(cameraX).toRawBits()
+        hash = 31L * hash + roundEps(cameraY).toRawBits()
+        hash = 31L * hash + roundEps(cameraZ).toRawBits()
+
         matrixPosHash = hash
+    }
+
+    private fun roundEps(x: Float): Float {
+        return round(x * 1_000.0f) / 1_000.0f
+    }
+
+    private fun roundEps(x: Double): Double {
+        return round(x * 1_000.0) / 1_000.0
     }
 
     abstract fun onPostTick(mainThreadContext: CoroutineContext, parentScope: CoroutineScope)

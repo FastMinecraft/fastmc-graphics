@@ -51,12 +51,6 @@ abstract class TerrainRenderer(
 
     protected var lastViewDistance = Int.MIN_VALUE
 
-    private var lastCameraX0 = Int.MAX_VALUE
-    private var lastCameraY0 = Int.MAX_VALUE
-    private var lastCameraZ0 = Int.MAX_VALUE
-    private var lastCameraYaw0 = Int.MAX_VALUE
-    private var lastCameraPitch0 = Int.MAX_VALUE
-
     private var lastSortX = Double.MAX_VALUE
     private var lastSortY = Double.MAX_VALUE
     private var lastSortZ = Double.MAX_VALUE
@@ -66,7 +60,7 @@ abstract class TerrainRenderer(
 
     private val forceUpdateTimer = TickTimer()
     private val rebuildTimer = TickTimer()
-    private var lastMatrixHash = 0L
+    private var lastMatrixPosHash = 0L
 
     private var updateCount = 0
     private var updateTimer = TickTimer()
@@ -108,26 +102,18 @@ abstract class TerrainRenderer(
         FastMcCoreScope.launch {
             coroutineScope {
                 FastMcMod.profiler.swap("checkUpdate")
-                val cameraPosX0 = cameraBlockX shr 1
-                val cameraPosY0 = cameraBlockY shr 1
-                val cameraPosZ0 = cameraBlockZ shr 1
-                val cameraYaw0 = cameraYaw.floorToInt()
-                val cameraPitch0 = cameraPitch.fastFloor()
 
                 val caveCullingUpdate = chunkStorage.checkCaveCullingUpdate()
                 val indicesUpdate = chunkStorage.checkChunkIndicesUpdate()
-                val viewUpdate =
-                    cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0
-                        || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
-                val frustumUpdate = lastMatrixHash != matrixHash
+                val viewUpdate = lastMatrixPosHash != matrixPosHash
                 val forceUpdate = forceUpdateTimer.tickAndReset(1000L) || !chunkStorage.cameraChunk.isBuilt
 
                 if (forceUpdate) {
                     chunkLoadingStatusCacheTimer.reset(-500)
                 }
 
-                val updateChunk = caveCullingUpdate || viewUpdate || frustumUpdate || forceUpdate
-                updateRegion.compareAndSet(false, indicesUpdate || viewUpdate || frustumUpdate || forceUpdate)
+                val updateChunk = caveCullingUpdate || viewUpdate || forceUpdate
+                updateRegion.compareAndSet(false, indicesUpdate || viewUpdate || forceUpdate)
 
                 FastMcMod.profiler.swap("camera")
                 chunkStorage.update(forceUpdate)
@@ -165,12 +151,7 @@ abstract class TerrainRenderer(
 
                 FastMcMod.profiler.swap("post")
                 if (updateRegion.get() || updateChunk) {
-                    lastMatrixHash = matrixHash
-                    lastCameraX0 = cameraPosX0
-                    lastCameraY0 = cameraPosY0
-                    lastCameraZ0 = cameraPosZ0
-                    lastCameraYaw0 = cameraYaw0
-                    lastCameraPitch0 = cameraPitch0
+                    lastMatrixPosHash = matrixPosHash
                 }
             }
 
@@ -213,12 +194,6 @@ abstract class TerrainRenderer(
         chunkCullingResults = emptyArray()
         tileEntityResults = emptyArray()
 
-        lastCameraX0 = Int.MAX_VALUE
-        lastCameraY0 = Int.MAX_VALUE
-        lastCameraZ0 = Int.MAX_VALUE
-        lastCameraYaw0 = Int.MAX_VALUE
-        lastCameraPitch0 = Int.MAX_VALUE
-
         lastSortX = Double.MAX_VALUE
         lastSortY = Double.MAX_VALUE
         lastSortZ = Double.MAX_VALUE
@@ -228,7 +203,7 @@ abstract class TerrainRenderer(
 
         forceUpdateTimer.reset(-999L)
         rebuildTimer.reset(-999L)
-        lastMatrixHash = 0
+        lastMatrixPosHash = 0
 
         updateCount = 0
         updateTimer.reset(-999L)
