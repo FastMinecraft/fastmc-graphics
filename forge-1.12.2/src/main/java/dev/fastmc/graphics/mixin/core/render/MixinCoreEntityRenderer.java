@@ -392,7 +392,7 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
 
     private int currentPass = 0;
 
-    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ActiveRenderInfo;updateRenderInfo(Lnet/minecraft/entity/Entity;Z)V", shift = At.Shift.AFTER))
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ActiveRenderInfo;updateRenderInfo(Lnet/minecraft/entity/Entity;Z)V", shift = At.Shift.AFTER, remap = false))
     private void Inject$renderWorldPass$INVOKE$ActiveRenderInfo$updateRenderInfo$AFTER(
         int pass,
         float partialTicks,
