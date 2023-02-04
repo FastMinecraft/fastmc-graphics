@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import kotlin.math.max
 
 allprojects {
     group = "dev.fastmc"
@@ -7,11 +6,7 @@ allprojects {
 }
 
 runVmOptions {
-    val threads = Runtime.getRuntime().availableProcessors()
     add(
-        "-Djoml.fastmath=true",
-        "-Djoml.sinLookup=true",
-        "-Djoml.useMathFma=true",
         "-Xms2G",
         "-Xmx2G",
         "-XX:+UnlockExperimentalVMOptions",
@@ -23,7 +18,6 @@ runVmOptions {
         "-XX:MaxGCPauseMillis=1",
         "-XX:G1NewSizePercent=2",
         "-XX:G1MaxNewSizePercent=10",
-        "-XX:G1HeapRegionSize=1M",
         "-XX:G1ReservePercent=15",
         "-XX:G1HeapWastePercent=10",
         "-XX:G1MixedGCCountTarget=16",
@@ -32,8 +26,6 @@ runVmOptions {
         "-XX:G1RSetUpdatingPauseTimePercent=25",
         "-XX:G1OldCSetRegionThresholdPercent=5",
         "-XX:SurvivorRatio=5",
-        "-XX:ParallelGCThreads=$threads",
-        "-XX:ConcGCThreads=${max(threads / 4, 1)}",
         "-XX:FlightRecorderOptions=stackdepth=512"
     )
 }

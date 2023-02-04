@@ -13,12 +13,12 @@
     "environment": "client",
     "entrypoints": {
         "main": [
-            "dev.fastmc.graphics.FastMcFabricEntryFoint"
+            "dev.fastmc.graphics.FastMcGraphicsFabricEntryFoint"
         ]
     },
     "mixins": [
-        "mixins.fastmc-graphics-core.json",
         "mixins.fastmc-graphics-accessor.json",
+        "mixins.fastmc-graphics-core.json",
         "mixins.fastmc-graphics-patch.json"
     ],
     "accessWidener": "fastmc-graphics.accesswidener",

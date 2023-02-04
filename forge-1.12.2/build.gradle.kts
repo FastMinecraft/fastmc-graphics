@@ -1,6 +1,6 @@
 forgeProject {
     modPackage.set("dev.fastmc.graphics")
-    accessTransformer = "fastmc_at.cfg"
+    accessTransformer = "fastmc-graphics-at.cfg"
     mixinConfig(
         "mixins.fastmc-graphics-accessor.json",
         "mixins.fastmc-graphics-core.json",

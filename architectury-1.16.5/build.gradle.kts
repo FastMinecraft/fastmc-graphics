@@ -9,5 +9,5 @@ architecturyProject {
 }
 
 modLoader {
-    forgeModClass.set("dev.fastmc.graphics.FastMcForgeEntryPoint")
+    forgeModClass.set("dev.fastmc.graphics.FastMcGraphicsForgeEntryFoint")
 }

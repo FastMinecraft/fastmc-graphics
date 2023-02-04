@@ -2,7 +2,7 @@ package dev.fastmc.graphics
 
 import net.fabricmc.api.ModInitializer
 
-class FastMcFabricEntryFoint : ModInitializer {
+class FastMcGraphicsFabricEntryFoint : ModInitializer {
     override fun onInitialize() {
     }
 }
