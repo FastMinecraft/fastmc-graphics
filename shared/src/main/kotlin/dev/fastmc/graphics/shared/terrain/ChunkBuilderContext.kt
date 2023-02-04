@@ -67,7 +67,7 @@ abstract class ContextProvider {
     }
 
     fun getBufferContext(task: ChunkBuilderTask): BufferContext {
-        val region = bufferPool.allocate(task)
+        val region = bufferPool.allocate()
         val context = objectPool.get()
         context.region0.set(region)
         context.init(task)

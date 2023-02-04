@@ -4,7 +4,6 @@ import dev.fastmc.common.*
 import dev.fastmc.common.collection.AtomicByteArray
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.opengl.*
-import dev.fastmc.graphics.shared.terrain.ChunkBuilderTask
 import java.nio.ByteOrder
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
@@ -65,7 +64,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         }
     }
 
-    fun allocate(task: ChunkBuilderTask): Region {
+    fun allocate(): Region {
         while (!checkCounter()) {
             //
         }
@@ -155,7 +154,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
             return this
         }
 
-        fun expand(task: ChunkBuilderTask) {
+        fun expand() {
             while (true) {
                 if (sectorEnd < sectorCapacity) {
                     if (sectorState.compareAndSet(sectorEnd, FALSE, TRUE)) {

@@ -283,11 +283,11 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                     indexBuffer.region.buffer.limit(indexBuffer.region.buffer.capacity())
                 } else {
                     while (resultVertexBuffer.region.buffer.remaining() < vertexLength) {
-                        resultVertexBuffer.region.expand(this)
+                        resultVertexBuffer.region.expand()
                     }
 
                     while (resultIndexBuffer!!.region.buffer.remaining() < indexLength) {
-                        resultIndexBuffer.region.expand(this)
+                        resultIndexBuffer.region.expand()
                     }
 
                     resultVertexBuffer.region.buffer.put(vertexBuffer.region.buffer)
@@ -352,7 +352,7 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
 
         val bufferContext = renderer.contextProvider.getBufferContext(this@SortTask)
         while (bufferContext.region.length < newData.indexData.size) {
-            bufferContext.region.expand(this@SortTask)
+            bufferContext.region.expand()
         }
         val buffer = bufferContext.region.buffer
         buffer.put(newData.indexData)
