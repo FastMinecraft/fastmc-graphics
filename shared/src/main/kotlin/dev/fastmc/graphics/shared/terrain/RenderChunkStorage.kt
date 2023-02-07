@@ -167,19 +167,7 @@ class RenderChunkStorage(
                             renderChunk.setPos(x, minChunkY, z)
                             renderChunk.renderRegion = region
 
-                            updateAdjancentChunk(
-                                renderChunk,
-                                indexX,
-                                indexZ,
-                                startChunkX,
-                                endChunkX,
-                                startChunkZ,
-                                endChunkZ
-                            )
-
-                            renderChunk = renderChunkArray[index + sizeY - 1]
-                            renderChunk.setPos(x, maxChunkY - 1, z)
-                            renderChunk.renderRegion = region
+                            renderChunk.adjacentRenderChunk[Direction.I_UP] = renderChunkArray[index + 1]
 
                             updateAdjancentChunk(
                                 renderChunk,
@@ -209,6 +197,22 @@ class RenderChunkStorage(
                                     endChunkZ
                                 )
                             }
+
+                            renderChunk = renderChunkArray[++index]
+                            renderChunk.setPos(x, maxChunkY - 1, z)
+                            renderChunk.renderRegion = region
+
+                            renderChunk.adjacentRenderChunk[Direction.I_DOWN] = renderChunkArray[index - 1]
+
+                            updateAdjancentChunk(
+                                renderChunk,
+                                indexX,
+                                indexZ,
+                                startChunkX,
+                                endChunkX,
+                                startChunkZ,
+                                endChunkZ
+                            )
 
                             indexZ = (indexZ + 1) % sizeXZ
                         }
