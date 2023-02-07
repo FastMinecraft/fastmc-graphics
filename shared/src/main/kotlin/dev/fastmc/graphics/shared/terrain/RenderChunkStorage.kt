@@ -333,7 +333,7 @@ class RenderChunkStorage(
                 val nextRenderChunk = cameraChunk.adjacentRenderChunk[nextDirection.ordinal] ?: continue
                 if (!cameraChunk.occlusionData.isVisible(nextDirection)) continue
                 newCullingBitSet.addFast(nextRenderChunk.index)
-                caveCullingQueue.enqueue(nextRenderChunk.index or (nextDirection.idOpposite shl 17) or (nextDirection.bitOpposite shl 20))
+                caveCullingQueue.enqueue(packCullingQueueBits(nextRenderChunk.index, nextDirection.idOpposite, nextDirection.bitOpposite))
             }
         } else {
             if (renderer.cameraChunkY < minChunkY) {
@@ -341,7 +341,7 @@ class RenderChunkStorage(
                     val renderChunk = renderChunkArray[i * sizeY]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue
                     newCullingBitSet.addFast(renderChunk.index)
-                    caveCullingQueue.enqueue(renderChunk.index or (Direction.I_DOWN shl 17) or (Direction.B_DOWN shl 20))
+                    caveCullingQueue.enqueue(packCullingQueueBits(renderChunk.index, Direction.I_DOWN, Direction.B_DOWN))
                 }
             } else {
                 val offset = sizeY - 1
@@ -349,30 +349,46 @@ class RenderChunkStorage(
                     val renderChunk = renderChunkArray[i * sizeY + offset]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue
                     newCullingBitSet.addFast(renderChunk.index)
-                    caveCullingQueue.enqueue(renderChunk.index or (Direction.I_UP shl 17) or (Direction.B_UP shl 20))
+                    caveCullingQueue.enqueue(packCullingQueueBits(renderChunk.index, Direction.I_UP, Direction.B_UP))
                 }
             }
         }
 
         while (!caveCullingQueue.isEmpty) {
             val i = caveCullingQueue.dequeueInt()
-            val chunkIndex = i and 0b1_1111_1111_1111_1111
-            val oppositeDirection = (i shr 17) and 0b111
-            val excludedDirections = (i shr 20) and 0b111111
+            val chunkIndex = unpackChunkIndex(i)
+            val oppositeDirection = directions[unpackOppositeDirectionIndex(i)]
+            val excludedDirectionBits = unpackExcludedDirectionBits(i)
             val renderChunk = renderChunkArray[chunkIndex]
 
             for (nextDirection in directions) {
-                if (excludedDirections and nextDirection.bit != 0) continue
-                if (!renderChunk.occlusionData.isVisible(directions[oppositeDirection], nextDirection)) continue
+                if (excludedDirectionBits and nextDirection.bit != 0) continue
+                if (!renderChunk.occlusionData.isVisible(oppositeDirection, nextDirection)) continue
                 val nextRenderChunk = renderChunk.adjacentRenderChunk[nextDirection.ordinal] ?: continue
                 if (!newCullingBitSet.add(nextRenderChunk.index)) continue
                 if (!nextRenderChunk.isBuilt) continue
-                caveCullingQueue.enqueue(nextRenderChunk.index or (nextDirection.idOpposite shl 17) or ((excludedDirections or nextDirection.bitOpposite) shl 20))
+                caveCullingQueue.enqueue(packCullingQueueBits(nextRenderChunk.index, nextDirection.idOpposite, excludedDirectionBits or nextDirection.bitOpposite))
             }
         }
 
         caveCullingBitSet0.swap()
         caveCullingUpdateCounter.update()
+    }
+
+    private fun unpackChunkIndex(bits: Int): Int {
+        return bits ushr 9
+    }
+
+    private fun unpackExcludedDirectionBits(bits: Int): Int {
+        return bits ushr 3 and 0b111111
+    }
+
+    private fun unpackOppositeDirectionIndex(bits: Int): Int {
+        return bits and 0b111
+    }
+
+    private fun packCullingQueueBits(chunkIndex: Int, oppositeDirectionIndex: Int, excludedDirectionBits: Int): Int {
+        return oppositeDirectionIndex or (excludedDirectionBits shl 3) or (chunkIndex shl 9)
     }
 
     fun checkChunkIndicesUpdate(): Boolean {
