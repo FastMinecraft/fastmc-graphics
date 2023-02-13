@@ -2,6 +2,5 @@ package dev.fastmc.graphics
 
 import net.minecraftforge.fml.common.Mod
 
-@Mod("fastmc-graphics")
-class FastMcGraphicsForgeEntryFoint {
-}
+@Mod("fastmc_graphics")
+class FastMcGraphicsForgeEntryPoint

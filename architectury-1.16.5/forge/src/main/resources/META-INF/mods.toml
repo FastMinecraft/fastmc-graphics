@@ -4,21 +4,21 @@ issueTrackerURL = "https://github.com/FastMinecraft/fastmc-graphics/issues"
 license = "MIT"
 
 [[mods]]
-modId = "fastmc-graphics"
+modId = "fastmc_graphics"
 version = "${version}"
 displayName = "Fast Minecraft Graphics"
 authors = "Luna"
 description = "Aggressive render optimization mod for Minecraft"
 #logoFile = ""
 
-[[dependencies.fastmc-graphics]]
+[[dependencies.fastmc_graphics]]
 modId = "forge"
 mandatory = true
 versionRange = "[36,)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.fastmc-graphics]]
+[[dependencies.fastmc_graphics]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[1.16.5,)"
