@@ -78,7 +78,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             it.render(drawShadow)
         }
 
-        glBindTexture(0)
+        glBindTextureUnit(0, 0)
         glBindVertexArray(0)
 
         shader.unbind()
@@ -120,7 +120,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
         private val vao: VertexArrayObject
     ) {
         fun render(drawShadow: Boolean) {
-            texture.bind()
+            texture.bind(0)
             vao.bind()
 
             if (drawShadow) {

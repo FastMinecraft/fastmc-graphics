@@ -110,7 +110,7 @@ class FontRenderer(
 
         textures = textureList.toTypedArray()
 
-        glBindTexture(0)
+        glBindTextureUnit(0, 0)
     }
 
     private fun asciiBlock(graphics: Graphics2D, asciiFont: BufferedImage, uvScale: Int): Array<CharGlyph> {

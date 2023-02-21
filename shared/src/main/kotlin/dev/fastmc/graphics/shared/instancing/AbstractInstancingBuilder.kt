@@ -184,7 +184,7 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
         private val texture: ResourceEntry<ITexture>
     ) : Renderer(renderInfo) {
         override fun preRender() {
-            texture.get(resourceManager).bind()
+            texture.get(resourceManager).bind(0)
         }
     }
 

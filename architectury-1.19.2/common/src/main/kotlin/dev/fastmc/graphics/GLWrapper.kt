@@ -49,7 +49,6 @@ class GLWrapper : IGLWrapper {
     override fun glClearDepth(depth: Double) = GL11C.glClearDepth(depth)
 
     override fun glDeleteTextures(texture: Int) = GL11C.glDeleteTextures(texture)
-    override fun glBindTexture(texture: Int) = GlStateManager._bindTexture(texture)
     override fun glDrawArrays(mode: Int, first: Int, count: Int) = GL11C.glDrawArrays(mode, first, count)
     override fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) =
         GL11C.glDrawElements(mode, count, type, indices)

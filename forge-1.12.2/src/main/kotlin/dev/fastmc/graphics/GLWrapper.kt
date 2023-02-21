@@ -62,7 +62,6 @@ class GLWrapper : IGLWrapper {
     override fun glClearDepth(depth: Double) = GlStateManager.clearDepth(depth)
 
     override fun glDeleteTextures(texture: Int) = GL11.glDeleteTextures(texture)
-    override fun glBindTexture(texture: Int) = GlStateManager.bindTexture(texture)
     override fun glDrawArrays(mode: Int, first: Int, count: Int) = GL11.glDrawArrays(mode, first, count)
 
     // LWJGL checks for GL_ELEMENT_ARRAY_BUFFER binding when invoking glDrawElements() with indices buffer offset.

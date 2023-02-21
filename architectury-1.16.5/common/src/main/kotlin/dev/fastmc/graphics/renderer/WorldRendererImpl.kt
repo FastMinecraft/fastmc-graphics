@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.renderer
 
-import dev.fastmc.graphics.shared.opengl.glBindTexture
+import dev.fastmc.graphics.shared.opengl.glBindTextureUnit
 import dev.fastmc.graphics.shared.opengl.glBindVertexArray
 import dev.fastmc.graphics.shared.opengl.glBlendFuncSeparate
 import dev.fastmc.graphics.shared.opengl.glUseProgramForce
@@ -31,7 +31,7 @@ class WorldRendererImpl(private val mc: Minecraft, override val resourceManager:
 
     override fun postRender() {
         glBindVertexArray(0)
-        glBindTexture(0)
+        glBindTextureUnit(0, 0)
         glUseProgramForce(0)
     }
 }

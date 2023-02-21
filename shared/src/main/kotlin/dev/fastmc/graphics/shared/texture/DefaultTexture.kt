@@ -51,10 +51,6 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
         }
     }
 
-    override fun bind() {
-        glBindTexture(id)
-    }
-
     override fun destroy() {
         glDeleteTextures(id)
     }

@@ -1,16 +1,17 @@
 package dev.fastmc.graphics.shared.texture
 
-import dev.fastmc.graphics.shared.opengl.IGLBinding
 import dev.fastmc.graphics.shared.opengl.IGLObject
-import dev.fastmc.graphics.shared.opengl.glBindTexture
+import dev.fastmc.graphics.shared.opengl.IGLTargetBinding
+import dev.fastmc.graphics.shared.opengl.glBindTextureUnit
 import dev.fastmc.graphics.shared.resource.Resource
 
-interface ITexture : Resource, IGLObject, IGLBinding {
-    override fun bind() {
-        glBindTexture(id)
+@Suppress("PARAMETER_NAME_CHANGED_ON_OVERRIDE")
+interface ITexture : Resource, IGLObject, IGLTargetBinding {
+    override fun bind(unit: Int) {
+        glBindTextureUnit(unit, id)
     }
 
-    override fun unbind() {
-        glBindTexture(0)
+    override fun unbind(unit: Int) {
+        glBindTextureUnit(unit, 0)
     }
 }

@@ -1,7 +1,6 @@
 package dev.fastmc.graphics.renderer
 
-import com.mojang.blaze3d.systems.RenderSystem
-import dev.fastmc.graphics.shared.opengl.glBindTexture
+import dev.fastmc.graphics.shared.opengl.glBindTextureUnit
 import dev.fastmc.graphics.shared.opengl.glBindVertexArray
 import dev.fastmc.graphics.shared.opengl.glBlendFuncSeparate
 import dev.fastmc.graphics.shared.opengl.glUseProgramForce
@@ -11,7 +10,8 @@ import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.util.Minecraft
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.lwjgl.opengl.GL11.*
+import org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA
+import org.lwjgl.opengl.GL11.GL_SRC_ALPHA
 import kotlin.coroutines.CoroutineContext
 
 class WorldRendererImpl(private val mc: Minecraft, override val resourceManager: IResourceManager) :
@@ -32,7 +32,7 @@ class WorldRendererImpl(private val mc: Minecraft, override val resourceManager:
 
     override fun postRender() {
         glBindVertexArray(0)
-        glBindTexture(0)
+        glBindTextureUnit(0, 0)
         glUseProgramForce(0)
     }
 }

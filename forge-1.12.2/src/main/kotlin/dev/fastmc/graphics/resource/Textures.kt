@@ -13,10 +13,6 @@ class ResourceLocationTexture(
     override val id: Int
         get() = mc.renderEngine.getTexture(resourceLocation).glTextureId
 
-    override fun bind() {
-        mc.renderEngine.bindTexture(resourceLocation)
-    }
-
     override fun destroy() {
 
     }

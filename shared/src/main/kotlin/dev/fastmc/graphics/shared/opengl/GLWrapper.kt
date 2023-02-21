@@ -19,7 +19,6 @@ interface IGLWrapper {
     fun glClearDepth(depth: Double)
 
     fun glDeleteTextures(texture: Int)
-    fun glBindTexture(texture: Int)
     fun glDrawArrays(mode: Int, first: Int, count: Int)
     fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long)
 
@@ -305,7 +304,6 @@ inline fun glClearColor(red: Float, green: Float, blue: Float, alpha: Float) =
 inline fun glClearDepth(depth: Double) = glWrapper.glClearDepth(depth)
 
 inline fun glDeleteTextures(texture: Int) = glWrapper.glDeleteTextures(texture)
-inline fun glBindTexture(texture: Int) = glWrapper.glBindTexture(texture)
 inline fun glDrawArrays(mode: Int, first: Int, count: Int) = glWrapper.glDrawArrays(mode, first, count)
 inline fun glDrawElements(mode: Int, count: Int, type: Int, indices: Long) =
     glWrapper.glDrawElements(mode, count, type, indices)
