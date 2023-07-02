@@ -5,6 +5,7 @@
     "package": "dev.fastmc.graphics.mixin.core",
     "client": [
         "MixinCoreMinecraftClient",
+        "MixinCoreWindow",
         "entity.MixinEntity",
         "entity.MixinEntityCow",
         "render.MixinCoreBackgroundRenderer",
