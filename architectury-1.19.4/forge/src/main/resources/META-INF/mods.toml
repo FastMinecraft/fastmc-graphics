@@ -1,0 +1,26 @@
+modLoader = "javafml"
+loaderVersion = "[12,)"
+issueTrackerURL = "https://github.com/FastMinecraft/fastmc-graphics/issues"
+license = "MIT"
+
+[[mods]]
+modId = "fastmc_graphics"
+version = "${version}"
+displayName = "Fast Minecraft Graphics"
+authors = "Luna"
+description = "Aggressive render optimization mod for Minecraft"
+#logoFile = ""
+
+[[dependencies.fastmc_graphics]]
+modId = "forge"
+mandatory = true
+versionRange = "[12,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.fastmc_graphics]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.19.4,)"
+ordering = "NONE"
+side = "BOTH"

@@ -1,0 +1,29 @@
+{
+    "schemaVersion": 1,
+    "id": "fastmc-graphics",
+    "version": "${version}",
+    "name": "Fast Minecraft Graphics",
+    "description": "Aggressive render optimization mod for Minecraft",
+    "authors": [
+        "Luna"
+    ],
+    "contact": {},
+    "license": "MIT",
+    "icon": "assets/fastmc/icon.png",
+    "environment": "client",
+    "entrypoints": {
+        "main": [
+            "dev.fastmc.graphics.FastMcGraphicsFabricEntryPoint"
+        ]
+    },
+    "mixins": [
+        "mixins.fastmc-graphics-accessor.json",
+        "mixins.fastmc-graphics-core.json",
+        "mixins.fastmc-graphics-patch.json"
+    ],
+    "accessWidener": "fastmc-graphics.accesswidener",
+    "depends": {
+        "fabricloader": ">=0.11",
+        "minecraft": "1.19.4"
+    }
+}
