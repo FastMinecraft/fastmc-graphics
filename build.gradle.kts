@@ -31,7 +31,7 @@ runVmOptions {
 }
 
 plugins {
-    id("dev.fastmc.mod-setup").version("1.2-SNAPSHOT")
+    id("dev.fastmc.mod-setup").version("1.3-SNAPSHOT")
 }
 
 subprojects {
