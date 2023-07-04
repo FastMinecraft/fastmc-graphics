@@ -3,6 +3,7 @@ rootProject.name = "fastmc-graphics"
 pluginManagement {
     repositories {
         gradlePluginPortal()
+        maven("https://maven.luna5ama.dev")
         maven("https://maven.fastmc.dev/")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.architectury.dev/")

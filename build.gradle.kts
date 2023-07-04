@@ -40,6 +40,7 @@ plugins {
 subprojects {
     repositories {
         mavenCentral()
+        maven("https://maven.luna5ama.dev")
         maven("https://maven.fastmc.dev/")
         maven("https://libraries.minecraft.net/")
     }
