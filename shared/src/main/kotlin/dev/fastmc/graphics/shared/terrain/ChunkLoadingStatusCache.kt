@@ -21,9 +21,10 @@ abstract class ChunkLoadingStatusCache<T_World> {
 
         if (world != this.world || sizeXZ != this.sizeXZ || originX != this.originX || originZ != this.originZ) {
             this.world = world
+            this.array = ByteArray(sizeXZ * sizeXZ)
             this.originX = originX
             this.originZ = originZ
-            this.array = ByteArray(sizeXZ * sizeXZ)
+            this.sizeXZ = sizeXZ
             return
         }
 
