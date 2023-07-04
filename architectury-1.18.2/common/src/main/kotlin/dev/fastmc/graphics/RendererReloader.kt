@@ -1,8 +1,8 @@
 package dev.fastmc.graphics
 
-import dev.fastmc.graphics.renderer.EntityRendererImpl
+import dev.fastmc.graphics.renderer.EntityInstancingRendererImpl
 import dev.fastmc.graphics.renderer.FontRendererWrapper
-import dev.fastmc.graphics.renderer.TileEntityRendererImpl
+import dev.fastmc.graphics.renderer.TileEntityInstancingRendererImpl
 import dev.fastmc.graphics.renderer.WorldRendererImpl
 import dev.fastmc.graphics.terrain.TerrainRendererImpl
 import dev.fastmc.graphics.util.Minecraft
@@ -33,8 +33,8 @@ object RendererReloader : ResourceReloader {
 
             val worldRenderer = WorldRendererImpl(mc, resourceManager)
             worldRenderer.init(
-                TileEntityRendererImpl(mc, worldRenderer),
-                EntityRendererImpl(mc, worldRenderer),
+                TileEntityInstancingRendererImpl(mc, worldRenderer),
+                EntityInstancingRendererImpl(mc, worldRenderer),
                 TerrainRendererImpl(worldRenderer)
             )
             if (mc.world != null) {

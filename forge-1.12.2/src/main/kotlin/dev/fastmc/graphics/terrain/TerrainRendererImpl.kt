@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.terrain
 
 import dev.fastmc.graphics.FastMcMod
-import dev.fastmc.graphics.renderer.TileEntityRendererImpl
+import dev.fastmc.graphics.renderer.TileEntityInstancingRendererImpl
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.terrain.*
 import net.minecraft.block.material.Material
@@ -118,7 +118,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
         val endZ = startZ + 15
 
         val blockRenderer = blockRenderer
-        val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityRendererImpl
+        val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityInstancingRendererImpl
 
         for (y in startY..endY) {
             for (z in startZ..endZ) {

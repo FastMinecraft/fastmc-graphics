@@ -169,11 +169,11 @@ abstract class RebuildContext(layerCount: Int) : Context() {
     var renderPosZ = 0.0f
 
     var activeLayer = 0
-    val translucentVertexBuilder = TranslucentVertexBuilder()
+    val translucentVertexBuilder = TranslucentMeshBuilder()
     val vertexBuilderArray = Array(layerCount) {
-        if (it == 1) translucentVertexBuilder else OpaqueTerrainVertexBuilder()
+        if (it == 1) translucentVertexBuilder else OpaqueTerrainMeshBuilder()
     }
-    val activeVertexBuilder: TerrainVertexBuilder
+    val activeVertexBuilder: TerrainMeshBuilder
         get() = vertexBuilderArray[activeLayer]
 
     @JvmField

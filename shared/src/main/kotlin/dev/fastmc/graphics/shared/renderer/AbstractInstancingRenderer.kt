@@ -3,7 +3,6 @@ package dev.fastmc.graphics.shared.renderer
 import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.IInfo
-import dev.fastmc.graphics.shared.opengl.*
 import dev.luna5ama.glwrapper.api.*
 import dev.fastmc.graphics.shared.util.ClassIDRegistry
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
@@ -14,7 +13,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
-abstract class AbstractRenderer<ET : Any>(
+abstract class AbstractInstancingRenderer<ET : Any>(
     protected val worldRenderer: WorldRenderer,
     val registry: ClassIDRegistry<Any>
 ) :
@@ -150,7 +149,7 @@ abstract class AbstractRenderer<ET : Any>(
                 dirty = false
                 val builder = builderClass.getDeclaredConstructor().newInstance()
 
-                builder.init(this@AbstractRenderer, entities.size)
+                builder.init(this@AbstractInstancingRenderer, entities.size)
                 builder.addAll(entities as List<T>)
 
                 withContext(mainThreadContext) {

@@ -161,7 +161,7 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, private val factory
 abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
     ChunkBuilderTask(renderer, scheduler) {
     final override fun run0() {
-        val bufferGroupArray: Array<TerrainVertexBuilder.BufferGroup?>
+        val bufferGroupArray: Array<TerrainMeshBuilder.BufferGroup?>
         val occlusionData: ChunkOcclusionData
         val translucentData: TranslucentData?
         val tileEntityList: FastObjectArrayList<ITileEntityInfo<*>>?
@@ -251,7 +251,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
     }
 
     private fun combineBuffers(
-        bufferGroup: TerrainVertexBuilder.BufferGroup
+        bufferGroup: TerrainMeshBuilder.BufferGroup
     ): Triple<FaceData, BufferContext, BufferContext>? {
         return if (bufferGroup.vertexBuffers.size == 1) {
             val vertexBuffer = bufferGroup.vertexBuffers[0]!!

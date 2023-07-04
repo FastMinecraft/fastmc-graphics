@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.renderer
 
-import dev.fastmc.graphics.shared.renderer.EntityRenderer
+import dev.fastmc.graphics.shared.renderer.EntityInstancingRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.ITypeID
@@ -12,8 +12,8 @@ import kotlinx.coroutines.withContext
 import net.minecraft.entity.Entity
 import kotlin.coroutines.CoroutineContext
 
-class EntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
-    EntityRenderer<Entity>(worldRenderer) {
+class EntityInstancingRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
+    EntityInstancingRenderer<Entity>(worldRenderer) {
     init {
 //        register<EntityCow, CowInstancingBuilder>()
     }

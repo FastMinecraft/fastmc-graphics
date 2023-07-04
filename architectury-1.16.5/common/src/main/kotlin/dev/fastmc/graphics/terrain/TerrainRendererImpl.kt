@@ -7,7 +7,7 @@ import dev.fastmc.common.collection.Int2ByteCacheMap
 import dev.fastmc.common.collection.Int2ObjectCacheMap
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.mixin.accessor.AccessorVoxelShape
-import dev.fastmc.graphics.renderer.TileEntityRendererImpl
+import dev.fastmc.graphics.renderer.TileEntityInstancingRendererImpl
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.terrain.*
 import dev.fastmc.graphics.util.Minecraft
@@ -158,7 +158,7 @@ abstract class RebuildContextImpl : RebuildContext(LAYER_COUNT) {
         val endZ = startZ + 15
 
         val blockRenderer = blockRenderer
-        val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityRendererImpl
+        val tileEntityRenderer = FastMcMod.worldRenderer.tileEntityRenderer as TileEntityInstancingRendererImpl
         val emptyFluid = Fluids.EMPTY
 
         for (y in startY..endY) {

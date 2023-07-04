@@ -1,14 +1,16 @@
 package dev.fastmc.graphics.renderer
 
+import com.mojang.blaze3d.systems.RenderSystem
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.tileentity.*
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IChestInfo
 import dev.fastmc.graphics.shared.renderer.IRenderer
-import dev.fastmc.graphics.shared.renderer.TileEntityRenderer
+import dev.fastmc.graphics.shared.renderer.TileEntityInstancingRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.tileentity.ChestInfo
 import dev.fastmc.graphics.util.*
+import dev.luna5ama.glwrapper.api.glBindTextureUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -17,8 +19,8 @@ import net.minecraft.block.enums.ChestType
 import net.minecraft.util.math.Direction
 import kotlin.coroutines.CoroutineContext
 
-class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
-    TileEntityRenderer<TileEntity>(worldRenderer) {
+class TileEntityInstancingRendererImpl(private val mc: Minecraft, worldRenderer: WorldRenderer) :
+    TileEntityInstancingRenderer<TileEntity>(worldRenderer) {
 
     init {
         register<TileEntityBed, BedInstancingBuilder>()
@@ -51,6 +53,7 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
 
     override fun render() {
         mc.gameRenderer.lightmapTextureManager.enable()
+        glBindTextureUnit(2, RenderSystem.getShaderTexture(2))
         super.render()
         mc.gameRenderer.lightmapTextureManager.disable()
     }
@@ -141,7 +144,7 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
                     } else {
                         launch(FastMcCoreScope.context) {
                             val builder = SmallChestInstancingBuilder()
-                            builder.init(this@TileEntityRendererImpl, smallChest.size)
+                            builder.init(this@TileEntityInstancingRendererImpl, smallChest.size)
                             @Suppress("UNCHECKED_CAST")
                             builder.addAll(smallChest as List<IChestInfo<*>>)
                             withContext(mainThreadContext) {
@@ -161,7 +164,7 @@ class TileEntityRendererImpl(private val mc: Minecraft, worldRenderer: WorldRend
                     } else {
                         launch(FastMcCoreScope.context) {
                             val builder = LargeChestInstancingBuilder()
-                            builder.init(this@TileEntityRendererImpl, largeChest.size)
+                            builder.init(this@TileEntityInstancingRendererImpl, largeChest.size)
                             @Suppress("UNCHECKED_CAST")
                             builder.addAll(largeChest as List<IChestInfo<*>>)
                             withContext(mainThreadContext) {

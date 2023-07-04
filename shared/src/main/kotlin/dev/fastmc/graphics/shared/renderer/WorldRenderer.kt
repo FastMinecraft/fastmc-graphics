@@ -15,8 +15,8 @@ import org.joml.Matrix4f
 import kotlin.coroutines.CoroutineContext
 
 abstract class WorldRenderer : IRenderer {
-    lateinit var tileEntityRenderer: TileEntityRenderer<*>; private set
-    lateinit var entityRenderer: EntityRenderer<*>; private set
+    lateinit var tileEntityRenderer: TileEntityInstancingRenderer<*>; private set
+    lateinit var entityRenderer: EntityInstancingRenderer<*>; private set
     lateinit var terrainRenderer: TerrainRenderer; private set
 
     final override var renderPosX = 0.0; private set
@@ -49,8 +49,8 @@ abstract class WorldRenderer : IRenderer {
     final override var matrixPosHash = 0L
 
     fun init(
-        tileEntityRenderer: TileEntityRenderer<*>,
-        entityRenderer: EntityRenderer<*>,
+        tileEntityRenderer: TileEntityInstancingRenderer<*>,
+        entityRenderer: EntityInstancingRenderer<*>,
         terrainRenderer: TerrainRenderer
     ) {
         check(!this::tileEntityRenderer.isInitialized)

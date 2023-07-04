@@ -2,7 +2,7 @@ package dev.fastmc.graphics.shared.terrain
 
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 
-abstract class TerrainVertexBuilder {
+abstract class TerrainMeshBuilder {
     @Volatile
     var task: ChunkBuilderTask? = null
 
@@ -162,12 +162,12 @@ abstract class TerrainVertexBuilder {
     }
 }
 
-class OpaqueTerrainVertexBuilder : TerrainVertexBuilder() {
+class OpaqueTerrainMeshBuilder : TerrainMeshBuilder() {
     override val bufferCount: Int
         get() = 63
 }
 
-class TranslucentVertexBuilder : TerrainVertexBuilder() {
+class TranslucentMeshBuilder : TerrainMeshBuilder() {
     override val bufferCount: Int
         get() = 1
 

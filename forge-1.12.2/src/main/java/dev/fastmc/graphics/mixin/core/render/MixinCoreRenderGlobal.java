@@ -2,7 +2,7 @@ package dev.fastmc.graphics.mixin.core.render;
 
 import dev.fastmc.common.collection.FastObjectArrayList;
 import dev.fastmc.graphics.FastMcMod;
-import dev.fastmc.graphics.renderer.EntityRendererImpl;
+import dev.fastmc.graphics.renderer.EntityInstancingRendererImpl;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import dev.fastmc.graphics.shared.terrain.RenderChunkStorage;
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer;
@@ -319,7 +319,7 @@ public abstract class MixinCoreRenderGlobal {
 
             this.world.profiler.endStartSection("vanilla");
             WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-            EntityRendererImpl entityRenderer = (EntityRendererImpl) worldRenderer.getEntityRenderer();
+            EntityInstancingRendererImpl entityRenderer = (EntityInstancingRendererImpl) worldRenderer.getEntityRenderer();
             BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
             List<Entity> loadedEntityList = this.world.loadedEntityList;
             boolean renderOutline = pass == 0 && this.isRenderEntityOutlines();

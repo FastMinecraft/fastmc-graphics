@@ -1,10 +1,10 @@
 package dev.fastmc.graphics.shared.terrain
 
-import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.graphics.shared.opengl.*
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
-import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.api.GL_DYNAMIC_STORAGE_BIT
+import dev.luna5ama.glwrapper.api.glInvalidateBufferData
+import dev.luna5ama.glwrapper.api.glNamedBufferSubData
 import dev.luna5ama.glwrapper.impl.BufferObject
 import dev.luna5ama.glwrapper.impl.VertexArrayObject
 import dev.luna5ama.kmogus.Arr
