@@ -1,5 +1,6 @@
 package dev.fastmc.graphics.shared.terrain
 
+import dev.luna5ama.kmogus.usePtr
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 
 abstract class TerrainMeshBuilder {
@@ -18,11 +19,7 @@ abstract class TerrainMeshBuilder {
         modelAttribute = layer.modelAttribute
 
         if (bufferGroup == null) {
-            bufferGroup = BufferGroup(
-                task,
-                arrayOfNulls(bufferCount),
-                arrayOfNulls(bufferCount),
-            )
+            bufferGroup = BufferGroup(task, arrayOfNulls(bufferCount))
             init0()
         }
     }
@@ -34,9 +31,9 @@ abstract class TerrainMeshBuilder {
     fun finish(): BufferGroup? {
         val group = bufferGroup
         bufferGroup = null
-        group?.let { g ->
-            g.finish(task!!)
-            if (g.vertexBuffers.all { it == null }) {
+        if (group != null) {
+            group.finish(task!!)
+            if (group.vertexBuffers.all { it == null }) {
                 return null
             }
         }
@@ -62,13 +59,11 @@ abstract class TerrainMeshBuilder {
     ) {
         val bufferGroup = bufferGroup!!
         val region = bufferGroup.getVertexBuffer(faceBit - 1).region
-        val arr = region.arr
-        check(arr.len == arr.baseLen) {"WtF"}
-        if (arr.rem < 16) {
+        if (region.arr.rem < 16) {
             region.expand(task!!)
         }
 
-        arr.usePtr {
+        region.arr.usePtr {
             setShortInc(((x + 0.25f) * 3971.818f).toInt().toShort())
                 .setShortInc(((y + 0.25f) * 3971.818f).toInt().toShort())
                 .setShortInc(((z + 0.25f) * 3971.818f).toInt().toShort())
@@ -84,42 +79,18 @@ abstract class TerrainMeshBuilder {
 
                 .setByteInc(modelAttribute.toByte())
         }
-
-        bufferGroup.vertexByteIndices[faceBit - 1] += 16L
     }
 
     open fun putQuad(faceBit: Int) {
         val bufferGroup = bufferGroup!!
-        val region = bufferGroup.getIndexBuffer(faceBit - 1).region
-        val arr = region.arr
-        if (arr.rem < 24) {
-            region.expand(task!!)
-        }
-
-        val vertexCount = bufferGroup.vertexCounts[faceBit - 1]
-
-        arr.usePtr {
-            setIntInc(vertexCount)
-                .setIntInc(vertexCount + 1)
-                .setIntInc(vertexCount + 3)
-
-                .setIntInc(vertexCount + 2)
-                .setIntInc(vertexCount + 3)
-                .setIntInc(vertexCount + 1)
-        }
-
-        bufferGroup.vertexCounts[faceBit - 1] += 4
-        bufferGroup.indexByteIndices[faceBit - 1] += 24L
+        bufferGroup.quadCounts[faceBit - 1]++
     }
 
     class BufferGroup(
         private val task: ChunkBuilderTask,
-        val vertexBuffers: Array<BufferContext?>,
-        val indexBuffers: Array<BufferContext?>
+        val vertexBuffers: Array<BufferContext?>
     ) {
-        val vertexCounts = IntArray(vertexBuffers.size)
-        val vertexByteIndices = LongArray(vertexBuffers.size)
-        val indexByteIndices = LongArray(indexBuffers.size)
+        val quadCounts = IntArray(vertexBuffers.size)
 
         fun getVertexBuffer(faceBitIndex: Int): BufferContext {
             var buffer = vertexBuffers[faceBitIndex]
@@ -130,28 +101,10 @@ abstract class TerrainMeshBuilder {
             return buffer
         }
 
-        fun getIndexBuffer(faceBit: Int): BufferContext {
-            var buffer = indexBuffers[faceBit]
-            if (buffer == null) {
-                buffer = task.renderer.contextProvider.getBufferContext(task)
-                indexBuffers[faceBit] = buffer
-            }
-            return buffer
-        }
-
         fun finish(task: ChunkBuilderTask) {
             vertexBuffers.forEachIndexed { i, it ->
                 if (it == null) return@forEachIndexed
-                if (vertexCounts[i] > 0) {
-                    it.region.arr.flip()
-                } else {
-                    it.release(task)
-                    vertexBuffers[i] = null
-                }
-            }
-            indexBuffers.forEachIndexed { i, it ->
-                if (it == null) return@forEachIndexed
-                if (vertexCounts[i] > 0) {
+                if (quadCounts[i] > 0) {
                     it.region.arr.flip()
                 } else {
                     it.release(task)
@@ -172,6 +125,26 @@ class TranslucentMeshBuilder : TerrainMeshBuilder() {
         get() = 1
 
     val posArrayList = FloatArrayList()
+
+    val quadCount get() = posArrayList.size / 12
+
+    fun getQuadCenterArray(): FloatArray {
+        val result = FloatArray(quadCount * 3)
+        val posArray = posArrayList.elements()
+
+        for (i in 0 until quadCount) {
+            val centerIndex = i * 3
+            val posIndex = i * 12
+            result[centerIndex] =
+                (posArray[posIndex] + posArray[posIndex + 3] + posArray[posIndex + 6] + posArray[posIndex + 9]) / 4.0f
+            result[centerIndex + 1] =
+                (posArray[posIndex + 1] + posArray[posIndex + 4] + posArray[posIndex + 7] + posArray[posIndex + 10]) / 4.0f
+            result[centerIndex + 2] =
+                (posArray[posIndex + 2] + posArray[posIndex + 5] + posArray[posIndex + 8] + posArray[posIndex + 11]) / 4.0f
+        }
+
+        return result
+    }
 
     override fun init0() {
         super.init0()

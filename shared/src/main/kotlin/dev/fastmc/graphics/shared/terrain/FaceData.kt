@@ -11,9 +11,7 @@ sealed interface FaceData {
         chunkOffsetData: Int
     )
 
-    class Singleton(indexBufferLength: Int) : FaceData {
-        private val indexCount = indexBufferLength
-
+    class Singleton(private val indexLength: Int) : FaceData {
         override fun addToBatch(
             batch: RenderRegion.LayerBatch,
             vertexRegionOffset: Int,
@@ -24,7 +22,7 @@ sealed interface FaceData {
             batch.put(
                 vertexRegionOffset,
                 indexRegionOffset,
-                indexCount,
+                indexLength,
                 chunkOffsetData
             )
         }

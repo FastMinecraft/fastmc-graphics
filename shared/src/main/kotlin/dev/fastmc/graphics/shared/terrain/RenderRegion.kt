@@ -10,6 +10,7 @@ import dev.luna5ama.glwrapper.impl.VertexArrayObject
 import dev.luna5ama.kmogus.Arr
 import dev.luna5ama.kmogus.asMutable
 import dev.luna5ama.kmogus.ensureCapacity
+import dev.luna5ama.kmogus.usePtr
 import org.joml.FrustumIntersection
 
 @Suppress("NOTHING_TO_INLINE")
@@ -100,14 +101,14 @@ class RenderRegion(
             count = 0
         }
 
-        fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
+        fun put(vertexByteOffset: Int, indexByteOffset: Int, indexLength: Int, baseInstance: Int) {
             clientBuffer.ensureCapacity((count + 1) * 20L, false)
 
             clientBuffer.usePtr {
-                setIntInc(indexCount / 4)
+                setIntInc(indexLength / 4)
                     .setIntInc(1)
-                    .setIntInc(indexOffset / 4)
-                    .setIntInc(vertexOffset / 16)
+                    .setIntInc(indexByteOffset / 4)
+                    .setIntInc(vertexByteOffset / 16)
                     .setIntInc(baseInstance)
             }
 

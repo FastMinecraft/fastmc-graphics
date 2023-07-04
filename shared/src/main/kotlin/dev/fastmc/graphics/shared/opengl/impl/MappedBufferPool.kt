@@ -148,7 +148,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         fun init(start: Int): Region {
             this.sectorOffset = start
             sectorLength = 1
-            arr.len = length
+            arr.reset()
 
             return this
         }
@@ -181,16 +181,15 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                                     if (++allocated > sectorLength) {
                                         val prevSectorOffset = sectorOffset
                                         val prevSectorEnd = sectorEnd
-                                        val prevPtr = arr.basePtr
-                                        val prevLen = arr.len
+                                        val prevPtr = arr0.ptr
+                                        val prevLen = arr0.len
 
                                         sectorOffset = i
                                         sectorLength = allocated
 
-                                        memcpy(prevPtr, arr.basePtr, prevLen)
+                                        memcpy(prevPtr, arr0.ptr, prevLen)
 
                                         arr.len = length
-                                        arr.pos = prevLen
 
                                         for (i1 in prevSectorOffset until prevSectorEnd) {
                                             sectorState.set(i1, FALSE)

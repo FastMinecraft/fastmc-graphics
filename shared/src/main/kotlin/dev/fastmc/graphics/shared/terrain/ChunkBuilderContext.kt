@@ -803,33 +803,33 @@ abstract class RebuildContext(layerCount: Int) : Context() {
 }
 
 abstract class SortContext : Context() {
-    private var tempIndexData = ByteArray(0)
-    private var tempQuadCenter = FloatArray(0)
-
     private var distanceArray = FloatArray(0)
     private var indexArray = IntArray(0)
 
-    fun getIndexDataArray(capacity: Int): ByteArray {
-        if (tempIndexData.size < capacity) {
-            tempIndexData = ByteArray(max(capacity, capacity + (capacity shr 1)))
-        }
-        return tempIndexData
-    }
-
-    fun getQuadCenterArray(capacity: Int): FloatArray {
-        if (tempQuadCenter.size < capacity) {
-            tempQuadCenter = FloatArray(max(capacity, capacity + (capacity shr 1)))
-        }
-        return tempQuadCenter
-    }
-
     inline fun sortQuads(task: ChunkBuilderTask, data: TranslucentData): TranslucentData {
-        return sortQuads(task, data.indexData, data.quadCenter, data.quadCenter.size / 3)
+        return sortQuads(task, data.quadIndices, data.quadCenter, data.quadCenter.size / 3)
     }
 
     fun sortQuads(
         task: ChunkBuilderTask,
-        indexData: ByteArray,
+        quadCenter: FloatArray,
+        quadCount: Int
+    ): TranslucentData {
+        if (distanceArray.size < quadCount) {
+            distanceArray = FloatArray(max(quadCount, quadCount + (quadCount shr 1)))
+            indexArray = IntArray(max(quadCount, quadCount + (quadCount shr 1)))
+        }
+
+        for (i in 0 until quadCount) {
+            indexArray[i] = i
+        }
+
+        return sortQuads(task, indexArray, quadCenter, quadCount)
+    }
+
+    fun sortQuads(
+        task: ChunkBuilderTask,
+        quadIndices: IntArray,
         quadCenter: FloatArray,
         quadCount: Int
     ): TranslucentData {
@@ -848,21 +848,15 @@ abstract class SortContext : Context() {
                 task.relativeCameraY,
                 task.relativeCameraZ
             )
-            indexArray[i] = i
+        }
+
+        if (quadIndices !== indexArray) {
+            quadIndices.copyInto(indexArray, 0, 0, quadCount)
         }
 
         IntIntrosort.sort(indexArray, 0, quadCount, distanceArray)
 
-        val newIndexData = ByteArray(quadCount * 6 * 4)
-        val newQuadCenter = FloatArray(quadCount * 3)
-
-        for (i in 0 until quadCount) {
-            val sortedQuadIndex = indexArray[i]
-            System.arraycopy(indexData, sortedQuadIndex * 24, newIndexData, i * 24, 24)
-            System.arraycopy(quadCenter, sortedQuadIndex * 3, newQuadCenter, i * 3, 3)
-        }
-
-        return TranslucentData(newIndexData, newQuadCenter)
+        return TranslucentData(indexArray.copyOf(quadCount), quadCenter)
     }
 }
 

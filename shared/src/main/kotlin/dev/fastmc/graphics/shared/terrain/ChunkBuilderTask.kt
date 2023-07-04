@@ -2,9 +2,9 @@ package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.Cancellable
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.luna5ama.kmogus.MutableArr
 import dev.luna5ama.kmogus.memcpy
+import dev.luna5ama.kmogus.usePtr
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -129,6 +129,53 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, private val factory
         throw TaskFinishedException
     }
 
+    protected fun TranslucentData?.writeElementIndices(bufferContext: BufferContext, quadCountIn: Int): BufferContext {
+        val region = bufferContext.region
+        val arr = region.arr
+
+        val quadCount = if (this != null) quadIndices.size else quadCountIn
+        val elementIndicesLen = quadCount * 6L * 4L
+
+        while (arr.rem < elementIndicesLen) {
+            region.expand(this@ChunkBuilderTask)
+        }
+
+        if (this != null) {
+            val quadIndices = quadIndices
+
+            for (i in 0 until quadCount) {
+                val index = quadIndices[i] * 4
+                arr.usePtr {
+                    setIntInc(index)
+                        .setIntInc(index + 1)
+                        .setIntInc(index + 3)
+                        .setIntInc(index + 2)
+                        .setIntInc(index + 3)
+                        .setIntInc(index + 1)
+                }
+            }
+        } else {
+            for (i in 0 until quadCount) {
+                val index = i * 4
+                arr.usePtr {
+                    setIntInc(index)
+                        .setIntInc(index + 1)
+                        .setIntInc(index + 3)
+                        .setIntInc(index + 2)
+                        .setIntInc(index + 3)
+                        .setIntInc(index + 1)
+                }
+            }
+        }
+
+        return bufferContext
+    }
+
+    protected fun TranslucentData?.writeElementIndices(quadCount: Int): BufferContext {
+        val bufferContext = renderer.contextProvider.getBufferContext(this@ChunkBuilderTask)
+        return writeElementIndices(bufferContext, quadCount)
+    }
+
     protected object CancelInitException : CancellationException() {
         init {
             stackTrace = emptyArray()
@@ -161,55 +208,31 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, private val factory
 abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
     ChunkBuilderTask(renderer, scheduler) {
     final override fun run0() {
-        val bufferGroupArray: Array<TerrainMeshBuilder.BufferGroup?>
-        val occlusionData: ChunkOcclusionData
-        val translucentData: TranslucentData?
-        val tileEntityList: FastObjectArrayList<ITileEntityInfo<*>>?
-        val instancingTileEntityList: FastObjectArrayList<ITileEntityInfo<*>>?
-        val globalTileEntityList: FastObjectArrayList<ITileEntityInfo<*>>?
-
         val rebuildContext = renderer.contextProvider.getRebuildContext(this@RebuildTask)
+
         if (rebuildContext.worldSnapshot.init()) {
             rebuildContext.renderChunk(this@RebuildTask)
 
-            bufferGroupArray = Array(rebuildContext.vertexBuilderArray.size) { i ->
-                rebuildContext.vertexBuilderArray[i].finish()
-            }
+            val bufferGroupArray =
+                Array(rebuildContext.vertexBuilderArray.size) { i ->
+                    rebuildContext.vertexBuilderArray[i].finish()
+                }
 
-            occlusionData = rebuildContext.occlusionDataBuilder.build()
-            tileEntityList = rebuildContext.tileEntityList.copyOrNull()
-            instancingTileEntityList = rebuildContext.instancingTileEntityList.copyOrNull()
-            globalTileEntityList = rebuildContext.globalTileEntityList.copyOrNull()
+            val occlusionData = rebuildContext.occlusionDataBuilder.build()
+            val tileEntityList = rebuildContext.tileEntityList.copyOrNull()
+            val instancingTileEntityList = rebuildContext.instancingTileEntityList.copyOrNull()
+            val globalTileEntityList = rebuildContext.globalTileEntityList.copyOrNull()
 
             val translucentBufferPair = bufferGroupArray[1]
-            translucentData = if (translucentBufferPair != null) {
-                val indexBuffer = translucentBufferPair.indexBuffers[0]!!.region.arr
-                val sortContext = renderer.contextProvider.getSortContext(this@RebuildTask)
-                val indexSize = indexBuffer.rem
+            val translucentData = if (translucentBufferPair != null) {
                 val quadCount = rebuildContext.translucentVertexBuilder.posArrayList.size / 12
-
-                val quadCenterArray = sortContext.getQuadCenterArray(quadCount * 3)
-                val posArray = rebuildContext.translucentVertexBuilder.posArrayList.elements()
-
-                for (i in 0 until quadCount) {
-                    val centerIndex = i * 3
-                    val posIndex = i * 12
-                    quadCenterArray[centerIndex] =
-                        (posArray[posIndex] + posArray[posIndex + 3] + posArray[posIndex + 6] + posArray[posIndex + 9]) / 4.0f
-                    quadCenterArray[centerIndex + 1] =
-                        (posArray[posIndex + 1] + posArray[posIndex + 4] + posArray[posIndex + 7] + posArray[posIndex + 10]) / 4.0f
-                    quadCenterArray[centerIndex + 2] =
-                        (posArray[posIndex + 2] + posArray[posIndex + 5] + posArray[posIndex + 8] + posArray[posIndex + 11]) / 4.0f
-                }
+                val quadCenterArray = rebuildContext.translucentVertexBuilder.getQuadCenterArray()
                 rebuildContext.release(this@RebuildTask)
 
-                val indexDataArray = sortContext.getIndexDataArray(indexSize.toInt())
-                memcpy(indexBuffer.ptr, indexDataArray, indexSize)
-
-                val data = sortContext.sortQuads(this@RebuildTask, indexDataArray, quadCenterArray, quadCount)
+                val sortContext = renderer.contextProvider.getSortContext(this@RebuildTask)
+                val data = sortContext.sortQuads(this@RebuildTask, quadCenterArray, quadCount)
                 sortContext.release(this@RebuildTask)
 
-                memcpy(data.indexData, indexBuffer.ptr, indexSize)
                 data
             } else {
                 rebuildContext.release(this@RebuildTask)
@@ -220,6 +243,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 occlusionData(occlusionData)
                 translucentData(translucentData)
                 updateTileEntity(tileEntityList, instancingTileEntityList, globalTileEntityList)
+
                 for (i in bufferGroupArray.indices) {
                     val bufferGroup = bufferGroupArray[i]
                     var faceData: FaceData? = null
@@ -227,7 +251,7 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                     var indexBuffer: BufferContext? = null
 
                     if (bufferGroup != null) {
-                        combineBuffers(bufferGroup)?.let {
+                        combineBuffers(if (i == 1) translucentData else null, bufferGroup)?.let {
                             faceData = it.first
                             vertexBuffer = it.second
                             indexBuffer = it.third
@@ -251,57 +275,52 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
     }
 
     private fun combineBuffers(
+        translucentData: TranslucentData?,
         bufferGroup: TerrainMeshBuilder.BufferGroup
     ): Triple<FaceData, BufferContext, BufferContext>? {
         return if (bufferGroup.vertexBuffers.size == 1) {
+            val quadCount = bufferGroup.quadCounts[0]
             val vertexBuffer = bufferGroup.vertexBuffers[0]!!
-            val indexBuffer = bufferGroup.indexBuffers[0]!!
-            Triple(FaceData.Singleton(indexBuffer.region.arr.rem.toInt()), vertexBuffer, indexBuffer)
+            val elementBuffer = translucentData.writeElementIndices(quadCount)
+            elementBuffer.region.arr.flip()
+            Triple(FaceData.Singleton(elementBuffer.region.arr.rem.toInt()), vertexBuffer, elementBuffer)
         } else {
             var dataArray: IntArray? = null
 
             var resultVertexBuffer: BufferContext? = null
-            var resultIndexBuffer: BufferContext? = null
+            var resultElementBuffer: BufferContext? = null
 
             for (i in bufferGroup.vertexBuffers.indices) {
                 val vertexBuffer = bufferGroup.vertexBuffers[i] ?: continue
-                val indexBuffer = bufferGroup.indexBuffers[i]!!
+                val faceQuadCount = bufferGroup.quadCounts[i]
 
                 val vertArr = vertexBuffer.region.arr
-                val elemArr = indexBuffer.region.arr
+                val vertexLength = vertArr.rem
+                val indexCount = faceQuadCount * 6
+                val indexLength = indexCount * 4
 
                 val resultVertArr: MutableArr
                 val resultElemArr: MutableArr
 
-                val vertexLength = vertArr.rem
-                val indexLength = elemArr.rem
-
                 if (resultVertexBuffer == null) {
                     vertArr.reset()
-                    elemArr.reset()
-
                     resultVertexBuffer = vertexBuffer
-                    resultIndexBuffer = indexBuffer
-
                     resultVertArr = vertArr
-                    resultElemArr = elemArr
+
+                    resultElementBuffer = translucentData.writeElementIndices(faceQuadCount)
+                    resultElemArr = resultElementBuffer.region.arr
                 } else {
                     resultVertArr = resultVertexBuffer.region.arr
-                    resultElemArr = resultIndexBuffer!!.region.arr
+                    resultElemArr = resultElementBuffer!!.region.arr
 
                     while (resultVertArr.rem < vertexLength) {
                         resultVertexBuffer.region.expand(this)
                     }
 
-                    while (resultElemArr.rem < indexLength) {
-                        resultIndexBuffer.region.expand(this)
-                    }
-
                     memcpy(vertArr.ptr, resultVertArr.ptr, vertexLength)
-                    memcpy(elemArr.ptr, resultElemArr.ptr, indexLength)
+                    translucentData.writeElementIndices(resultElementBuffer, faceQuadCount)
 
                     vertexBuffer.release(this)
-                    indexBuffer.release(this)
                 }
 
                 if (dataArray == null) {
@@ -310,17 +329,16 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
 
                 val dataIndex = i * 3
                 dataArray[dataIndex] = resultVertArr.pos.toInt()
-                dataArray[dataIndex + 1] = resultElemArr.pos.toInt()
-                dataArray[dataIndex + 2] = indexLength.toInt()
+                dataArray[dataIndex + 1] = (resultElemArr.pos - indexLength).toInt()
+                dataArray[dataIndex + 2] = indexLength
 
                 resultVertArr.pos += vertexLength
-                resultElemArr.pos += indexLength
             }
 
             if (dataArray != null) {
                 resultVertexBuffer!!.region.arr.flip()
-                resultIndexBuffer!!.region.arr.flip()
-                Triple(FaceData.Multiple(dataArray), resultVertexBuffer, resultIndexBuffer)
+                resultElementBuffer!!.region.arr.flip()
+                Triple(FaceData.Multiple(dataArray), resultVertexBuffer, resultElementBuffer)
             } else {
                 null
             }
@@ -357,13 +375,8 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
         val newData = sortContext.sortQuads(this@SortTask, data!!)
         sortContext.release(this@SortTask)
 
-        val bufferContext = renderer.contextProvider.getBufferContext(this@SortTask)
-        while (bufferContext.region.length < newData.indexData.size) {
-            bufferContext.region.expand(this)
-        }
-        val buffer = bufferContext.region.arr
-        buffer.len = newData.indexData.size.toLong()
-        memcpy(newData.indexData, buffer.ptr, buffer.len)
+        val bufferContext = newData.writeElementIndices(newData.quadCount)
+        bufferContext.region.arr.flip()
 
         renderer.chunkBuilder.scheduleUpload(this) {
             translucentData(newData)
