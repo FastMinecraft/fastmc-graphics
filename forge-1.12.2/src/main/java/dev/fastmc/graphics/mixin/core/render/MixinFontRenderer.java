@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.mixin.core.render;
 
-import dev.fastmc.common.MathUtilsKt;
+import dev.fastmc.common.MathUtilKt;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.shared.util.MatrixUtils;
 import net.minecraft.client.gui.FontRenderer;
@@ -59,21 +59,21 @@ public abstract class MixinFontRenderer {
             Matrix4f modelView = MatrixUtils.INSTANCE.getMatrix();
 
             FastMcMod.INSTANCE.getFontRenderer().drawString(projection, modelView, text, x, y, color, 1.0f, drawShadow);
-            cir.setReturnValue(MathUtilsKt.fastCeil(x + FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(text)));
+            cir.setReturnValue(MathUtilKt.ceilToInt(x + FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(text)));
         }
     }
 
     @Inject(method = "getStringWidth", at = @At("HEAD"), cancellable = true)
     public void getStringWidth$Inject$HEAD(String text, CallbackInfoReturnable<Integer> cir) {
         if (FastMcMod.INSTANCE.isInitialized()) {
-            cir.setReturnValue(MathUtilsKt.fastCeil(FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(text)));
+            cir.setReturnValue(MathUtilKt.ceilToInt(FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(text)));
         }
     }
 
     @Inject(method = "getCharWidth", at = @At("HEAD"), cancellable = true)
     public void getCharWidth$Inject$HEAD(char character, CallbackInfoReturnable<Integer> cir) {
         if (FastMcMod.INSTANCE.isInitialized()) {
-            cir.setReturnValue(MathUtilsKt.fastCeil(FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(character)));
+            cir.setReturnValue(MathUtilKt.ceilToInt(FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(character)));
         }
     }
 

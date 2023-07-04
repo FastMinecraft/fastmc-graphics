@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.mixin.core.render;
 
-import dev.fastmc.common.MathUtils;
-import dev.fastmc.common.MathUtilsKt;
+import dev.fastmc.common.MathUtil;
+import dev.fastmc.common.MathUtilKt;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.shared.FpsDisplay;
 import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
@@ -93,13 +93,13 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         Entity entity = this.mc.getRenderViewEntity();
         if (entity != null) {
             worldRenderer.updateRenderPos(
-                MathUtils.lerp(entity.prevPosX, entity.posX, partialTicks),
-                MathUtils.lerp(entity.prevPosY, entity.posY, partialTicks),
-                MathUtils.lerp(entity.prevPosZ, entity.posZ, partialTicks)
+                MathUtil.lerp(entity.prevPosX, entity.posX, partialTicks),
+                MathUtil.lerp(entity.prevPosY, entity.posY, partialTicks),
+                MathUtil.lerp(entity.prevPosZ, entity.posZ, partialTicks)
             );
 
-            float yaw = MathUtils.lerp(entity.prevRotationYaw, entity.rotationYaw, partialTicks);
-            float pitch = MathUtils.lerp(entity.prevRotationPitch, entity.rotationPitch, partialTicks);
+            float yaw = MathUtil.lerp(entity.prevRotationYaw, entity.rotationYaw, partialTicks);
+            float pitch = MathUtil.lerp(entity.prevRotationPitch, entity.rotationPitch, partialTicks);
 
             if (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).isPlayerSleeping()) {
                 BlockPos blockpos = new BlockPos(entity);
@@ -139,7 +139,7 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         }
 
         projection.perspective(
-            MathUtilsKt.toRadians(this.getFOVModifier(partialTicks, true)),
+            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
             (float) this.mc.displayWidth / (float) this.mc.displayHeight,
             0.05f,
             this.farPlaneDistance * MathHelper.SQRT_2
@@ -169,14 +169,14 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
             float f2 = 5.0f / (f1 * f1 + 5.0f) - f1 * 0.04f;
             f2 = f2 * f2;
             modelView.rotate(
-                MathUtilsKt.toRadians(((float) this.rendererUpdateCount + partialTicks) * (float) i),
+                MathUtilKt.toRadians(((float) this.rendererUpdateCount + partialTicks) * (float) i),
                 0.0f,
                 1.0f,
                 1.0f
             );
             modelView.scale(1.0f / f2, 1.0f, 1.0f);
             modelView.rotate(
-                MathUtilsKt.toRadians(-((float) this.rendererUpdateCount + partialTicks) * (float) i),
+                MathUtilKt.toRadians(-((float) this.rendererUpdateCount + partialTicks) * (float) i),
                 0.0f,
                 1.0f,
                 1.0f
@@ -188,19 +188,19 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         if (this.debugView) {
             switch (this.debugViewDirection) {
                 case 0:
-                    modelView.rotate(MathUtilsKt.toRadians(90.0f), 0.0f, 1.0f, 0.0f);
+                    modelView.rotate(MathUtilKt.toRadians(90.0f), 0.0f, 1.0f, 0.0f);
                     break;
                 case 1:
-                    modelView.rotate(MathUtilsKt.toRadians(180.0f), 0.0f, 1.0f, 0.0f);
+                    modelView.rotate(MathUtilKt.toRadians(180.0f), 0.0f, 1.0f, 0.0f);
                     break;
                 case 2:
-                    modelView.rotate(MathUtilsKt.toRadians(-90.0f), 0.0f, 1.0f, 0.0f);
+                    modelView.rotate(MathUtilKt.toRadians(-90.0f), 0.0f, 1.0f, 0.0f);
                     break;
                 case 3:
-                    modelView.rotate(MathUtilsKt.toRadians(90.0f), 1.0f, 0.0f, 0.0f);
+                    modelView.rotate(MathUtilKt.toRadians(90.0f), 1.0f, 0.0f, 0.0f);
                     break;
                 case 4:
-                    modelView.rotate(MathUtilsKt.toRadians(-90.0f), 1.0f, 0.0f, 0.0f);
+                    modelView.rotate(MathUtilKt.toRadians(-90.0f), 1.0f, 0.0f, 0.0f);
                     break;
             }
         }
@@ -213,7 +213,7 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
 
             if (entitylivingbase.getHealth() <= 0.0F) {
                 float f1 = (float) entitylivingbase.deathTime + partialTicks;
-                modelView.rotate(MathUtilsKt.toRadians(40.0F - 8000.0F / (f1 + 200.0F)), 0.0F, 0.0F, 1.0F);
+                modelView.rotate(MathUtilKt.toRadians(40.0F - 8000.0F / (f1 + 200.0F)), 0.0F, 0.0F, 1.0F);
             }
 
             if (f < 0.0F) {
@@ -223,9 +223,9 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
             f = f / (float) entitylivingbase.maxHurtTime;
             f = MathHelper.sin(f * f * f * f * (float) Math.PI);
             float f2 = entitylivingbase.attackedAtYaw;
-            modelView.rotate(MathUtilsKt.toRadians(-f2), 0.0F, 1.0F, 0.0F);
-            modelView.rotate(MathUtilsKt.toRadians(-f * 14.0F), 0.0F, 0.0F, 1.0F);
-            modelView.rotate(MathUtilsKt.toRadians(f2), 0.0F, 1.0F, 0.0F);
+            modelView.rotate(MathUtilKt.toRadians(-f2), 0.0F, 1.0F, 0.0F);
+            modelView.rotate(MathUtilKt.toRadians(-f * 14.0F), 0.0F, 0.0F, 1.0F);
+            modelView.rotate(MathUtilKt.toRadians(f2), 0.0F, 1.0F, 0.0F);
         }
     }
 
@@ -241,14 +241,14 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
                 -Math.abs(MathHelper.cos(f1 * (float) Math.PI) * f2),
                 0.0F
             );
-            modelView.rotate(MathUtilsKt.toRadians(MathHelper.sin(f1 * (float) Math.PI) * f2 * 3.0F), 0.0F, 0.0F, 1.0F);
+            modelView.rotate(MathUtilKt.toRadians(MathHelper.sin(f1 * (float) Math.PI) * f2 * 3.0F), 0.0F, 0.0F, 1.0F);
             modelView.rotate(
-                MathUtilsKt.toRadians(Math.abs(MathHelper.cos(f1 * (float) Math.PI - 0.2F) * f2) * 5.0F),
+                MathUtilKt.toRadians(Math.abs(MathHelper.cos(f1 * (float) Math.PI - 0.2F) * f2) * 5.0F),
                 1.0F,
                 0.0F,
                 0.0F
             );
-            modelView.rotate(MathUtilsKt.toRadians(f3), 1.0F, 0.0F, 0.0F);
+            modelView.rotate(MathUtilKt.toRadians(f3), 1.0F, 0.0F, 0.0F);
         }
     }
 
@@ -271,7 +271,7 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
 
                 if (block.isBed(iblockstate, this.mc.world, blockpos, entity)) {
                     modelView.rotate(
-                        MathUtilsKt.toRadians(block.getBedDirection(
+                        MathUtilKt.toRadians(block.getBedDirection(
                             iblockstate,
                             this.mc.world,
                             blockpos
@@ -283,13 +283,13 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
                 }
 
                 modelView.rotate(
-                    MathUtilsKt.toRadians(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F),
+                    MathUtilKt.toRadians(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F),
                     0.0F,
                     -1.0F,
                     0.0F
                 );
                 modelView.rotate(
-                    MathUtilsKt.toRadians(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks),
+                    MathUtilKt.toRadians(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks),
                     -1.0F,
                     0.0F,
                     0.0F
@@ -335,14 +335,14 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
                 }
 
                 if (this.mc.gameSettings.thirdPersonView == 2) {
-                    modelView.rotate(MathUtilsKt.toRadians(180.0F), 0.0F, 1.0F, 0.0F);
+                    modelView.rotate(MathUtilKt.toRadians(180.0F), 0.0F, 1.0F, 0.0F);
                 }
 
-                modelView.rotate(MathUtilsKt.toRadians(entity.rotationPitch - f2), 1.0F, 0.0F, 0.0F);
-                modelView.rotate(MathUtilsKt.toRadians(entity.rotationYaw - f1), 0.0F, 1.0F, 0.0F);
+                modelView.rotate(MathUtilKt.toRadians(entity.rotationPitch - f2), 1.0F, 0.0F, 0.0F);
+                modelView.rotate(MathUtilKt.toRadians(entity.rotationYaw - f1), 0.0F, 1.0F, 0.0F);
                 modelView.translate(0.0F, 0.0F, (float) (-d3));
-                modelView.rotate(MathUtilsKt.toRadians(f1 - entity.rotationYaw), 0.0F, 1.0F, 0.0F);
-                modelView.rotate(MathUtilsKt.toRadians(f2 - entity.rotationPitch), 1.0F, 0.0F, 0.0F);
+                modelView.rotate(MathUtilKt.toRadians(f1 - entity.rotationYaw), 0.0F, 1.0F, 0.0F);
+                modelView.rotate(MathUtilKt.toRadians(f2 - entity.rotationPitch), 1.0F, 0.0F, 0.0F);
             }
         } else {
             modelView.translate(0.0F, 0.0F, 0.05F);
@@ -367,9 +367,9 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
                 roll
             );
             net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
-            modelView.rotate(MathUtilsKt.toRadians(event.getRoll()), 0.0F, 0.0F, 1.0F);
-            modelView.rotate(MathUtilsKt.toRadians(event.getPitch()), 1.0F, 0.0F, 0.0F);
-            modelView.rotate(MathUtilsKt.toRadians(event.getYaw()), 0.0F, 1.0F, 0.0F);
+            modelView.rotate(MathUtilKt.toRadians(event.getRoll()), 0.0F, 0.0F, 1.0F);
+            modelView.rotate(MathUtilKt.toRadians(event.getPitch()), 1.0F, 0.0F, 0.0F);
+            modelView.rotate(MathUtilKt.toRadians(event.getYaw()), 0.0F, 1.0F, 0.0F);
         }
 
         modelView.translate(0.0F, -f, 0.0F);

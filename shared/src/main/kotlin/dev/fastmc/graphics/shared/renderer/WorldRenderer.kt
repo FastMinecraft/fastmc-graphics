@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.shared.renderer
 
-import dev.fastmc.common.fastFloor
+import dev.fastmc.common.floorToInt
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer
 import dev.luna5ama.glwrapper.api.GL_DYNAMIC_STORAGE_BIT
 import dev.luna5ama.glwrapper.api.glInvalidateBufferData
@@ -77,9 +77,9 @@ abstract class WorldRenderer : IRenderer {
         this.cameraY = cameraY
         this.cameraZ = cameraZ
 
-        cameraBlockX = cameraX.fastFloor()
-        cameraBlockY = cameraY.fastFloor()
-        cameraBlockZ = cameraZ.fastFloor()
+        cameraBlockX = cameraX.floorToInt()
+        cameraBlockY = cameraY.floorToInt()
+        cameraBlockZ = cameraZ.floorToInt()
     }
 
     fun updateRenderPos(renderPosX: Double, renderPosY: Double, renderPosZ: Double) {

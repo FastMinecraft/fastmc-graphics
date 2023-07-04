@@ -109,7 +109,7 @@ abstract class TerrainRenderer(
                 val cameraPosY0 = cameraBlockY shr 1
                 val cameraPosZ0 = cameraBlockZ shr 1
                 val cameraYaw0 = cameraYaw.floorToInt()
-                val cameraPitch0 = cameraPitch.fastFloor()
+                val cameraPitch0 = cameraPitch.floorToInt()
 
                 val caveCullingUpdate = chunkStorage.checkCaveCullingUpdate()
                 val indicesUpdate = chunkStorage.checkChunkIndicesUpdate()
@@ -549,12 +549,12 @@ abstract class TerrainRenderer(
     }
 
     private fun calculateVisibleFaceBit(renderChunk: RenderChunk): Int {
-        return (Direction.B_EAST * ((renderChunk.minX - cameraX).fastFloor() ushr 31)) or
-            (Direction.B_WEST * ((cameraX - renderChunk.maxX).fastFloor() ushr 31)) or
-            (Direction.B_UP * ((renderChunk.minY - cameraY).fastFloor() ushr 31)) or
-            (Direction.B_DOWN * ((cameraY - renderChunk.maxY).fastFloor() ushr 31)) or
-            (Direction.B_SOUTH * ((renderChunk.minZ - cameraZ).fastFloor() ushr 31)) or
-            (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).fastFloor() ushr 31))
+        return (Direction.B_EAST * ((renderChunk.minX - cameraX).floorToInt() ushr 31)) or
+            (Direction.B_WEST * ((cameraX - renderChunk.maxX).floorToInt() ushr 31)) or
+            (Direction.B_UP * ((renderChunk.minY - cameraY).floorToInt() ushr 31)) or
+            (Direction.B_DOWN * ((cameraY - renderChunk.maxY).floorToInt() ushr 31)) or
+            (Direction.B_SOUTH * ((renderChunk.minZ - cameraZ).floorToInt() ushr 31)) or
+            (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).floorToInt() ushr 31))
     }
 
     private val updateDebugRunnable = Runnable {

@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.shared.texture
 
 import dev.fastmc.common.collection.mapArray
-import dev.fastmc.common.fastCeil
+import dev.fastmc.common.ceilToInt
 import dev.fastmc.common.toRadians
 import java.awt.Graphics2D
 import java.awt.Rectangle
@@ -168,7 +168,7 @@ class TextureTransformer(
             tempGraphics.dispose()
 
             val bounds = imageTransform.getBounds()
-            val image = BufferedImage(bounds.width.fastCeil(), bounds.height.fastCeil(), input.type)
+            val image = BufferedImage(bounds.width.ceilToInt(), bounds.height.ceilToInt(), input.type)
             val graphics = image.createGraphics()
             graphics.drawImage(tempImage, imageTransform, null)
             graphics.dispose()

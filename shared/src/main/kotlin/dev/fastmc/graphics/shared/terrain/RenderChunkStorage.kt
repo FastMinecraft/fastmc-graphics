@@ -136,13 +136,13 @@ class RenderChunkStorage(
 
             val startRegionX = (renderer.cameraChunkX - halfSize) shr 4
             val startRegionZ = (renderer.cameraChunkZ - halfSize) shr 4
-            val offsetX = fastFloorMod(startRegionX, regionSizeXZ)
-            val offsetZ = fastFloorMod(startRegionZ, regionSizeXZ)
+            val offsetX = floorToIntMod(startRegionX, regionSizeXZ)
+            val offsetZ = floorToIntMod(startRegionZ, regionSizeXZ)
 
             for (i in regionArray.indices) {
                 launch(FastMcCoreScope.context) {
-                    val blockX = (fastFloorMod((i % regionSizeXZ) - offsetX, regionSizeXZ) + startRegionX) shl 8
-                    val blockZ = (fastFloorMod((i / regionSizeXZ) - offsetZ, regionSizeXZ) + startRegionZ) shl 8
+                    val blockX = (floorToIntMod((i % regionSizeXZ) - offsetX, regionSizeXZ) + startRegionX) shl 8
+                    val blockZ = (floorToIntMod((i / regionSizeXZ) - offsetZ, regionSizeXZ) + startRegionZ) shl 8
 
                     val region = regionArray[i]
                     region.setPos(blockX, blockZ)
@@ -152,8 +152,8 @@ class RenderChunkStorage(
                     val endX = min((blockX shr 4) + 16, endChunkX)
                     val endZ = min((blockZ shr 4) + 16, endChunkZ)
 
-                    var indexX = fastFloorMod(startX, sizeXZ)
-                    val startIndexZ = fastFloorMod(startZ, sizeXZ)
+                    var indexX = floorToIntMod(startX, sizeXZ)
+                    val startIndexZ = floorToIntMod(startZ, sizeXZ)
                     var indexZ: Int
 
                     for (x in startX until endX) {
@@ -235,28 +235,28 @@ class RenderChunkStorage(
 
         if (renderChunk.chunkX > startChunkX) {
             renderChunk.adjacentRenderChunk[Direction.I_WEST] =
-                renderChunkArray[chunkPos2Index(fastFloorMod(indexX - 1, sizeXZ), y, indexZ)]
+                renderChunkArray[chunkPos2Index(floorToIntMod(indexX - 1, sizeXZ), y, indexZ)]
         } else {
             renderChunk.adjacentRenderChunk[Direction.I_WEST] = null
         }
 
         if (renderChunk.chunkX < endChunkX - 1) {
             renderChunk.adjacentRenderChunk[Direction.I_EAST] =
-                renderChunkArray[chunkPos2Index(fastFloorMod(indexX + 1, sizeXZ), y, indexZ)]
+                renderChunkArray[chunkPos2Index(floorToIntMod(indexX + 1, sizeXZ), y, indexZ)]
         } else {
             renderChunk.adjacentRenderChunk[Direction.I_EAST] = null
         }
 
         if (renderChunk.chunkZ > startChunkZ) {
             renderChunk.adjacentRenderChunk[Direction.I_NORTH] =
-                renderChunkArray[chunkPos2Index(indexX, y, fastFloorMod(indexZ - 1, sizeXZ))]
+                renderChunkArray[chunkPos2Index(indexX, y, floorToIntMod(indexZ - 1, sizeXZ))]
         } else {
             renderChunk.adjacentRenderChunk[Direction.I_NORTH] = null
         }
 
         if (renderChunk.chunkZ < endChunkZ - 1) {
             renderChunk.adjacentRenderChunk[Direction.I_SOUTH] =
-                renderChunkArray[chunkPos2Index(indexX, y, fastFloorMod(indexZ + 1, sizeXZ))]
+                renderChunkArray[chunkPos2Index(indexX, y, floorToIntMod(indexZ + 1, sizeXZ))]
         } else {
             renderChunk.adjacentRenderChunk[Direction.I_SOUTH] = null
         }
@@ -408,8 +408,8 @@ class RenderChunkStorage(
 
     fun getRegionByRegion(regionX: Int, regionZ: Int): RenderRegion {
         return regionArray[regionPos2Index(
-            fastFloorMod(regionX, regionSizeXZ),
-            fastFloorMod(regionZ, regionSizeXZ)
+            floorToIntMod(regionX, regionSizeXZ),
+            floorToIntMod(regionZ, regionSizeXZ)
         )]
     }
 
@@ -432,9 +432,9 @@ class RenderChunkStorage(
         chunkZ: Int
     ): RenderChunk {
         return renderChunkArray[chunkPos2Index(
-            fastFloorMod(chunkX, sizeXZ),
+            floorToIntMod(chunkX, sizeXZ),
             chunkY,
-            fastFloorMod(chunkZ, sizeXZ)
+            floorToIntMod(chunkZ, sizeXZ)
         )]
     }
 
@@ -444,7 +444,7 @@ class RenderChunkStorage(
         }
     }
 
-    private fun fastFloorMod(x: Int, y: Int): Int {
+    private fun floorToIntMod(x: Int, y: Int): Int {
         val i = x % y
         return i + (i ushr 31) * y
     }

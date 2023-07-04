@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.entity
 
-import dev.fastmc.common.fastFloor
+import dev.fastmc.common.floorToInt
 import dev.fastmc.graphics.shared.instancing.entity.info.IEntityInfo
 import net.minecraft.client.render.WorldRenderer
 import net.minecraft.entity.Entity
@@ -11,7 +11,7 @@ interface EntityInfo<E : Entity> : IEntityInfo<E> {
     override val lightMapUV: Int
         get() = if (entity.isOnFire) 0xF000F0 else entity.world?.let {
 
-            val blockPos = BlockPos.Mutable(entity.x.fastFloor(), 0, entity.z.fastFloor())
+            val blockPos = BlockPos.Mutable(entity.x.floorToInt(), 0, entity.z.floorToInt())
 
             return if (it.chunkManager.isChunkLoaded(blockPos.x shr 4, blockPos.z shr 4)) {
                 blockPos.y = MathHelper.floor(entity.y + entity.eyeY)

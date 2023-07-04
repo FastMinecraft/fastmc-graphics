@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.util
 
 import dev.fastmc.common.distanceSq
-import dev.fastmc.common.fastFloor
+import dev.fastmc.common.floorToInt
 import net.minecraft.block.state.IBlockState
 import net.minecraft.util.EnumFacing
 import net.minecraft.util.math.BlockPos
@@ -22,9 +22,9 @@ fun rayTrace(
     var currentZ = start.z
 
     // Int start position
-    var currentBlockX = currentX.fastFloor()
-    var currentBlockY = currentY.fastFloor()
-    var currentBlockZ = currentZ.fastFloor()
+    var currentBlockX = currentX.floorToInt()
+    var currentBlockY = currentY.floorToInt()
+    var currentBlockZ = currentZ.floorToInt()
 
     // Raytrace start block
     val blockPos = BlockPos.MutableBlockPos(currentBlockX, currentBlockY, currentBlockZ)
@@ -42,9 +42,9 @@ fun rayTrace(
     }
 
     // Int end position
-    val endBlockX = endX.fastFloor()
-    val endBlockY = endY.fastFloor()
-    val endBlockZ = endZ.fastFloor()
+    val endBlockX = endX.floorToInt()
+    val endBlockY = endY.floorToInt()
+    val endBlockZ = endZ.floorToInt()
 
     var count = 200
 
@@ -94,23 +94,23 @@ fun rayTrace(
             currentZ += diffZ * stepX
 
             currentBlockX = nextX - (endBlockX - currentBlockX ushr 31)
-            currentBlockY = currentY.fastFloor()
-            currentBlockZ = currentZ.fastFloor()
+            currentBlockY = currentY.floorToInt()
+            currentBlockZ = currentZ.floorToInt()
         } else if (stepY < stepZ) {
             currentX += diffX * stepY
             currentY = nextY.toDouble()
             currentZ += diffZ * stepY
 
-            currentBlockX = currentX.fastFloor()
+            currentBlockX = currentX.floorToInt()
             currentBlockY = nextY - (endBlockY - currentBlockY ushr 31)
-            currentBlockZ = currentZ.fastFloor()
+            currentBlockZ = currentZ.floorToInt()
         } else {
             currentX += diffX * stepZ
             currentY += diffY * stepZ
             currentZ = nextZ.toDouble()
 
-            currentBlockX = currentX.fastFloor()
-            currentBlockY = currentY.fastFloor()
+            currentBlockX = currentX.floorToInt()
+            currentBlockY = currentY.floorToInt()
             currentBlockZ = nextZ - (endBlockZ - currentBlockZ ushr 31)
         }
 
@@ -128,10 +128,10 @@ fun rayTrace(
     }
 
     return if (returnLastUncollidableBlock) {
-        val enumFacing = if (currentX == currentX.fastFloor().toDouble()) {
+        val enumFacing = if (currentX == currentX.floorToInt().toDouble()) {
             if (end.x > start.x) EnumFacing.WEST
             else EnumFacing.EAST
-        } else if (currentY == currentY.fastFloor().toDouble()) {
+        } else if (currentY == currentY.floorToInt().toDouble()) {
             if (end.y > start.y) EnumFacing.DOWN
             else EnumFacing.UP
         } else {

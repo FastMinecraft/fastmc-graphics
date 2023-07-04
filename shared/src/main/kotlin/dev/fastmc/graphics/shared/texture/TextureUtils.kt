@@ -1,6 +1,6 @@
 package dev.fastmc.graphics.shared.texture
 
-import dev.fastmc.common.MathUtils
+import dev.fastmc.common.MathUtil
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 
@@ -11,7 +11,7 @@ object TextureUtils {
 
         val firstImage = images[0]
         val height = firstImage.height
-        val totalHeight = MathUtils.ceilToPOT(height * images.size)
+        val totalHeight = MathUtil.ceilToPOT(height * images.size)
         val finalImage = BufferedImage(firstImage.width, totalHeight, firstImage.type)
         val graphics = finalImage.createGraphics()
 
@@ -52,7 +52,7 @@ object TextureUtils {
 
         val firstImage = images[0]
         val size = firstImage.width
-        val finalImage = BufferedImage(size * 4, MathUtils.ceilToPOT(size * 5), firstImage.type)
+        val finalImage = BufferedImage(size * 4, MathUtil.ceilToPOT(size * 5), firstImage.type)
         val graphics = finalImage.createGraphics()
 
         for (x in 0 until 4) {
