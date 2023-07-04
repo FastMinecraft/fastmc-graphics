@@ -22,7 +22,6 @@ public class MixinPatchClientChunkManager {
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init$Inject$RETURN(ClientWorld world, int loadDistance, CallbackInfo ci) {
-        OffThreadLightingProvider.executor.getQueue().clear();
         this.lightingProvider = new OffThreadLightingProvider(
             (ChunkProvider) this,
             true,

@@ -80,7 +80,10 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
             ) * mc.options.entityDistanceScaling
         )
 
-        (world.chunkManager.lightingProvider as OffThreadLightingProvider).doLightUpdates()
+        (world.chunkManager.lightingProvider as OffThreadLightingProvider).doLightUpdates(Int.MAX_VALUE,
+            doSkylight = true,
+            skipEdgeLightPropagation = true
+        )
 
         update0(uploadChunks)
 

@@ -96,7 +96,7 @@ class TerrainRendererImpl(renderer: WorldRenderer) : TerrainRenderer(
             ) * mc.options.entityDistanceScaling.value
         )
 
-        (world.chunkManager.lightingProvider as OffThreadLightingProvider).doLightUpdates(world.hasNoChunkUpdaters())
+        (world.chunkManager.lightingProvider as OffThreadLightingProvider).doLightUpdates(Int.MAX_VALUE, world.hasNoChunkUpdaters(), true)
 
         update0(uploadChunks)
 
