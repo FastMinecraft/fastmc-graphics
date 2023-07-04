@@ -360,6 +360,9 @@ abstract class ChunkBuilder(
 
         fun clear() {
             synchronized(taskQueue) {
+                taskQueue.forEach {
+                    it.cancel()
+                }
                 taskQueue.clear()
             }
             while (activeCount.get() != 0) {

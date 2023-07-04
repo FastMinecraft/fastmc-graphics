@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.opengl.impl
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.AtomicByteArray
 import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.graphics.shared.terrain.ChunkBuilderTask
 import dev.luna5ama.glwrapper.api.*
 import dev.luna5ama.glwrapper.impl.BufferObject
 import dev.luna5ama.kmogus.Arr
@@ -152,7 +153,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
             return this
         }
 
-        fun expand() {
+        fun expand(task: ChunkBuilderTask) {
             while (true) {
                 if (sectorEnd < sectorCapacity) {
                     if (sectorState.compareAndSet(sectorEnd, FALSE, TRUE)) {
@@ -179,8 +180,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                                 if (sectorState.compareAndSet(i + allocated, FALSE, TRUE)) {
                                     if (++allocated > sectorLength) {
                                         val prevSectorOffset = sectorOffset
-                                        val prevSectorLength = sectorLength
-                                        arr.flip()
+                                        val prevSectorEnd = sectorEnd
                                         val prevPtr = arr.basePtr
                                         val prevLen = arr.len
 
@@ -192,7 +192,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                                         arr.len = length
                                         arr.pos = prevLen
 
-                                        for (i1 in prevSectorOffset until prevSectorLength) {
+                                        for (i1 in prevSectorOffset until prevSectorEnd) {
                                             sectorState.set(i1, FALSE)
                                         }
                                         doNotify()
@@ -218,7 +218,8 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                     block /= 2
                 }
 
-                lock.withLock { condition.await() }
+                task.checkCancelled()
+                lock.withLock { condition.awaitNanos(1_000_000) }
             }
         }
 

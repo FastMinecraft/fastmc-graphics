@@ -63,8 +63,9 @@ abstract class TerrainVertexBuilder {
         val bufferGroup = bufferGroup!!
         val region = bufferGroup.getVertexBuffer(faceBit - 1).region
         val arr = region.arr
+        check(arr.len == arr.baseLen) {"WtF"}
         if (arr.rem < 16) {
-            region.expand()
+            region.expand(task!!)
         }
 
         arr.usePtr {
@@ -92,7 +93,7 @@ abstract class TerrainVertexBuilder {
         val region = bufferGroup.getIndexBuffer(faceBit - 1).region
         val arr = region.arr
         if (arr.rem < 24) {
-            region.expand()
+            region.expand(task!!)
         }
 
         val vertexCount = bufferGroup.vertexCounts[faceBit - 1]

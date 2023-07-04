@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.terrain
 import dev.fastmc.common.Cancellable
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
+import dev.luna5ama.kmogus.MutableArr
 import dev.luna5ama.kmogus.memcpy
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -259,9 +260,6 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
         } else {
             var dataArray: IntArray? = null
 
-            var vertexOffset = 0L
-            var indexOffset = 0L
-
             var resultVertexBuffer: BufferContext? = null
             var resultIndexBuffer: BufferContext? = null
 
@@ -269,23 +267,38 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 val vertexBuffer = bufferGroup.vertexBuffers[i] ?: continue
                 val indexBuffer = bufferGroup.indexBuffers[i]!!
 
-                val vertexLength = vertexBuffer.region.arr.rem
-                val indexLength = indexBuffer.region.arr.rem
+                val vertArr = vertexBuffer.region.arr
+                val elemArr = indexBuffer.region.arr
+
+                val resultVertArr: MutableArr
+                val resultElemArr: MutableArr
+
+                val vertexLength = vertArr.rem
+                val indexLength = elemArr.rem
 
                 if (resultVertexBuffer == null) {
+                    vertArr.reset()
+                    elemArr.reset()
+
                     resultVertexBuffer = vertexBuffer
                     resultIndexBuffer = indexBuffer
+
+                    resultVertArr = vertArr
+                    resultElemArr = elemArr
                 } else {
-                    while (resultVertexBuffer.region.arr.rem < vertexLength) {
-                        resultVertexBuffer.region.expand()
+                    resultVertArr = resultVertexBuffer.region.arr
+                    resultElemArr = resultIndexBuffer!!.region.arr
+
+                    while (resultVertArr.rem < vertexLength) {
+                        resultVertexBuffer.region.expand(this)
                     }
 
-                    while (resultIndexBuffer!!.region.arr.rem < indexLength) {
-                        resultIndexBuffer.region.expand()
+                    while (resultElemArr.rem < indexLength) {
+                        resultIndexBuffer.region.expand(this)
                     }
 
-                    memcpy(vertexBuffer.region.arr.basePtr, resultVertexBuffer.region.arr.basePtr + vertexOffset, vertexLength)
-                    memcpy(indexBuffer.region.arr.basePtr, resultIndexBuffer.region.arr.basePtr + indexOffset, indexLength)
+                    memcpy(vertArr.ptr, resultVertArr.ptr, vertexLength)
+                    memcpy(elemArr.ptr, resultElemArr.ptr, indexLength)
 
                     vertexBuffer.release(this)
                     indexBuffer.release(this)
@@ -296,17 +309,17 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 }
 
                 val dataIndex = i * 3
-                dataArray[dataIndex] = vertexOffset.toInt()
-                dataArray[dataIndex + 1] = indexOffset.toInt()
+                dataArray[dataIndex] = resultVertArr.pos.toInt()
+                dataArray[dataIndex + 1] = resultElemArr.pos.toInt()
                 dataArray[dataIndex + 2] = indexLength.toInt()
 
-                vertexOffset += vertexLength
-                indexOffset += indexLength
+                resultVertArr.pos += vertexLength
+                resultElemArr.pos += indexLength
             }
 
             if (dataArray != null) {
-                resultVertexBuffer!!.region.arr.len = vertexOffset
-                resultIndexBuffer!!.region.arr.len = indexOffset
+                resultVertexBuffer!!.region.arr.flip()
+                resultIndexBuffer!!.region.arr.flip()
                 Triple(FaceData.Multiple(dataArray), resultVertexBuffer, resultIndexBuffer)
             } else {
                 null
@@ -346,7 +359,7 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
 
         val bufferContext = renderer.contextProvider.getBufferContext(this@SortTask)
         while (bufferContext.region.length < newData.indexData.size) {
-            bufferContext.region.expand()
+            bufferContext.region.expand(this)
         }
         val buffer = bufferContext.region.arr
         buffer.len = newData.indexData.size.toLong()
