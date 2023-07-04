@@ -1,17 +1,12 @@
 package dev.fastmc.graphics.mixin.core.render;
 
-import com.mojang.blaze3d.platform.GlStateManager;
-import com.mojang.blaze3d.systems.RenderSystem;
 import dev.fastmc.common.collection.FastObjectArrayList;
 import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.mixin.accessor.AccessorLightmapTextureManager;
 import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
-import dev.fastmc.graphics.shared.opengl.GLWrapperKt;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import dev.fastmc.graphics.shared.terrain.RenderChunk;
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer;
-import dev.fastmc.graphics.shared.terrain.TerrainShaderManager;
-import dev.fastmc.graphics.util.AdaptersKt;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
@@ -44,8 +39,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
-import static org.lwjgl.opengl.GL11.GL_LEQUAL;
+import static dev.luna5ama.glwrapper.api.GL11.*;
+import static dev.luna5ama.glwrapper.api.GL14.glBlendFuncSeparate;
 
 @SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)
@@ -270,27 +265,29 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
     public void preRenderLayer(int layerIndex) {
         ICoreWorldRenderer.super.preRenderLayer(layerIndex);
         switch (layerIndex) {
-            case 0 -> preRenderSolid();
+            case 0 -> fastmc_graphics$preRenderSolid();
             case 1 -> {
-                preRenderTranslucent();
-                setupTranslucentFbo(this.translucentFramebuffer);
+                fastmc_graphics$preRenderTranslucent();
+                fastmc_graphics$setupTranslucentFbo(this.translucentFramebuffer);
             }
             case 2 -> {
-                preRenderTranslucent();
-                setupTranslucentFbo(this.weatherFramebuffer);
+                fastmc_graphics$preRenderTranslucent();
+                fastmc_graphics$setupTranslucentFbo(this.weatherFramebuffer);
             }
             default -> throw new IllegalArgumentException("Invalid layer index: " + layerIndex);
         }
     }
 
-    private static void preRenderSolid() {
+    @Unique
+    private static void fastmc_graphics$preRenderSolid() {
         glEnable(GL_CULL_FACE);
         glDisable(GL_BLEND);
         glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GLWrapperKt.GL_LEQUAL);
+        glDepthFunc(GL_LEQUAL);
     }
 
-    private static void preRenderTranslucent() {
+    @Unique
+    private static void fastmc_graphics$preRenderTranslucent() {
         glEnable(GL_CULL_FACE);
         glEnable(GL_BLEND);
         glBlendFuncSeparate(
@@ -300,10 +297,11 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
             GL_ONE_MINUS_SRC_ALPHA
         );
         glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GLWrapperKt.GL_LEQUAL);
+        glDepthFunc(GL_LEQUAL);
     }
 
-    private static void setupTranslucentFbo(Framebuffer weather) {
+    @Unique
+    private static void fastmc_graphics$setupTranslucentFbo(Framebuffer weather) {
         boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && weather != null;
         if (usingFbo) {
             weather.beginWrite(false);

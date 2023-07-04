@@ -4,6 +4,12 @@ import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.opengl.*
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.impl.BufferObject
+import dev.luna5ama.glwrapper.impl.VertexArrayObject
+import dev.luna5ama.kmogus.Arr
+import dev.luna5ama.kmogus.asMutable
+import dev.luna5ama.kmogus.ensureCapacity
 import org.joml.FrustumIntersection
 
 @Suppress("NOTHING_TO_INLINE")
@@ -35,25 +41,25 @@ class RenderRegion(
     val indexBufferPool = RenderBufferPool((4 * 1024 * 1024).countTrailingZeroBits())
 
     private var vbo = vertexBufferPool.bufferObject
-    private var ibo = indexBufferPool.bufferObject
+    private var ebo = indexBufferPool.bufferObject
 
     @JvmField
     var vao = VertexArrayObject().apply {
         attachVbo(vbo, TerrainRenderer.VERTEX_ATTRIBUTE)
-        attachIbo(ibo)
+        attachEbo(ebo)
     }
 
     fun updateVao() {
         val newVbo = vertexBufferPool.bufferObject
         val newIbo = indexBufferPool.bufferObject
-        if (vbo !== newVbo || ibo !== newIbo) {
+        if (vbo !== newVbo || ebo !== newIbo) {
             vbo = newVbo
-            ibo = newIbo
+            ebo = newIbo
 
             vao.destroyVao()
             vao = VertexArrayObject().apply {
                 attachVbo(newVbo, TerrainRenderer.VERTEX_ATTRIBUTE)
-                attachIbo(newIbo)
+                attachEbo(newIbo)
             }
         }
     }
@@ -81,8 +87,7 @@ class RenderRegion(
 
     class LayerBatch(regionChunkCount: Int) {
         private var serverBuffer: BufferObject? = null
-        private val cachedClientBuffer = CachedBuffer(regionChunkCount * 20)
-        private var index = 0
+        private val clientBuffer = Arr.malloc(regionChunkCount * 20L).asMutable()
         private var isDirty = false
 
         val bufferID get() = serverBuffer?.id ?: 0
@@ -90,37 +95,38 @@ class RenderRegion(
         val isEmpty get() = count == 0
 
         fun update() {
-            index = 0
+            clientBuffer.reset()
             isDirty = true
             count = 0
         }
 
         fun put(vertexOffset: Int, indexOffset: Int, indexCount: Int, baseInstance: Int) {
-            val clientBuffer = cachedClientBuffer.ensureCapacityByte((count + 1) * 20)
-            val address = clientBuffer.address + index
+            clientBuffer.ensureCapacity((count + 1) * 20L, false)
 
-            UNSAFE.putInt(address, indexCount / 4)
-            UNSAFE.putInt(address + 4L, 1)
-            UNSAFE.putInt(address + 8L, indexOffset / 4)
-            UNSAFE.putInt(address + 12L, vertexOffset / 16)
-            UNSAFE.putInt(address + 16L, baseInstance)
+            clientBuffer.usePtr {
+                setIntInc(indexCount / 4)
+                    .setIntInc(1)
+                    .setIntInc(indexOffset / 4)
+                    .setIntInc(vertexOffset / 16)
+                    .setIntInc(baseInstance)
+            }
 
-            index += 20
             this.count++
         }
 
         fun checkUpdate() {
             if (isDirty && count != 0) {
-                val clientBuffer = cachedClientBuffer.getByte()
-                clientBuffer.limit(index)
+                clientBuffer.flip()
+                val dataSize = clientBuffer.rem
                 var buffer = serverBuffer
-                if (buffer == null || buffer.size < clientBuffer.remaining() || buffer.size - clientBuffer.remaining() > 1024 * 1024) {
+
+                if (buffer == null || buffer.size < dataSize || buffer.size - dataSize > 1024 * 1024) {
                     buffer?.destroy()
-                    buffer = BufferObject.Immutable().allocate(clientBuffer, GL_DYNAMIC_STORAGE_BIT)
+                    buffer = BufferObject.Immutable().allocate(dataSize, clientBuffer.ptr, GL_DYNAMIC_STORAGE_BIT)
                     serverBuffer = buffer
                 } else {
                     glInvalidateBufferData(buffer.id)
-                    glNamedBufferSubData(buffer.id, 0L, clientBuffer)
+                    glNamedBufferSubData(buffer.id, 0L, dataSize, clientBuffer.ptr)
                 }
             }
             isDirty = false
@@ -128,7 +134,7 @@ class RenderRegion(
 
         fun destroy() {
             serverBuffer?.destroy()
-            cachedClientBuffer.free()
+            clientBuffer.free()
         }
     }
 

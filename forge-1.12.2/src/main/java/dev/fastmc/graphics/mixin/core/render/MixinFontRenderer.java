@@ -6,12 +6,15 @@ import dev.fastmc.graphics.shared.util.MatrixUtils;
 import net.minecraft.client.gui.FontRenderer;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static org.lwjgl.opengl.GL11.*;
+import static dev.luna5ama.glwrapper.api.GL11.glGetFloatv;
+import static org.lwjgl.opengl.GL11.GL_MODELVIEW_MATRIX;
+import static org.lwjgl.opengl.GL11.GL_PROJECTION_MATRIX;
 
 @Mixin(FontRenderer.class)
 public abstract class MixinFontRenderer {
@@ -24,7 +27,7 @@ public abstract class MixinFontRenderer {
         boolean dropShadow,
         CallbackInfoReturnable<Integer> cir
     ) {
-        handleDrawString(text, x, y, color, dropShadow, cir);
+        fastmc_graphics$handleDrawString(text, x, y, color, dropShadow, cir);
     }
 
     @Inject(method = "renderString", at = @At("HEAD"), cancellable = true)
@@ -36,10 +39,11 @@ public abstract class MixinFontRenderer {
         boolean shadow,
         CallbackInfoReturnable<Integer> cir
     ) {
-        handleDrawString(text, x, y, color, false, cir);
+        fastmc_graphics$handleDrawString(text, x, y, color, false, cir);
     }
 
-    private void handleDrawString(
+    @Unique
+    private void fastmc_graphics$handleDrawString(
         String text,
         float x,
         float y,
@@ -48,10 +52,10 @@ public abstract class MixinFontRenderer {
         CallbackInfoReturnable<Integer> cir
     ) {
         if (FastMcMod.INSTANCE.isInitialized()) {
-            glGetFloat(GL_PROJECTION_MATRIX, MatrixUtils.INSTANCE.getMatrixBuffer());
+            glGetFloatv(GL_PROJECTION_MATRIX, MatrixUtils.INSTANCE.getPtrLong());
             Matrix4f projection = MatrixUtils.INSTANCE.getMatrix();
 
-            glGetFloat(GL_MODELVIEW_MATRIX, MatrixUtils.INSTANCE.getMatrixBuffer());
+            glGetFloatv(GL_MODELVIEW_MATRIX, MatrixUtils.INSTANCE.getPtrLong());
             Matrix4f modelView = MatrixUtils.INSTANCE.getMatrix();
 
             FastMcMod.INSTANCE.getFontRenderer().drawString(projection, modelView, text, x, y, color, 1.0f, drawShadow);

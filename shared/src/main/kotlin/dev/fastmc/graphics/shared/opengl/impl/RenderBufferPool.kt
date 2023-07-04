@@ -2,10 +2,10 @@ package dev.fastmc.graphics.shared.opengl.impl
 
 import dev.fastmc.common.ObjectPool
 import dev.fastmc.common.pollEach
-import dev.fastmc.graphics.shared.opengl.BufferObject
-import dev.fastmc.graphics.shared.opengl.GL_DYNAMIC_DRAW
-import dev.fastmc.graphics.shared.opengl.glCopyNamedBufferSubData
-import dev.fastmc.graphics.shared.opengl.glInvalidateBufferSubData
+import dev.luna5ama.glwrapper.api.GL_DYNAMIC_DRAW
+import dev.luna5ama.glwrapper.api.glCopyNamedBufferSubData
+import dev.luna5ama.glwrapper.api.glInvalidateBufferSubData
+import dev.luna5ama.glwrapper.impl.BufferObject
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class RenderBufferPool(private val growPower: Int) {
@@ -14,10 +14,10 @@ class RenderBufferPool(private val growPower: Int) {
 
     var bufferObject = BufferObject.Mutable(); private set
 
-    var capacity = 0
-    var allocated = 0; private set
+    var capacity = 0L
+    var allocated = 0L; private set
     val unused get() = capacity - allocated
-    val isEmpty get() = allocated == 0
+    val isEmpty get() = allocated == 0L
 
     private var regionHead = Region().apply {
         length = 0
@@ -28,7 +28,7 @@ class RenderBufferPool(private val growPower: Int) {
 
     private val releaseQueue = ConcurrentLinkedQueue<Region>()
 
-    fun allocate(newLength: Int): Region {
+    fun allocate(newLength: Long): Region {
         updateUnusedNodes()
         ensureCapacity(newLength)
         return allocate0(unusedHead!!, newLength)!!
@@ -71,8 +71,8 @@ class RenderBufferPool(private val growPower: Int) {
         bufferObject.destroy()
     }
 
-    fun ensureCapacity(newLength: Int) {
-        if (capacity == 0) {
+    fun ensureCapacity(newLength: Long) {
+        if (capacity == 0L) {
             val newSize = (newLength + growAmount - 1) shr growPower shl growPower
             bufferObject.allocate(newSize, GL_DYNAMIC_DRAW)
             capacity = newSize
@@ -109,9 +109,9 @@ class RenderBufferPool(private val growPower: Int) {
                     glCopyNamedBufferSubData(
                         bufferObject.id,
                         newBufferObject.id,
-                        current.offset.toLong(),
-                        allocated.toLong(),
-                        current.length.toLong()
+                        current.offset,
+                        allocated,
+                        current.length
                     )
                     current.offset = allocated
                     allocated += current.length
@@ -138,7 +138,7 @@ class RenderBufferPool(private val growPower: Int) {
             val newSize = (lastUnused + newLength + growAmount - 1) shr growPower shl growPower
             val newBufferObject = BufferObject.Mutable().allocate(newSize, GL_DYNAMIC_DRAW)
 
-            glCopyNamedBufferSubData(bufferObject.id, newBufferObject.id, 0L, 0L, lastUnused.toLong())
+            glCopyNamedBufferSubData(bufferObject.id, newBufferObject.id, 0L, 0L, lastUnused)
             bufferObject.destroy()
             bufferObject = newBufferObject
             capacity = newSize
@@ -158,7 +158,7 @@ class RenderBufferPool(private val growPower: Int) {
         updateUnusedNodes()
     }
 
-    private fun allocate0(startRegion: Region, newLength: Int): Region? {
+    private fun allocate0(startRegion: Region, newLength: Long): Region? {
         var current: Region? = startRegion
         while (current != null) {
             if (current.length >= newLength) {
@@ -254,8 +254,8 @@ class RenderBufferPool(private val growPower: Int) {
         val bufferObjectID get() = bufferObject.id
 
         var used = false; internal set
-        var offset = 0; internal set
-        var length = 0; internal set
+        var offset = 0L; internal set
+        var length = 0L; internal set
         val end get() = offset + length
 
         var prev: Region? = null; internal set
@@ -277,7 +277,7 @@ class RenderBufferPool(private val growPower: Int) {
             return this
         }
 
-        internal fun slice(newLength: Int): Region? {
+        internal fun slice(newLength: Long): Region? {
             if (newLength == this.length) {
                 return null
             }
@@ -290,12 +290,11 @@ class RenderBufferPool(private val growPower: Int) {
             linkNodes(newRegion, this.next)
             linkNodes(this, newRegion)
 
-
             return newRegion
         }
 
         fun invalidate() {
-            glInvalidateBufferSubData(bufferObjectID, offset.toLong(), length.toLong())
+            glInvalidateBufferSubData(bufferObjectID, offset, length)
         }
 
         fun release() {

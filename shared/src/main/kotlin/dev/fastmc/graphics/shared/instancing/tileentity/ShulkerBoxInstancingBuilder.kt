@@ -1,57 +1,60 @@
 package dev.fastmc.graphics.shared.instancing.tileentity
 
-import dev.fastmc.common.skip
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IShulkerBoxInfo
 import dev.fastmc.graphics.shared.model.Model
-import dev.fastmc.graphics.shared.opengl.GLDataType
-import dev.fastmc.graphics.shared.opengl.impl.VertexAttribute
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
-import java.nio.ByteBuffer
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexAttribute
+import dev.luna5ama.kmogus.Ptr
 
 class ShulkerBoxInstancingBuilder : TileEntityInstancingBuilder<IShulkerBoxInfo<*>>(20) {
-    override fun add(buffer: ByteBuffer, info: IShulkerBoxInfo<*>) {
+    override fun add(ptr: Ptr, info: IShulkerBoxInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         val posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
 
-        buffer.putFloat(posX)
-        buffer.putFloat(posY)
-        buffer.putFloat(posZ)
+        ptr.setFloatInc(posX)
+            .setFloatInc(posY)
+            .setFloatInc(posZ)
 
-        buffer.putLightMapUV(info)
+            .putLightMapUV(info)
 
-        when (info.direction) {
-            0 -> {
-                buffer.put(0)
-                buffer.put(2)
+            .run {
+                when (info.direction) {
+                    0 -> {
+                        setByteInc(0)
+                            .setByteInc(2)
+                    }
+                    1 -> {
+                        setByteInc(0)
+                            .setByteInc(0)
+                    }
+                    2 -> {
+                        setByteInc(2)
+                            .setByteInc(-1)
+                    }
+                    3 -> {
+                        setByteInc(0)
+                            .setByteInc(-1)
+                    }
+                    4 -> {
+                        setByteInc(-1)
+                            .setByteInc(1)
+                    }
+                    5 -> {
+                        setByteInc(1)
+                            .setByteInc(1)
+                    }
+                    else -> {
+                        this
+                    }
+                }
             }
-            1 -> {
-                buffer.put(0)
-                buffer.put(0)
-            }
-            2 -> {
-                buffer.put(2)
-                buffer.put(-1)
-            }
-            3 -> {
-                buffer.put(0)
-                buffer.put(-1)
-            }
-            4 -> {
-                buffer.put(-1)
-                buffer.put(1)
-            }
-            5 -> {
-                buffer.put(1)
-                buffer.put(1)
-            }
-        }
 
-        buffer.put(info.color.toByte())
-        buffer.put((info.prevProgress * 255.0f).toInt().toByte())
-        buffer.put((info.progress * 255.0f).toInt().toByte())
-        buffer.skip(1)
+            .setByteInc(info.color.toByte())
+            .setByteInc((info.prevProgress * 255.0f).toInt().toByte())
+            .setByteInc((info.progress * 255.0f).toInt().toByte())
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model

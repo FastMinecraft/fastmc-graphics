@@ -18,9 +18,7 @@ float calcDiffuse(vec3 lightPos) {
 
 void main() {
     fragColor = texture(tileEntityTexture, uv);
-    #ifdef ALPHA_TEST
     if (fragColor.a <= 0.5) discard;
-    #endif
 
     vec3 lightColor = texture(lightMapTexture, lightMapUV).rgb;
     float diffuse = calcDiffuse(lightPos1) + calcDiffuse(lightPos2);

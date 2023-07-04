@@ -4,7 +4,7 @@ import dev.fastmc.common.ColorARGB
 import dev.fastmc.graphics.resource.readImage
 import dev.fastmc.graphics.shared.font.FontRenderer
 import dev.fastmc.graphics.shared.font.IFontRendererWrapper
-import dev.fastmc.graphics.shared.opengl.glUseProgramForce
+import dev.luna5ama.glwrapper.api.glUseProgram
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.util.ResourceLocation
@@ -52,6 +52,6 @@ class FontRendererWrapper(resourceManager: net.minecraft.client.resources.IResou
         wrapped.drawString(projection, modelView, string, posX, posY, ColorARGB(adjustedColor), scale, drawShadow)
 
         GlStateManager.enableAlpha()
-        glUseProgramForce(0)
+        glUseProgram(0)
     }
 }

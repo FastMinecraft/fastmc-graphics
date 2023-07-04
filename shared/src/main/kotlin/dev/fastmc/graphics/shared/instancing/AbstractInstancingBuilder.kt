@@ -1,22 +1,22 @@
 package dev.fastmc.graphics.shared.instancing
 
 import dev.fastmc.common.ParallelUtils
-import dev.fastmc.common.allocateByte
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.shared.model.Model
 import dev.fastmc.graphics.shared.opengl.*
-import dev.fastmc.graphics.shared.opengl.ShaderSource.Companion.invoke
-import dev.fastmc.graphics.shared.opengl.impl.VertexAttribute
-import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
+import dev.luna5ama.glwrapper.api.*
 import dev.fastmc.graphics.shared.renderer.IRenderer
 import dev.fastmc.graphics.shared.resource.IResourceManager
 import dev.fastmc.graphics.shared.resource.Resource
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
+import dev.luna5ama.glwrapper.impl.*
+import dev.luna5ama.glwrapper.impl.ShaderSource.Companion.invoke
+import dev.luna5ama.kmogus.Arr
+import dev.luna5ama.kmogus.Ptr
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: Int) {
@@ -25,7 +25,6 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
     private var builtPosY0 = Double.NaN
     private var builtPosZ0 = Double.NaN
     private var size0 = -1
-    private var buffer0: ByteBuffer? = null
 
     protected val resourceManager: IResourceManager
         get() {
@@ -57,11 +56,7 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
             return size0
         }
 
-    private val buffer: ByteBuffer
-        get() {
-            check(buffer0 != null)
-            return buffer0!!
-        }
+    private val buffer = Arr.malloc(0L)
 
     fun init(renderer: IRenderer, size: Int) {
         check(size0 == -1)
@@ -75,7 +70,7 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
         builtPosX0 = renderer.renderPosX
         builtPosY0 = renderer.renderPosY
         builtPosZ0 = renderer.renderPosZ
-        buffer0 = allocateByte(size * vertexSize)
+        buffer.realloc((size * vertexSize).toLong(), true)
 
         vertexAttribute = buildAttribute(vertexSize, 1) { setupAttribute() }
     }
@@ -86,19 +81,9 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
                 total = entities.size,
                 blockForEach = { start, end ->
                     launch(FastMcCoreScope.context) {
-                        val regionBuffer = buffer.duplicate().order(ByteOrder.nativeOrder())
-                        regionBuffer.position(start * vertexSize)
-
                         for (i in start until end) {
-                            add(regionBuffer, entities[i])
+                            add(buffer.ptr + (i * vertexSize).toLong(), entities[i])
                         }
-                    }
-                },
-                blockForRemaining = { start, end ->
-                    buffer.position(start * vertexSize)
-
-                    for (i in start until end) {
-                        add(buffer, entities[i])
                     }
                 }
             )
@@ -106,13 +91,12 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
     }
 
     fun build(): Renderer {
-        buffer.position(0).limit(buffer.capacity())
         return uploadBuffer(buffer)
     }
 
     abstract fun VertexAttribute.Builder.setupAttribute()
 
-    abstract fun add(buffer: ByteBuffer, info: T)
+    abstract fun add(ptr: Ptr, info: T)
 
     private lateinit var vertexAttribute: VertexAttribute
 
@@ -120,14 +104,14 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
     protected abstract val shader: ResourceEntry<InstancingShaderProgram>
     protected abstract val texture: ResourceEntry<ITexture>
 
-    protected open fun uploadBuffer(buffer: ByteBuffer): Renderer {
+    protected open fun uploadBuffer(buffer: Arr): Renderer {
         val shader = shader.get(resourceManager)
         val model = model.get(resourceManager)
 
         val vao = VertexArrayObject()
         val vbo = BufferObject.Immutable()
 
-        vbo.allocate(buffer, 0)
+        vbo.allocate(buffer.len, buffer.ptr, 0)
 
         model.attachVbo(vao)
         vao.attachVbo(vbo, vertexAttribute)
@@ -190,14 +174,14 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
 
     open class InstancingShaderProgram(
         override val resourceName: String,
-        vertex: ShaderSource.Vertex,
-        fragment: ShaderSource.Fragment
-    ) : ShaderProgram(vertex, fragment { define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit) }), Resource {
+        vertex: ShaderSource.Vert,
+        fragment: ShaderSource.Frag
+    ) : ShaderProgram(vertex, fragment { define("LIGHT_MAP_UNIT", FastMcMod.lightMapUnit) }), Resource {
         private val offsetUniform = glGetUniformLocation(id, "offset")
 
         override fun bind() {
             super.bind()
-            attachBuffer(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.globalUBO, "Global")
+            bindBuffer(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.globalUBO, "Global")
         }
 
         fun setOffset(x: Float, y: Float, z: Float) {

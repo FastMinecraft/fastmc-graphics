@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.shared.font
 
-import dev.fastmc.graphics.shared.opengl.glDeleteTextures
 import dev.fastmc.graphics.shared.texture.ITexture
+import dev.luna5ama.glwrapper.api.glDeleteTextures
 
 class GlyphTexture(
     override val id: Int,

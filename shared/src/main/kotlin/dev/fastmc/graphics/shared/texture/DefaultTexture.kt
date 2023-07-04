@@ -3,6 +3,8 @@ package dev.fastmc.graphics.shared.texture
 import dev.fastmc.common.allocateByte
 import dev.fastmc.common.free
 import dev.fastmc.graphics.shared.opengl.*
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.kmogus.Arr
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer
 import java.nio.ByteBuffer
@@ -13,12 +15,11 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
     init {
         val width = bufferedImage.width
         val height = bufferedImage.height
-        val buffer = allocateByte(width * height * 4)
+        val buffer = Arr.malloc(width * height * 4L)
 
         bufferedImage.getRGBA(buffer)
-        buffer.flip()
         glTextureStorage2D(id, 1, GL_RGBA8, width, height)
-        glTextureSubImage2D(id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer)
+        glTextureSubImage2D(id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer.ptr)
         buffer.free()
 
         glTextureParameteri(id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
@@ -28,7 +29,7 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
         glTextureParameteri(id, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
     }
 
-    private fun BufferedImage.getRGBA(buffer: ByteBuffer) {
+    private fun BufferedImage.getRGBA(buffer: Arr) {
         val numBands = raster.numBands
 
         val data = when (val dataType = raster.dataBuffer.dataType) {
@@ -40,13 +41,15 @@ class DefaultTexture(override val resourceName: String, bufferedImage: BufferedI
             else -> throw IllegalArgumentException("Unknown data buffer type: $dataType")
         }
 
+        var ptr = buffer.ptr
+
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val dataElement = raster.getDataElements(x, y, data)
-                buffer.put(colorModel.getRed(dataElement).toByte())
-                buffer.put(colorModel.getGreen(dataElement).toByte())
-                buffer.put(colorModel.getBlue(dataElement).toByte())
-                buffer.put(colorModel.getAlpha(dataElement).toByte())
+                ptr = ptr.setByteInc(colorModel.getRed(dataElement).toByte())
+                ptr = ptr.setByteInc(colorModel.getGreen(dataElement).toByte())
+                ptr = ptr.setByteInc(colorModel.getBlue(dataElement).toByte())
+                ptr = ptr.setByteInc(colorModel.getAlpha(dataElement).toByte())
             }
         }
     }

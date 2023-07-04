@@ -3,15 +3,19 @@ package dev.fastmc.graphics.shared.opengl.impl
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.AtomicByteArray
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.graphics.shared.opengl.*
-import java.nio.ByteOrder
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.impl.BufferObject
+import dev.luna5ama.kmogus.Arr
+import dev.luna5ama.kmogus.Ptr
+import dev.luna5ama.kmogus.asMutable
+import dev.luna5ama.kmogus.memcpy
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, val maxRegions: Int) {
-    private val sectorSize = 1 shl sectorSizePower
+    private val sectorSize = 1L shl sectorSizePower
     val capacity = sectorSize * sectorCapacity
 
     private val vbo = BufferObject.Immutable()
@@ -20,10 +24,10 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
     private val baseBuffer = glMapNamedBufferRange(
         vbo.id,
         0,
-        capacity.toLong(),
+        capacity,
         GL_MAP_WRITE_BIT or GL_MAP_PERSISTENT_BIT or GL_MAP_COHERENT_BIT or GL_MAP_UNSYNCHRONIZED_BIT
-    )!!
-    private val baseAddress = baseBuffer.address
+    )
+    private val basePtr = baseBuffer.ptr
 
     private val regionPool = ConcurrentObjectPool { Region() }
     private val sectorState = AtomicByteArray(sectorCapacity)
@@ -127,30 +131,24 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         return stringBuilder.toString()
     }
 
-    @Suppress("UNNECESSARY_NOT_NULL_ASSERTION")
     inner class Region internal constructor() {
         val vboID get() = vbo.id
 
-        val buffer = baseBuffer.duplicate().order(ByteOrder.nativeOrder())!!
-        private val swapBuffer = baseBuffer.duplicate().order(ByteOrder.nativeOrder())!!
+        private val arr0 = InternalArr()
+        val arr = arr0.asMutable()
 
         var sectorOffset = -1; internal set
         var sectorLength = -1; internal set
         val sectorEnd get() = sectorOffset + sectorLength
 
-        var address = buffer.address
         val offset get() = sectorOffset * sectorSize
         val length get() = sectorLength * sectorSize
 
         fun init(start: Int): Region {
             this.sectorOffset = start
             sectorLength = 1
+            arr.len = length
 
-            buffer.address = baseAddress + offset
-            this.address = buffer.address
-
-            buffer.capacity = length
-            buffer.clear()
             return this
         }
 
@@ -160,8 +158,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                     if (sectorState.compareAndSet(sectorEnd, FALSE, TRUE)) {
                         usedSectorCount0.incrementAndGet()
                         sectorLength++
-                        buffer.capacity = length
-                        buffer.limit(buffer.capacity)
+                        arr.len = length
                         return
                     }
                 }
@@ -181,27 +178,25 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                             while (true) {
                                 if (sectorState.compareAndSet(i + allocated, FALSE, TRUE)) {
                                     if (++allocated > sectorLength) {
-                                        swapBuffer.address = buffer.address
-                                        swapBuffer.position = 0
-                                        swapBuffer.limit = buffer.position
-                                        swapBuffer.capacity = buffer.capacity
+                                        val prevSectorOffset = sectorOffset
+                                        val prevSectorLength = sectorLength
+                                        arr.flip()
+                                        val prevPtr = arr.basePtr
+                                        val prevLen = arr.len
 
-                                        buffer.address = baseAddress + i * sectorSize
-                                        this.address = buffer.address
+                                        sectorOffset = i
+                                        sectorLength = allocated
 
-                                        buffer.capacity = allocated * sectorSize
-                                        buffer.clear()
-                                        address = buffer.address
+                                        memcpy(prevPtr, arr.basePtr, prevLen)
 
-                                        buffer.put(swapBuffer)
+                                        arr.len = length
+                                        arr.pos = prevLen
 
-                                        for (i1 in sectorOffset until sectorEnd) {
+                                        for (i1 in prevSectorOffset until prevSectorLength) {
                                             sectorState.set(i1, FALSE)
                                         }
                                         doNotify()
 
-                                        sectorOffset = i
-                                        sectorLength = allocated
                                         usedSectorCount0.incrementAndGet()
 
                                         return
@@ -230,6 +225,22 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         fun release() {
             pendingRelease.add(this)
         }
+
+        private inner class InternalArr : Arr {
+            override val len: Long
+                get() = length
+
+            override val ptr: Ptr
+                get() = basePtr + offset
+
+            override fun free() {
+                throw UnsupportedOperationException()
+            }
+
+            override fun realloc(newLength: Long, init: Boolean) {
+                throw UnsupportedOperationException()
+            }
+        }
     }
 
     private inner class ReleaseTask {
@@ -237,7 +248,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
         private val sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
 
         fun tryRelease(): Boolean {
-            return if (glGetSynciv(sync, GL_SYNC_STATUS) == GL_SIGNALED) {
+            return if (glGetSynci(sync, GL_SYNC_STATUS) == GL_SIGNALED) {
                 glDeleteSync(sync)
                 for (i in list.indices) {
                     release(list[i])

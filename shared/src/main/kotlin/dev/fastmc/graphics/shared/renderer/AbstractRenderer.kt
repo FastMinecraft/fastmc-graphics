@@ -4,6 +4,7 @@ import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.IInfo
 import dev.fastmc.graphics.shared.opengl.*
+import dev.luna5ama.glwrapper.api.*
 import dev.fastmc.graphics.shared.util.ClassIDRegistry
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.ITypeID

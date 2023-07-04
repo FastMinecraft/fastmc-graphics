@@ -1,12 +1,14 @@
 package dev.fastmc.graphics.shared.renderer
 
-import dev.fastmc.common.MemoryStack
 import dev.fastmc.common.fastFloor
-import dev.fastmc.common.skip
-import dev.fastmc.graphics.shared.opengl.BufferObject
-import dev.fastmc.graphics.shared.opengl.GL_DYNAMIC_STORAGE_BIT
-import dev.fastmc.graphics.shared.opengl.glNamedBufferSubData
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer
+import dev.luna5ama.glwrapper.api.GL_DYNAMIC_STORAGE_BIT
+import dev.luna5ama.glwrapper.api.glInvalidateBufferData
+import dev.luna5ama.glwrapper.api.glNamedBufferSubData
+import dev.luna5ama.glwrapper.impl.*
+import dev.luna5ama.kmogus.MemoryStack
+import dev.luna5ama.kmogus.asMutable
+import dev.luna5ama.kmogus.copyToMutableArr
 import kotlinx.coroutines.CoroutineScope
 import org.joml.FrustumIntersection
 import org.joml.Matrix4f
@@ -94,20 +96,19 @@ abstract class WorldRenderer : IRenderer {
     }
 
     fun updateGlobalUBO(partialTicks: Float) {
-        MemoryStack.use {
-            withMalloc(globalUBO.size) {
-                projectionMatrix.get(0, it)
-                modelViewMatrix.get(64, it)
-                inverseProjectMatrix.get(128, it)
-                inverseModelViewMatrix.get(192, it)
-                it.skip(256)
-                it.putFloat(screenWidth.toFloat())
-                it.putFloat(screenHeight.toFloat())
-                it.putFloat(partialTicks)
-                it.flip()
-                globalUBO.invalidate()
-                glNamedBufferSubData(globalUBO.id, 0, it)
-            }
+        MemoryStack {
+            val arr = malloc(globalUBO.size).asMutable()
+            projectionMatrix.copyToMutableArr(arr)
+            modelViewMatrix.copyToMutableArr(arr)
+            inverseProjectMatrix.copyToMutableArr(arr)
+            inverseModelViewMatrix.copyToMutableArr(arr)
+
+            arr.ptr.setFloatInc(screenWidth.toFloat())
+                .setFloatInc(screenHeight.toFloat())
+                .setFloatInc(partialTicks)
+
+            glInvalidateBufferData(globalUBO.id)
+            glNamedBufferSubData(globalUBO.id, 0, arr.len, arr.basePtr)
         }
     }
 

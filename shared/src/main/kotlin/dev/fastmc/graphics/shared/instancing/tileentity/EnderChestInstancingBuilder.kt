@@ -1,23 +1,20 @@
 package dev.fastmc.graphics.shared.instancing.tileentity
 
-import dev.fastmc.common.skip
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IEnderChestInfo
 import dev.fastmc.graphics.shared.model.Model
-import dev.fastmc.graphics.shared.opengl.GLDataType
-import dev.fastmc.graphics.shared.opengl.impl.VertexAttribute
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
-import java.nio.ByteBuffer
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexAttribute
+import dev.luna5ama.kmogus.Ptr
 
 class EnderChestInstancingBuilder : TileEntityInstancingBuilder<IEnderChestInfo<*>>(20) {
-    override fun add(buffer: ByteBuffer, info: IEnderChestInfo<*>) {
-        buffer.putPos(info)
-        buffer.putLightMapUV(info)
-        buffer.putHDirection(info.hDirection)
-
-        buffer.putShort((info.prevLidAngle * 65535.0f).toInt().toShort())
-        buffer.putShort((info.lidAngle * 65535.0f).toInt().toShort())
-        buffer.skip(1)
+    override fun add(ptr: Ptr, info: IEnderChestInfo<*>) {
+        ptr.putPos(info)
+            .putLightMapUV(info)
+            .putHDirection(info.hDirection)
+            .setShortInc((info.prevLidAngle * 65535.0f).toInt().toShort())
+            .setShortInc((info.lidAngle * 65535.0f).toInt().toShort())
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model

@@ -6,13 +6,15 @@ import dev.fastmc.common.sort.ObjectIntrosort
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.shared.FpsDisplay
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
-import dev.fastmc.graphics.shared.opengl.*
-import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
 import dev.fastmc.graphics.shared.renderer.*
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.FastMcExtendScope
-import kotlinx.coroutines.*
-import java.lang.Runnable
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.buildAttribute
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import java.util.*
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Future
@@ -532,8 +534,8 @@ abstract class TerrainRenderer(
                             val indexRegion = layer.indexRegion ?: continue
                             layer.faceData?.addToBatch(
                                 layerBatch,
-                                vertexRegion.offset,
-                                indexRegion.offset,
+                                vertexRegion.offset.toInt(),
+                                indexRegion.offset.toInt(),
                                 region.tempVisibleBits[i].toInt(),
                                 (renderChunk.originX and 255 shl 20)
                                     or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
@@ -576,7 +578,7 @@ abstract class TerrainRenderer(
             val region = regionArray[i]
             val allocated = region.vertexBufferPool.allocated + region.indexBufferPool.allocated
             totalChunkVertexSize += allocated
-            if (allocated != 0) {
+            if (allocated != 0L) {
                 if (region.frustumCull.isInFrustum()) {
                     visibleRegionCount++
                 }

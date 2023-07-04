@@ -15,8 +15,6 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReferenceArray
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import kotlin.math.max
 
 abstract class ChunkBuilder(
@@ -141,8 +139,8 @@ abstract class ChunkBuilder(
 
             vertexBufferPool.update()
             indexBufferPool.update()
-            vertexBufferPool.ensureCapacity((newLength ushr 32).toInt())
-            indexBufferPool.ensureCapacity(newLength.toInt())
+            vertexBufferPool.ensureCapacity(newLength ushr 32 and 0x7FFFFFFFL)
+            indexBufferPool.ensureCapacity(newLength and 0x7FFFFFFFL)
 
             for (i in list.indices) {
                 val task = list[i]

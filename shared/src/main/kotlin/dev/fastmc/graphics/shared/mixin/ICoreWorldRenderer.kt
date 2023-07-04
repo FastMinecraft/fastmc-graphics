@@ -1,8 +1,9 @@
 package dev.fastmc.graphics.shared.mixin
 
 import dev.fastmc.graphics.FastMcMod
-import dev.fastmc.graphics.FastMcMod.glWrapper
 import dev.fastmc.graphics.shared.opengl.*
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.api.*
 
 interface ICoreWorldRenderer {
     val terrainRenderer get() = FastMcMod.worldRenderer.terrainRenderer
@@ -28,13 +29,13 @@ interface ICoreWorldRenderer {
         glTextureParameteri(lightMapTexture, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
         glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
         glTextureParameteri(lightMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
-        glBindTextureUnit(glWrapper.lightMapUnit, lightMapTexture)
+        glBindTextureUnit(FastMcMod.lightMapUnit, lightMapTexture)
     }
 
     fun postRenderTerrain() {
         glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0)
         glBindVertexArray(0)
-        glUseProgramForce(0)
+        glUseProgram(0)
     }
 
    fun renderTileEntityFastMc(tickDelta: Float) {

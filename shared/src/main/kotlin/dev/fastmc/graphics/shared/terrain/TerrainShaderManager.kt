@@ -1,12 +1,16 @@
 package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.EnumMap
-import dev.fastmc.common.MemoryStack
 import dev.fastmc.common.ceilToInt
 import dev.fastmc.common.sq
 import dev.fastmc.graphics.FastMcMod
 import dev.fastmc.graphics.shared.opengl.*
-import dev.fastmc.graphics.shared.opengl.ShaderSource.Companion.invoke
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.impl.BufferObject
+import dev.luna5ama.glwrapper.impl.ShaderProgram
+import dev.luna5ama.glwrapper.impl.ShaderSource
+import dev.luna5ama.glwrapper.impl.ShaderSource.Companion.invoke
+import dev.luna5ama.kmogus.MemoryStack
 import java.util.*
 import kotlin.math.ln
 import kotlin.math.sqrt
@@ -59,7 +63,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         fogType: FogType
     ): TerrainShaderProgram {
         return shaderMap.getOrPut(fogShape, ::EnumMap).getOrPut(fogType) {
-            val vertex = ShaderSource.Vertex("/assets/shaders/terrain/Terrain.vert") {
+            val vertex = ShaderSource.Vert("/assets/shaders/terrain/Terrain.vert") {
                 FogShape.values().forEach {
                     define(it.toString(), it.ordinal)
                 }
@@ -69,7 +73,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
                 define("FOG_SHAPE", fogShape)
                 define("FOG_TYPE", fogType)
             }
-            val fragment = ShaderSource.Fragment("/assets/shaders/terrain/Terrain.frag")
+            val fragment = ShaderSource.Frag("/assets/shaders/terrain/Terrain.frag")
 
             TerrainShaderProgram(this, vertex, fragment)
         }
@@ -82,18 +86,19 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         green: Float,
         blue: Float
     ) {
-        MemoryStack.use {
-            withMalloc(fogParametersUBO.size) {
-                it.putFloat(red)
-                it.putFloat(green)
-                it.putFloat(blue)
-                it.putFloat(1.0f)
-                it.putFloat(densityOrM)
-                it.putFloat(b)
-                it.flip()
-                fogParametersUBO.invalidate()
-                glNamedBufferSubData(fogParametersUBO.id, 0, it)
-            }
+        MemoryStack {
+            val arr = malloc(fogParametersUBO.size)
+            val ptr = arr.ptr
+
+            ptr.setFloatInc(red)
+                .setFloatInc( green)
+                .setFloatInc(blue)
+                .setFloatInc(1.0f)
+                .setFloatInc(densityOrM)
+                .setFloatInc(b)
+
+            glInvalidateBufferData(fogParametersUBO.id)
+            glNamedBufferSubData(fogParametersUBO.id, 0, arr.len, ptr)
         }
     }
 
@@ -103,20 +108,20 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
     class TerrainShaderProgram(
         private val manager: TerrainShaderManager,
-        vertex: ShaderSource.Vertex,
-        fragment: ShaderSource.Fragment
+        vertex: ShaderSource.Vert,
+        fragment: ShaderSource.Frag
     ) : ShaderProgram(
         vertex,
         fragment {
-            define("LIGHT_MAP_UNIT", FastMcMod.glWrapper.lightMapUnit)
+            define("LIGHT_MAP_UNIT", FastMcMod.lightMapUnit)
         }
     ) {
         private val regionOffsetUniform = glGetUniformLocation(id, "regionOffset")
 
         override fun bind() {
             super.bind()
-            attachBuffer(GL_UNIFORM_BUFFER, manager.renderer.globalUBO, "Global")
-            attachBuffer(GL_UNIFORM_BUFFER, manager.fogParametersUBO, "FogParameters")
+            bindBuffer(GL_UNIFORM_BUFFER, manager.renderer.globalUBO, "Global")
+            bindBuffer(GL_UNIFORM_BUFFER, manager.fogParametersUBO, "FogParameters")
         }
 
         internal fun setRegionOffset(x: Float, y: Float, z: Float) {

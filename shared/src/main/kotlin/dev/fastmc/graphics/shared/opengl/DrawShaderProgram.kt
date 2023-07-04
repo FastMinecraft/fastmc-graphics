@@ -1,28 +1,22 @@
 package dev.fastmc.graphics.shared.opengl
 
 import dev.fastmc.graphics.shared.util.MatrixUtils
+import dev.luna5ama.glwrapper.impl.ShaderProgram
+import dev.luna5ama.glwrapper.impl.ShaderSource
 import org.joml.Matrix4f
 
-open class DrawShaderProgram(vertex: ShaderSource.Vertex, fragment: ShaderSource.Fragment) :
+open class DrawShaderProgram(vertex: ShaderSource.Vert, fragment: ShaderSource.Frag) :
     ShaderProgram(vertex, fragment) {
-    private val projectionUniform = glGetUniformLocation(id, "projection")
-    private val modelViewUniform = glGetUniformLocation(id, "modelView")
+    private val projectionUniform = locateUniform("projection")
+    private val modelViewUniform = locateUniform("modelView")
 
     fun updateProjectionMatrix(matrix4f: Matrix4f) {
         MatrixUtils.putMatrix(matrix4f)
-        updateProjectionMatrix()
+        MatrixUtils.uploadMatrix(id, projectionUniform)
     }
 
     fun updateModelViewMatrix(matrix4f: Matrix4f) {
         MatrixUtils.putMatrix(matrix4f)
-        updateModelViewMatrix()
-    }
-
-    fun updateProjectionMatrix() {
-        MatrixUtils.uploadMatrix(id, projectionUniform)
-    }
-
-    fun updateModelViewMatrix() {
         MatrixUtils.uploadMatrix(id, modelViewUniform)
     }
 }

@@ -6,6 +6,7 @@ import dev.fastmc.graphics.resource.toBufferedImage
 import dev.fastmc.graphics.shared.font.FontRenderer
 import dev.fastmc.graphics.shared.font.IFontRendererWrapper
 import dev.fastmc.graphics.shared.opengl.*
+import dev.luna5ama.glwrapper.api.*
 import dev.fastmc.graphics.util.ResourceLocation
 import net.minecraft.resource.ResourceManager
 import org.joml.Matrix4f
@@ -49,6 +50,6 @@ class FontRendererWrapper(resourceManager: ResourceManager) : IFontRendererWrapp
 
         wrapped.drawString(projection, modelView, string, posX, posY, ColorARGB(adjustedColor), scale, drawShadow)
 
-        glUseProgramForce(0)
+        glUseProgram(0)
     }
 }

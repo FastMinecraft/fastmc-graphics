@@ -1,10 +1,11 @@
 package dev.fastmc.graphics.shared.model
 
-import dev.fastmc.graphics.shared.opengl.BufferObject
-import dev.fastmc.graphics.shared.opengl.GLDataType
-import dev.fastmc.graphics.shared.opengl.VertexArrayObject
-import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
 import dev.fastmc.graphics.shared.resource.Resource
+import dev.luna5ama.glwrapper.impl.BufferObject
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexArrayObject
+import dev.luna5ama.glwrapper.impl.buildAttribute
+import dev.luna5ama.kmogus.MemoryStack
 
 abstract class Model(override val resourceName: String, private val textureSizeX: Int, private val textureSizeZ: Int) :
     Resource {
@@ -18,7 +19,10 @@ abstract class Model(override val resourceName: String, private val textureSizeX
         vbo = BufferObject.Immutable()
         modelSize = builder.vertexSize
 
-        vbo.allocate(builder.build(), 0)
+        MemoryStack {
+            val arr = builder.build(this)
+            vbo.allocate(arr.len, arr.ptr, 0)
+        }
     }
 
     protected abstract fun ModelBuilder.buildModel()

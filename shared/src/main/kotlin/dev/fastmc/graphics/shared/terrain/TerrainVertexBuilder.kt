@@ -1,7 +1,5 @@
 package dev.fastmc.graphics.shared.terrain
 
-import dev.fastmc.common.UNSAFE
-import dev.fastmc.common.skip
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 
 abstract class TerrainVertexBuilder {
@@ -37,7 +35,7 @@ abstract class TerrainVertexBuilder {
         val group = bufferGroup
         bufferGroup = null
         group?.let { g ->
-            g.flip(task!!)
+            g.finish(task!!)
             if (g.vertexBuffers.all { it == null }) {
                 return null
             }
@@ -64,54 +62,53 @@ abstract class TerrainVertexBuilder {
     ) {
         val bufferGroup = bufferGroup!!
         val region = bufferGroup.getVertexBuffer(faceBit - 1).region
-        val buffer = region.buffer
-        if (buffer.remaining() < 16) {
+        val arr = region.arr
+        if (arr.rem < 16) {
             region.expand()
         }
 
-        val address = region.address + bufferGroup.vertexByteIndices[faceBit - 1]
+        arr.usePtr {
+            setShortInc(((x + 0.25f) * 3971.818f).toInt().toShort())
+                .setShortInc(((y + 0.25f) * 3971.818f).toInt().toShort())
+                .setShortInc(((z + 0.25f) * 3971.818f).toInt().toShort())
 
-        UNSAFE.putShort(address, ((x + 0.25f) * 3971.818f).toInt().toShort())
-        UNSAFE.putShort(address + 2L, ((y + 0.25f) * 3971.818f).toInt().toShort())
-        UNSAFE.putShort(address + 4L, ((z + 0.25f) * 3971.818f).toInt().toShort())
+                .setShortInc((u * 65535.0f).toInt().toShort())
+                .setShortInc((v * 65535.0f).toInt().toShort())
 
-        UNSAFE.putShort(address + 6L, (u * 65535.0f).toInt().toShort())
-        UNSAFE.putShort(address + 8L, (v * 65535.0f).toInt().toShort())
+                .setShortInc(lightMapUV.toShort())
 
-        UNSAFE.putShort(address + 10L, lightMapUV.toShort())
+                .setByteInc(r.toByte())
+                .setByteInc(g.toByte())
+                .setByteInc(b.toByte())
 
-        UNSAFE.putByte(address + 12L, r.toByte())
-        UNSAFE.putByte(address + 13L, g.toByte())
-        UNSAFE.putByte(address + 14L, b.toByte())
-
-        UNSAFE.putByte(address + 15L, modelAttribute.toByte())
+                .setByteInc(modelAttribute.toByte())
+        }
 
         bufferGroup.vertexByteIndices[faceBit - 1] += 16L
-        buffer.skip(16)
     }
 
     open fun putQuad(faceBit: Int) {
         val bufferGroup = bufferGroup!!
         val region = bufferGroup.getIndexBuffer(faceBit - 1).region
-        val buffer = region.buffer
-        if (buffer.remaining() < 24) {
+        val arr = region.arr
+        if (arr.rem < 24) {
             region.expand()
         }
 
         val vertexCount = bufferGroup.vertexCounts[faceBit - 1]
-        val address = region.address + bufferGroup.indexByteIndices[faceBit - 1]
 
-        UNSAFE.putInt(address, vertexCount)
-        UNSAFE.putInt(address + 4L, vertexCount + 1)
-        UNSAFE.putInt(address + 8L, vertexCount + 3)
+        arr.usePtr {
+            setIntInc(vertexCount)
+                .setIntInc(vertexCount + 1)
+                .setIntInc(vertexCount + 3)
 
-        UNSAFE.putInt(address + 12L, vertexCount + 2)
-        UNSAFE.putInt(address + 16L, vertexCount + 3)
-        UNSAFE.putInt(address + 20L, vertexCount + 1)
+                .setIntInc(vertexCount + 2)
+                .setIntInc(vertexCount + 3)
+                .setIntInc(vertexCount + 1)
+        }
 
         bufferGroup.vertexCounts[faceBit - 1] += 4
         bufferGroup.indexByteIndices[faceBit - 1] += 24L
-        buffer.skip(24)
     }
 
     class BufferGroup(
@@ -141,11 +138,11 @@ abstract class TerrainVertexBuilder {
             return buffer
         }
 
-        fun flip(task: ChunkBuilderTask) {
+        fun finish(task: ChunkBuilderTask) {
             vertexBuffers.forEachIndexed { i, it ->
                 if (it == null) return@forEachIndexed
                 if (vertexCounts[i] > 0) {
-                    it.region.buffer.flip()
+                    it.region.arr.flip()
                 } else {
                     it.release(task)
                     vertexBuffers[i] = null
@@ -154,7 +151,7 @@ abstract class TerrainVertexBuilder {
             indexBuffers.forEachIndexed { i, it ->
                 if (it == null) return@forEachIndexed
                 if (vertexCounts[i] > 0) {
-                    it.region.buffer.flip()
+                    it.region.arr.flip()
                 } else {
                     it.release(task)
                     vertexBuffers[i] = null

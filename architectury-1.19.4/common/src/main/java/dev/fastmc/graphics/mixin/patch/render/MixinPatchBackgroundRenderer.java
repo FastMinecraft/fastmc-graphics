@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 
-import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.glClearColor;
+import static dev.luna5ama.glwrapper.api.GL11.glClearColor;
 
 @Mixin(BackgroundRenderer.class)
 public class MixinPatchBackgroundRenderer {

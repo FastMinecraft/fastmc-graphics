@@ -1,15 +1,16 @@
 package dev.fastmc.graphics.shared.font
 
 import dev.fastmc.common.ColorARGB
-import dev.fastmc.common.allocateByte
 import dev.fastmc.common.sq
 import dev.fastmc.graphics.shared.opengl.*
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.impl.ShaderSource
+import dev.luna5ama.kmogus.Arr
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.joml.Matrix4f
 import java.awt.Graphics2D
 import java.awt.image.BufferedImage
 import java.awt.image.DataBuffer
-import java.nio.ByteBuffer
 import kotlin.math.min
 
 class FontRenderer(
@@ -25,7 +26,7 @@ class FontRenderer(
     private val renderStringMap = Object2ObjectOpenHashMap<CharSequence, RenderString>()
     private var cleanTimer = System.currentTimeMillis()
 
-    val shader = ShaderProgram()
+    val shader = FontRendererShaderProgram()
 
     val fontHeight = 8
     var unicode = false
@@ -45,7 +46,7 @@ class FontRenderer(
         var image = BufferedImage(textureSize, textureSize, BufferedImage.TYPE_INT_ARGB)
         var graphics2D = image.createGraphics()
 
-        val buffer = allocateByte(textureSize.sq)
+        val buffer = Arr.malloc(textureSize.sq.toLong())
         val textureList = ArrayList<GlyphTexture>()
 
         asciiBlock = GlyphBlock(texture, asciiBlock(graphics2D, asciiFont, uvScale), true)
@@ -53,9 +54,7 @@ class FontRenderer(
         fun upload() {
             graphics2D.dispose()
 
-            buffer.clear()
             image.getAlpha(buffer)
-            buffer.flip()
 
             glTextureStorage2D(texture.id, 1, GL_COMPRESSED_RED_RGTC1, textureSize, textureSize)
             glTextureSubImage2D(
@@ -67,8 +66,10 @@ class FontRenderer(
                 textureSize,
                 GL_RED,
                 GL_UNSIGNED_BYTE,
-                buffer
+                buffer.ptr
             )
+            buffer.free()
+
             glTextureParameteri(texture.id, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
             glTextureParameteri(texture.id, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
             textureList.add(texture)
@@ -247,7 +248,7 @@ class FontRenderer(
         return array
     }
 
-    private fun BufferedImage.getAlpha(byteBuffer: ByteBuffer) {
+    private fun BufferedImage.getAlpha(arr: Arr) {
         val numBands = raster.numBands
 
         val data = when (val dataType = raster.dataBuffer.dataType) {
@@ -259,9 +260,11 @@ class FontRenderer(
             else -> throw IllegalArgumentException("Unknown data buffer type: $dataType")
         }
 
+        var ptr = arr.ptr
+
         for (y in 0 until height) {
             for (x in 0 until width) {
-                byteBuffer.put(colorModel.getAlpha(raster.getDataElements(x, y, data)).toByte())
+                ptr = ptr.setByteInc(colorModel.getAlpha(raster.getDataElements(x, y, data)).toByte())
             }
         }
     }
@@ -348,9 +351,9 @@ class FontRenderer(
         renderStringMap.clear()
     }
 
-    class ShaderProgram : DrawShaderProgram(
-        ShaderSource.Vertex("/assets/shaders/FontRenderer.vert"),
-        ShaderSource.Fragment("/assets/shaders/FontRenderer.frag")
+    class FontRendererShaderProgram : DrawShaderProgram(
+        ShaderSource.Vert("/assets/shaders/FontRenderer.vert"),
+        ShaderSource.Frag("/assets/shaders/FontRenderer.frag")
     ) {
         private val defaultColorUniform = glGetUniformLocation(id, "defaultColor")
         private var lastColor = ColorARGB(0)

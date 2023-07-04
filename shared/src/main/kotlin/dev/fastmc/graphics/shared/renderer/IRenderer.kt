@@ -1,7 +1,7 @@
 package dev.fastmc.graphics.shared.renderer
 
-import dev.fastmc.graphics.shared.opengl.BufferObject
 import dev.fastmc.graphics.shared.resource.IResourceManager
+import dev.luna5ama.glwrapper.impl.BufferObject
 import org.joml.FrustumIntersection
 import org.joml.Matrix4f
 

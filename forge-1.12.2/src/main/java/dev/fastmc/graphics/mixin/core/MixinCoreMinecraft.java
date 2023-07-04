@@ -1,9 +1,9 @@
 package dev.fastmc.graphics.mixin.core;
 
 import dev.fastmc.graphics.FastMcMod;
-import dev.fastmc.graphics.GLWrapper;
 import dev.fastmc.graphics.RendererReloader;
 import dev.fastmc.graphics.shared.FpsDisplay;
+import dev.luna5ama.glwrapper.api.GLWrapperImpl;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.IReloadableResourceManager;
 import net.minecraft.profiler.Profiler;
@@ -25,7 +25,7 @@ public class MixinCoreMinecraft {
 
     @Inject(method = "init", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/OpenGlHelper;initializeTextures()V", shift = At.Shift.AFTER))
     public void init$Inject$INVOKE$initializeTextures(CallbackInfo ci) {
-        FastMcMod.INSTANCE.initGLWrapper(new GLWrapper());
+        FastMcMod.INSTANCE.initGLWrapper(new GLWrapperImpl(), 1);
         FastMcMod.INSTANCE.initProfiler(new dev.fastmc.graphics.mixin.Profiler((Minecraft) (Object) this));
     }
 

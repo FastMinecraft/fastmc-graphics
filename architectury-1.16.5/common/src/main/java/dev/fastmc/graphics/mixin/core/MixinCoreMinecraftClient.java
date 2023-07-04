@@ -2,11 +2,11 @@ package dev.fastmc.graphics.mixin.core;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.fastmc.graphics.FastMcMod;
-import dev.fastmc.graphics.GLWrapper;
 import dev.fastmc.graphics.RendererReloader;
 import dev.fastmc.graphics.shared.FpsDisplay;
 import dev.fastmc.graphics.shared.util.FastMcCoreScope;
 import dev.fastmc.graphics.shared.util.FastMcExtendScope;
+import dev.luna5ama.glwrapper.api.GLWrapperImpl;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.SplashScreen;
 import net.minecraft.client.world.ClientWorld;
@@ -44,7 +44,7 @@ public abstract class MixinCoreMinecraftClient extends ReentrantThreadExecutor<R
     @Redirect(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/blaze3d/systems/RenderSystem;initRenderer(IZ)V"))
     public void Redirect$init$INVOKE$RenderSystem$initRenderer(int debugVerbosity, boolean debugSync) {
         RenderSystem.initRenderer(debugVerbosity, debugSync);
-        FastMcMod.INSTANCE.initGLWrapper(new GLWrapper());
+        FastMcMod.INSTANCE.initGLWrapper(new GLWrapperImpl(), 2);
         FastMcMod.INSTANCE.initProfiler(new dev.fastmc.graphics.mixin.Profiler((MinecraftClient) (Object) this));
     }
 

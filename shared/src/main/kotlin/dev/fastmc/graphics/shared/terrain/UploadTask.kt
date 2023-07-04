@@ -2,7 +2,7 @@ package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
-import dev.fastmc.graphics.shared.opengl.glCopyNamedBufferSubData
+import dev.luna5ama.glwrapper.api.glCopyNamedBufferSubData
 
 internal class UploadTask(
     private val parentTask: ChunkBuilderTask,
@@ -137,22 +137,22 @@ internal class UploadTask(
             override fun clear(task: ChunkBuilderTask, index: Int): Long {
                 val layer = task.renderChunk.layers[index]
                 val region = layer.indexRegion
-                val updateSize = indexBuffer.region.buffer.remaining()
+                val updateSize = indexBuffer.region.arr.rem
 
                 return if (region != null) {
                     if (region.length != updateSize) {
                         layer.indexRegion = null
-                        updateSize.toLong()
+                        updateSize
                     } else {
                         0L
                     }
                 } else {
-                    updateSize.toLong()
+                    updateSize
                 }
             }
 
             override fun update(task: ChunkBuilderTask, index: Int) {
-                val updateSize = indexBuffer.region.buffer.remaining()
+                val updateSize = indexBuffer.region.arr.rem
                 val layer = task.renderChunk.layers[index]
                 var region = layer.indexRegion
 
@@ -166,9 +166,9 @@ internal class UploadTask(
                 glCopyNamedBufferSubData(
                     indexBuffer.region.vboID,
                     region.bufferObjectID,
-                    indexBuffer.region.offset.toLong(),
-                    region.offset.toLong(),
-                    updateSize.toLong()
+                    indexBuffer.region.offset,
+                    region.offset,
+                    updateSize
                 )
 
                 if (faceData != null) {
@@ -185,17 +185,17 @@ internal class UploadTask(
             override fun clear(task: ChunkBuilderTask, index: Int): Long {
                 val layer = task.renderChunk.layers[index]
                 val region = layer.vertexRegion
-                val updateSize = vertexBuffer.region.buffer.remaining()
+                val updateSize = vertexBuffer.region.arr.rem
 
                 val vertexUpdateSize = if (region != null) {
                     if (region.length != updateSize) {
                         layer.vertexRegion = null
-                        updateSize.toLong()
+                        updateSize
                     } else {
                         0L
                     }
                 } else {
-                    updateSize.toLong()
+                    updateSize
                 }
 
                 return (vertexUpdateSize shl 32) or super.clear(task, index)
@@ -204,7 +204,7 @@ internal class UploadTask(
             override fun update(task: ChunkBuilderTask, index: Int) {
                 super.update(task, index)
 
-                val updateSize = vertexBuffer.region.buffer.remaining()
+                val updateSize = vertexBuffer.region.arr.rem
                 val layer = task.renderChunk.layers[index]
                 var region = layer.vertexRegion
 
@@ -218,9 +218,9 @@ internal class UploadTask(
                 glCopyNamedBufferSubData(
                     vertexBuffer.region.vboID,
                     region.bufferObjectID,
-                    vertexBuffer.region.offset.toLong(),
-                    region.offset.toLong(),
-                    updateSize.toLong()
+                    vertexBuffer.region.offset,
+                    region.offset,
+                    updateSize
                 )
 
                 vertexBuffer.release(task)

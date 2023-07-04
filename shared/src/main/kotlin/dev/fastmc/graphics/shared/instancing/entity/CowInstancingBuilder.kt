@@ -1,40 +1,32 @@
 package dev.fastmc.graphics.shared.instancing.entity
 
-import dev.fastmc.common.skip
 import dev.fastmc.graphics.shared.instancing.entity.info.ICowInfo
 import dev.fastmc.graphics.shared.model.Model
-import dev.fastmc.graphics.shared.opengl.GLDataType
-import dev.fastmc.graphics.shared.opengl.impl.VertexAttribute
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
-import java.nio.ByteBuffer
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexAttribute
+import dev.luna5ama.kmogus.Ptr
 
 class CowInstancingBuilder : EntityInstancingBuilder<ICowInfo<*>>(68) {
-    override fun add(buffer: ByteBuffer, info: ICowInfo<*>) {
-        buffer.putFloat((info.prevX - builtPosX).toFloat())
-        buffer.putFloat((info.prevY - builtPosY).toFloat())
-        buffer.putFloat((info.prevZ - builtPosZ).toFloat())
-        buffer.putFloat((info.x - builtPosX).toFloat())
-        buffer.putFloat((info.y - builtPosY).toFloat())
-        buffer.putFloat((info.z - builtPosZ).toFloat())
-
-        buffer.putLightMapUV(info)
-
-        buffer.putFloat(info.prevRenderYawOffset)
-        buffer.putFloat(info.prevRotationYawHead)
-        buffer.putFloat(info.prevRotationPitch)
-
-        buffer.putFloat(info.renderYawOffset)
-        buffer.putFloat(info.rotationYawHead)
-        buffer.putFloat(info.rotationPitch)
-
-        buffer.putFloat(info.limbSwing - info.limbSwingAmount)
-        buffer.putFloat(info.prevLimbSwingAmount)
-
-        buffer.putFloat(info.limbSwing)
-        buffer.putFloat(info.limbSwingAmount)
-
-        buffer.skip(2)
+    override fun add(ptr: Ptr, info: ICowInfo<*>) {
+        ptr.setFloatInc((info.prevX - builtPosX).toFloat())
+            .setFloatInc((info.prevY - builtPosY).toFloat())
+            .setFloatInc((info.prevZ - builtPosZ).toFloat())
+            .setFloatInc((info.x - builtPosX).toFloat())
+            .setFloatInc((info.y - builtPosY).toFloat())
+            .setFloatInc((info.z - builtPosZ).toFloat())
+            .putLightMapUV(info)
+            .setFloatInc(info.prevRenderYawOffset)
+            .setFloatInc(info.prevRotationYawHead)
+            .setFloatInc(info.prevRotationPitch)
+            .setFloatInc(info.renderYawOffset)
+            .setFloatInc(info.rotationYawHead)
+            .setFloatInc(info.rotationPitch)
+            .setFloatInc(info.limbSwing - info.limbSwingAmount)
+            .setFloatInc(info.prevLimbSwingAmount)
+            .setFloatInc(info.limbSwing)
+            .setFloatInc(info.limbSwingAmount)
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model

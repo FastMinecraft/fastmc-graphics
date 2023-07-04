@@ -1,23 +1,20 @@
 package dev.fastmc.graphics.shared.instancing.tileentity
 
-import dev.fastmc.common.skip
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IBedInfo
 import dev.fastmc.graphics.shared.model.Model
-import dev.fastmc.graphics.shared.opengl.GLDataType
-import dev.fastmc.graphics.shared.opengl.impl.VertexAttribute
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
-import java.nio.ByteBuffer
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexAttribute
+import dev.luna5ama.kmogus.Ptr
 
 class BedInstancingBuilder : TileEntityInstancingBuilder<IBedInfo<*>>(20) {
-    override fun add(buffer: ByteBuffer, info: IBedInfo<*>) {
-        buffer.putPos(info)
-        buffer.putLightMapUV(info)
-        buffer.putHDirection((info.hDirection - 2 + 2) % 4 + 2)
-
-        buffer.put(info.color.toByte())
-        buffer.put(if (info.isHead) 1 else 0)
-        buffer.skip(3)
+    override fun add(ptr: Ptr, info: IBedInfo<*>) {
+        ptr.putPos(info)
+            .putLightMapUV(info)
+            .putHDirection((info.hDirection - 2 + 2) % 4 + 2)
+            .setByteInc(info.color.toByte())
+            .setByteInc(if (info.isHead) 1 else 0)
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model

@@ -4,13 +4,13 @@ import com.mojang.blaze3d.systems.RenderSystem
 import dev.fastmc.graphics.shared.instancing.AbstractInstancingBuilder
 import dev.fastmc.graphics.shared.instancing.tileentity.*
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IChestInfo
-import dev.fastmc.graphics.shared.opengl.glBindTextureUnit
 import dev.fastmc.graphics.shared.renderer.IRenderer
 import dev.fastmc.graphics.shared.renderer.TileEntityRenderer
 import dev.fastmc.graphics.shared.renderer.WorldRenderer
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.tileentity.ChestInfo
 import dev.fastmc.graphics.util.*
+import dev.luna5ama.glwrapper.api.glBindTextureUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch

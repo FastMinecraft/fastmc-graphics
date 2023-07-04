@@ -1,5 +1,5 @@
 #version 460
-#import /assets/shaders/util/Mat3Rotation.glsl
+#include "/assets/shaders/util/Mat3Rotation.glsl"
 
 layout(std140) uniform Global {
     mat4 projection;

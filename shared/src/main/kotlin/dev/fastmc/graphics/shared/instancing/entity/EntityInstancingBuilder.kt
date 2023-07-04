@@ -5,29 +5,29 @@ import dev.fastmc.graphics.shared.instancing.entity.info.IEntityInfo
 import dev.fastmc.graphics.shared.model.Model
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
-import java.nio.ByteBuffer
+import dev.luna5ama.kmogus.Ptr
 
 abstract class EntityInstancingBuilder<T : IEntityInfo<*>>(vertexSize: Int) : AbstractInstancingBuilder<T>(vertexSize) {
-    protected fun ByteBuffer.putPos(info: T) {
-        putFloat((info.prevX - builtPosX).toFloat())
-        putFloat((info.prevY - builtPosY).toFloat())
-        putFloat((info.prevZ - builtPosZ).toFloat())
-        putFloat((info.x - builtPosX).toFloat())
-        putFloat((info.y - builtPosY).toFloat())
-        putFloat((info.z - builtPosZ).toFloat())
+    protected fun Ptr.putPos(info: T): Ptr {
+        return setFloatInc((info.prevX - builtPosX).toFloat())
+            .setFloatInc((info.prevY - builtPosY).toFloat())
+            .setFloatInc((info.prevZ - builtPosZ).toFloat())
+            .setFloatInc((info.x - builtPosX).toFloat())
+            .setFloatInc((info.y - builtPosY).toFloat())
+            .setFloatInc((info.z - builtPosZ).toFloat())
     }
 
-    protected fun ByteBuffer.putRotations(info: T) {
-        putFloat(info.rotationYaw)
-        putFloat(info.rotationPitch)
-        putFloat(info.prevRotationYaw)
-        putFloat(info.prevRotationPitch)
+    protected fun Ptr.putRotations(info: T): Ptr {
+        return setFloatInc(info.rotationYaw)
+            .setFloatInc(info.rotationPitch)
+            .setFloatInc(info.prevRotationYaw)
+            .setFloatInc(info.prevRotationPitch)
     }
 
-    protected fun ByteBuffer.putLightMapUV(info: T) {
+    protected fun Ptr.putLightMapUV(info: T): Ptr {
         val lightMapUV = info.lightMapUV
-        put((lightMapUV and 0xFF).toByte())
-        put((lightMapUV shr 16 and 0xFF).toByte())
+        return setByteInc((lightMapUV and 0xFF).toByte())
+            .setByteInc((lightMapUV shr 16 and 0xFF).toByte())
     }
 
     protected companion object {

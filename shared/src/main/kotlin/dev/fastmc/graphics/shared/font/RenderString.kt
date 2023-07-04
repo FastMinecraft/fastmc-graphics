@@ -1,16 +1,19 @@
 package dev.fastmc.graphics.shared.font
 
 import dev.fastmc.common.ColorARGB
-import dev.fastmc.common.allocateByte
 import dev.fastmc.common.collection.FastIntMap
-import dev.fastmc.common.skip
-import dev.fastmc.graphics.shared.opengl.*
-import dev.fastmc.graphics.shared.opengl.impl.buildAttribute
+import dev.fastmc.graphics.structs.FontVertex
+import dev.luna5ama.glwrapper.api.*
+import dev.luna5ama.glwrapper.impl.BufferObject
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexArrayObject
+import dev.luna5ama.glwrapper.impl.buildAttribute
+import dev.luna5ama.kmogus.Arr
+import dev.luna5ama.kmogus.MemoryStack
 import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.shorts.ShortArrayList
 import org.joml.Matrix4f
-import java.nio.ByteBuffer
 
 class RenderString(fontRenderer: FontRenderer, private val string: CharSequence) {
     private val renderInfos: Array<RenderInfo>
@@ -63,7 +66,7 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
     }
 
     fun render(
-        shader: FontRenderer.ShaderProgram,
+        shader: FontRenderer.FontRendererShaderProgram,
         projection: Matrix4f,
         modelView: Matrix4f,
         color: ColorARGB,
@@ -172,27 +175,33 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
             }
 
             fun build(): RenderInfo {
-                val vboBuffer = buildVboBuffer()
-                val iboBuffer = buildIboBuffer()
+                val vbo = BufferObject.Immutable()
+                MemoryStack {
+                    val buffer = buildVboBuffer()
+                    vbo.allocate(buffer.len, buffer.ptr, 0)
+                }
+
+
+                val ebo = BufferObject.Immutable()
+                MemoryStack {
+                    val buffer = buildEboBuffer()
+                    ebo.allocate(buffer.len, buffer.ptr, 0)
+                }
 
                 val vao = VertexArrayObject()
-                val vbo = BufferObject.Immutable()
-                val ibo = BufferObject.Immutable()
-
-                vbo.allocate(vboBuffer, 0)
-                ibo.allocate(iboBuffer, 0)
-
                 vao.attachVbo(vbo, VERTEX_ATTRIBUTE)
-                vao.attachIbo(ibo)
+                vao.attachEbo(ebo)
 
                 return RenderInfo(texture, size, vao)
             }
 
-            private fun buildVboBuffer(): ByteBuffer {
-                val vboBuffer = allocateByte(size * 4 * 2 * 16)
+            private fun MemoryStack.buildVboBuffer(): Arr {
+                val vboBuffer = calloc(size * 4 * 2 * 16L)
 
                 var posIndex = 0
                 var uvIndex = 0
+
+                var struct = FontVertex(vboBuffer)
 
                 for (i in colorList.indices) {
                     val color = colorList.getByte(i)
@@ -203,127 +212,126 @@ class RenderString(fontRenderer: FontRenderer, private val string: CharSequence)
                     var u = uvList.getShort(uvIndex++)
                     var v = uvList.getShort(uvIndex++)
 
-                    vboBuffer.putFloat(posX + 1.0f)
-                    vboBuffer.putFloat(posY + 1.0f)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(1)
-                    vboBuffer.skip(1)
+                    struct.position.x = posX + 1.0f
+                    struct.position.y = posY + 1.0f
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 1
+                    struct++
 
-                    vboBuffer.putFloat(posX)
-                    vboBuffer.putFloat(posY)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(0)
-                    vboBuffer.skip(1)
-
-                    posX = posList.getFloat(posIndex++)
-                    posY = posList.getFloat(posIndex++)
-                    u = uvList.getShort(uvIndex++)
-                    v = uvList.getShort(uvIndex++)
-
-                    vboBuffer.putFloat(posX + 1.0f)
-                    vboBuffer.putFloat(posY + 1.0f)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(1)
-                    vboBuffer.skip(1)
-
-                    vboBuffer.putFloat(posX)
-                    vboBuffer.putFloat(posY)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(0)
-                    vboBuffer.skip(1)
+                    struct.position.x = posX
+                    struct.position.y = posY
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 0
+                    struct++
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
                     u = uvList.getShort(uvIndex++)
                     v = uvList.getShort(uvIndex++)
 
-                    vboBuffer.putFloat(posX + 1.0f)
-                    vboBuffer.putFloat(posY + 1.0f)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(1)
-                    vboBuffer.skip(1)
+                    struct.position.x = posX + 1.0f
+                    struct.position.y = posY + 1.0f
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 1
+                    struct++
 
-                    vboBuffer.putFloat(posX)
-                    vboBuffer.putFloat(posY)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(0)
-                    vboBuffer.skip(1)
+                    struct.position.x = posX
+                    struct.position.y = posY
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 0
+                    struct++
 
                     posX = posList.getFloat(posIndex++)
                     posY = posList.getFloat(posIndex++)
                     u = uvList.getShort(uvIndex++)
                     v = uvList.getShort(uvIndex++)
 
-                    vboBuffer.putFloat(posX + 1.0f)
-                    vboBuffer.putFloat(posY + 1.0f)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(1)
-                    vboBuffer.skip(1)
+                    struct.position.x = posX + 1.0f
+                    struct.position.y = posY + 1.0f
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 1
+                    struct++
 
-                    vboBuffer.putFloat(posX)
-                    vboBuffer.putFloat(posY)
-                    vboBuffer.putShort(u)
-                    vboBuffer.putShort(v)
-                    vboBuffer.put(color)
-                    vboBuffer.put(overrideColor)
-                    vboBuffer.put(0)
-                    vboBuffer.skip(1)
+                    struct.position.x = posX
+                    struct.position.y = posY
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 0
+                    struct++
+
+                    posX = posList.getFloat(posIndex++)
+                    posY = posList.getFloat(posIndex++)
+                    u = uvList.getShort(uvIndex++)
+                    v = uvList.getShort(uvIndex++)
+
+                    struct.position.x = posX + 1.0f
+                    struct.position.y = posY + 1.0f
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 1
+                    struct++
+
+                    struct.position.x = posX
+                    struct.position.y = posY
+                    struct.vertUV.x = u
+                    struct.vertUV.y = v
+                    struct.colorIndex = color
+                    struct.overrideColor = overrideColor
+                    struct.shadow = 0
+                    struct++
                 }
 
-                vboBuffer.flip()
                 return vboBuffer
             }
 
-            private fun buildIboBuffer(): ByteBuffer {
-                val iboBuffer = allocateByte(size * 2 * 6 * 2)
+            private fun MemoryStack.buildEboBuffer(): Arr {
+                val iboBuffer = malloc(size * 2 * 6 * 2L)
 
                 val indexSize = size * 2 * 4
                 var index = 0
+                var ptr = iboBuffer.ptr
 
                 while (index < indexSize) {
-                    iboBuffer.putShort(index.toShort())
-                    iboBuffer.putShort((index + 4).toShort())
-                    iboBuffer.putShort((index + 2).toShort())
-                    iboBuffer.putShort((index + 6).toShort())
-                    iboBuffer.putShort((index + 2).toShort())
-                    iboBuffer.putShort((index + 4).toShort())
+                    ptr = ptr.setShortInc(index.toShort())
+                        .setShortInc((index + 4).toShort())
+                        .setShortInc((index + 2).toShort())
+                        .setShortInc((index + 6).toShort())
+                        .setShortInc((index + 2).toShort())
+                        .setShortInc((index + 4).toShort())
                     index += 8
                 }
 
                 index = 0
 
                 while (index < indexSize) {
-                    iboBuffer.putShort((index + 1).toShort())
-                    iboBuffer.putShort((index + 5).toShort())
-                    iboBuffer.putShort((index + 3).toShort())
-                    iboBuffer.putShort((index + 7).toShort())
-                    iboBuffer.putShort((index + 3).toShort())
-                    iboBuffer.putShort((index + 5).toShort())
+                    ptr = ptr.setShortInc((index + 1).toShort())
+                        .setShortInc((index + 5).toShort())
+                        .setShortInc((index + 3).toShort())
+                        .setShortInc((index + 7).toShort())
+                        .setShortInc((index + 3).toShort())
+                        .setShortInc((index + 5).toShort())
                     index += 8
                 }
 
-                iboBuffer.flip()
                 return iboBuffer
             }
 

@@ -48,7 +48,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.util.Set;
 import java.util.SortedSet;
 
-import static dev.fastmc.graphics.shared.opengl.GLWrapperKt.*;
+import static dev.luna5ama.glwrapper.api.GL11.*;
+import static dev.luna5ama.glwrapper.api.GL14.glBlendFuncSeparate;
 
 @SuppressWarnings("deprecation")
 @Mixin(value = net.minecraft.client.render.WorldRenderer.class, priority = Integer.MAX_VALUE)

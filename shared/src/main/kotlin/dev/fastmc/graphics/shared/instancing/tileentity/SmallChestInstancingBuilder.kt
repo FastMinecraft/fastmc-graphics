@@ -2,40 +2,42 @@ package dev.fastmc.graphics.shared.instancing.tileentity
 
 import dev.fastmc.graphics.shared.instancing.tileentity.info.IChestInfo
 import dev.fastmc.graphics.shared.model.Model
-import dev.fastmc.graphics.shared.opengl.GLDataType
-import dev.fastmc.graphics.shared.opengl.impl.VertexAttribute
 import dev.fastmc.graphics.shared.resource.ResourceEntry
 import dev.fastmc.graphics.shared.texture.ITexture
-import java.nio.ByteBuffer
+import dev.luna5ama.glwrapper.impl.GLDataType
+import dev.luna5ama.glwrapper.impl.VertexAttribute
+import dev.luna5ama.kmogus.Ptr
 import java.util.*
 
 open class SmallChestInstancingBuilder : TileEntityInstancingBuilder<IChestInfo<*>>(20) {
-    override fun add(buffer: ByteBuffer, info: IChestInfo<*>) {
+    override fun add(ptr: Ptr, info: IChestInfo<*>) {
         val posX = (info.posX + 0.5 - builtPosX).toFloat()
         val posY = (info.posY - builtPosY).toFloat()
         val posZ = (info.posZ + 0.5 - builtPosZ).toFloat()
 
-        buffer.putFloat(posX)
-        buffer.putFloat(posY)
-        buffer.putFloat(posZ)
+        ptr.setFloatInc(posX)
+            .setFloatInc(posY)
+            .setFloatInc(posZ)
 
-        buffer.putLightMapUV(info)
-        buffer.putHDirection(info.hDirection)
+            .putLightMapUV(info)
+            .putHDirection(info.hDirection)
 
-        when {
-            isChristmas -> {
-                buffer.put(2)
+            .run {
+                when {
+                    isChristmas -> {
+                        setByteInc(2)
+                    }
+                    info.isTrap -> {
+                        setByteInc(1)
+                    }
+                    else -> {
+                        setByteInc(0)
+                    }
+                }
             }
-            info.isTrap -> {
-                buffer.put(1)
-            }
-            else -> {
-                buffer.put(0)
-            }
-        }
 
-        buffer.putShort((info.prevLidAngle * 65535.0f).toInt().toShort())
-        buffer.putShort((info.lidAngle * 65535.0f).toInt().toShort())
+            .setShortInc((info.prevLidAngle * 65535.0f).toInt().toShort())
+            .setShortInc((info.lidAngle * 65535.0f).toInt().toShort())
     }
 
     override val model: ResourceEntry<Model> get() = Companion.model

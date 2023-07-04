@@ -3,6 +3,7 @@ package dev.fastmc.graphics.shared.terrain
 import dev.fastmc.common.Cancellable
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
+import dev.luna5ama.kmogus.memcpy
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -181,9 +182,9 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
 
             val translucentBufferPair = bufferGroupArray[1]
             translucentData = if (translucentBufferPair != null) {
-                val indexBuffer = translucentBufferPair.indexBuffers[0]!!.region.buffer
+                val indexBuffer = translucentBufferPair.indexBuffers[0]!!.region.arr
                 val sortContext = renderer.contextProvider.getSortContext(this@RebuildTask)
-                val indexSize = indexBuffer.remaining()
+                val indexSize = indexBuffer.rem
                 val quadCount = rebuildContext.translucentVertexBuilder.posArrayList.size / 12
 
                 val quadCenterArray = sortContext.getQuadCenterArray(quadCount * 3)
@@ -201,15 +202,13 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 }
                 rebuildContext.release(this@RebuildTask)
 
-                val indexDataArray = sortContext.getIndexDataArray(indexSize)
-                indexBuffer.get(indexDataArray, 0, indexSize)
+                val indexDataArray = sortContext.getIndexDataArray(indexSize.toInt())
+                memcpy(indexBuffer.ptr, indexDataArray, indexSize)
 
                 val data = sortContext.sortQuads(this@RebuildTask, indexDataArray, quadCenterArray, quadCount)
                 sortContext.release(this@RebuildTask)
 
-                indexBuffer.clear()
-                indexBuffer.put(data.indexData)
-                indexBuffer.flip()
+                memcpy(data.indexData, indexBuffer.ptr, indexSize)
                 data
             } else {
                 rebuildContext.release(this@RebuildTask)
@@ -256,12 +255,12 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
         return if (bufferGroup.vertexBuffers.size == 1) {
             val vertexBuffer = bufferGroup.vertexBuffers[0]!!
             val indexBuffer = bufferGroup.indexBuffers[0]!!
-            Triple(FaceData.Singleton(indexBuffer.region.buffer.remaining()), vertexBuffer, indexBuffer)
+            Triple(FaceData.Singleton(indexBuffer.region.arr.rem.toInt()), vertexBuffer, indexBuffer)
         } else {
             var dataArray: IntArray? = null
 
-            var vertexOffset = 0
-            var indexOffset = 0
+            var vertexOffset = 0L
+            var indexOffset = 0L
 
             var resultVertexBuffer: BufferContext? = null
             var resultIndexBuffer: BufferContext? = null
@@ -270,28 +269,23 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 val vertexBuffer = bufferGroup.vertexBuffers[i] ?: continue
                 val indexBuffer = bufferGroup.indexBuffers[i]!!
 
-                val vertexLength = vertexBuffer.region.buffer.remaining()
-                val indexLength = indexBuffer.region.buffer.remaining()
+                val vertexLength = vertexBuffer.region.arr.rem
+                val indexLength = indexBuffer.region.arr.rem
 
                 if (resultVertexBuffer == null) {
                     resultVertexBuffer = vertexBuffer
-                    vertexBuffer.region.buffer.position(vertexBuffer.region.buffer.limit())
-                    vertexBuffer.region.buffer.limit(vertexBuffer.region.buffer.capacity())
-
                     resultIndexBuffer = indexBuffer
-                    indexBuffer.region.buffer.position(indexBuffer.region.buffer.limit())
-                    indexBuffer.region.buffer.limit(indexBuffer.region.buffer.capacity())
                 } else {
-                    while (resultVertexBuffer.region.buffer.remaining() < vertexLength) {
+                    while (resultVertexBuffer.region.arr.rem < vertexLength) {
                         resultVertexBuffer.region.expand()
                     }
 
-                    while (resultIndexBuffer!!.region.buffer.remaining() < indexLength) {
+                    while (resultIndexBuffer!!.region.arr.rem < indexLength) {
                         resultIndexBuffer.region.expand()
                     }
 
-                    resultVertexBuffer.region.buffer.put(vertexBuffer.region.buffer)
-                    resultIndexBuffer.region.buffer.put(indexBuffer.region.buffer)
+                    memcpy(vertexBuffer.region.arr.basePtr, resultVertexBuffer.region.arr.basePtr + vertexOffset, vertexLength)
+                    memcpy(indexBuffer.region.arr.basePtr, resultIndexBuffer.region.arr.basePtr + indexOffset, indexLength)
 
                     vertexBuffer.release(this)
                     indexBuffer.release(this)
@@ -302,17 +296,17 @@ abstract class RebuildTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.Ta
                 }
 
                 val dataIndex = i * 3
-                dataArray[dataIndex] = vertexOffset
-                dataArray[dataIndex + 1] = indexOffset
-                dataArray[dataIndex + 2] = indexLength
+                dataArray[dataIndex] = vertexOffset.toInt()
+                dataArray[dataIndex + 1] = indexOffset.toInt()
+                dataArray[dataIndex + 2] = indexLength.toInt()
 
                 vertexOffset += vertexLength
                 indexOffset += indexLength
             }
 
             if (dataArray != null) {
-                resultVertexBuffer!!.region.buffer.flip()
-                resultIndexBuffer!!.region.buffer.flip()
+                resultVertexBuffer!!.region.arr.len = vertexOffset
+                resultIndexBuffer!!.region.arr.len = indexOffset
                 Triple(FaceData.Multiple(dataArray), resultVertexBuffer, resultIndexBuffer)
             } else {
                 null
@@ -354,9 +348,9 @@ class SortTask(renderer: TerrainRenderer, scheduler: ChunkBuilder.TaskFactory) :
         while (bufferContext.region.length < newData.indexData.size) {
             bufferContext.region.expand()
         }
-        val buffer = bufferContext.region.buffer
-        buffer.put(newData.indexData)
-        buffer.flip()
+        val buffer = bufferContext.region.arr
+        buffer.len = newData.indexData.size.toLong()
+        memcpy(newData.indexData, buffer.ptr, buffer.len)
 
         renderer.chunkBuilder.scheduleUpload(this) {
             translucentData(newData)

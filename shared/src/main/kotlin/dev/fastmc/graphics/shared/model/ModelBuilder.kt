@@ -1,7 +1,6 @@
 package dev.fastmc.graphics.shared.model
 
-import dev.fastmc.common.allocateByte
-import java.nio.ByteBuffer
+import dev.luna5ama.kmogus.*
 
 open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: Int) {
     open var idCounter = 0
@@ -19,16 +18,16 @@ open class ModelBuilder(val id: Int, val textureSizeX: Int, val textureSizeY: In
         vertexSize += childModelBuilder.vertexSize
     }
 
-    fun build(): ByteBuffer {
-        val buffer = allocateByte(vertexSize * 20)
+    fun build(memoryStack: MemoryStack): Arr {
+        val buffer = memoryStack.calloc(vertexSize * 20L).asMutable()
         build(buffer)
         buffer.flip()
         return buffer
     }
 
-    open fun build(vboBuffer: ByteBuffer) {
+    open fun build(buffer: MutableArr) {
         childModels.forEach {
-            it.build(vboBuffer)
+            it.build(buffer)
         }
     }
 }
@@ -58,15 +57,15 @@ class ChildModelBuilder(parent: ModelBuilder) :
         TextureOffsetGroup(textureOffsetX, textureOffsetY).apply(block)
     }
 
-    override fun build(vboBuffer: ByteBuffer) {
-        super.build(vboBuffer)
+    override fun build(buffer: MutableArr) {
+        super.build(buffer)
         boxList.forEach {
-            it.putDown(vboBuffer)
-            it.putUp(vboBuffer)
-            it.putWest(vboBuffer)
-            it.putSouth(vboBuffer)
-            it.putEast(vboBuffer)
-            it.putNorth(vboBuffer)
+            it.putDown(buffer)
+            it.putUp(buffer)
+            it.putWest(buffer)
+            it.putSouth(buffer)
+            it.putEast(buffer)
+            it.putNorth(buffer)
         }
     }
 
@@ -109,217 +108,229 @@ class ChildModelBuilder(parent: ModelBuilder) :
         val maxY = offsetY + sizeY
         val maxZ = offsetZ + sizeZ
 
-        fun putDown(vboBuffer: ByteBuffer) {
-            vboBuffer.putPos(minX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX, 0.0f)
-            vboBuffer.putNormal(0, -1, 0)
-            vboBuffer.putID()
+        fun putDown(vboBuffer: MutableArr) {
+            vboBuffer.usePtr {
+                putPos(minX, minY, minZ)
+                    .putUV(sizeZ + sizeX, 0.0f)
+                    .putNormal(0, -1, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeX, sizeZ)
-            vboBuffer.putNormal(0, -1, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, maxZ)
+                    .putUV(sizeZ + sizeX + sizeX, sizeZ)
+                    .putNormal(0, -1, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(0, -1, 0)
-            vboBuffer.putID()
+                    .putPos(minX, minY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ)
+                    .putNormal(0, -1, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX, 0.0f)
-            vboBuffer.putNormal(0, -1, 0)
-            vboBuffer.putID()
+                    .putPos(minX, minY, minZ)
+                    .putUV(sizeZ + sizeX, 0.0f)
+                    .putNormal(0, -1, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeX, 0.0f)
-            vboBuffer.putNormal(0, -1, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, minZ)
+                    .putUV(sizeZ + sizeX + sizeX, 0.0f)
+                    .putNormal(0, -1, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeX, sizeZ)
-            vboBuffer.putNormal(0, -1, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, maxZ)
+                    .putUV(sizeZ + sizeX + sizeX, sizeZ)
+                    .putNormal(0, -1, 0)
+                    .putID()
+            }
         }
 
-        fun putUp(vboBuffer: ByteBuffer) {
-            vboBuffer.putPos(minX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ)
-            vboBuffer.putNormal(0, 1, 0)
-            vboBuffer.putID()
+        fun putUp(vboBuffer: MutableArr) {
+            vboBuffer.usePtr {
+                putPos(minX, maxY, maxZ)
+                    .putUV(sizeZ, sizeZ)
+                    .putNormal(0, 1, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX, 0.0f)
-            vboBuffer.putNormal(0, 1, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, minZ)
+                    .putUV(sizeZ + sizeX, 0.0f)
+                    .putNormal(0, 1, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, maxY, minZ)
-            vboBuffer.putUV(sizeZ, 0.0f)
-            vboBuffer.putNormal(0, 1, 0)
-            vboBuffer.putID()
+                    .putPos(minX, maxY, minZ)
+                    .putUV(sizeZ, 0.0f)
+                    .putNormal(0, 1, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ)
-            vboBuffer.putNormal(0, 1, 0)
-            vboBuffer.putID()
+                    .putPos(minX, maxY, maxZ)
+                    .putUV(sizeZ, sizeZ)
+                    .putNormal(0, 1, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(0, 1, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ)
+                    .putNormal(0, 1, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX, 0.0f)
-            vboBuffer.putNormal(0, 1, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, minZ)
+                    .putUV(sizeZ + sizeX, 0.0f)
+                    .putNormal(0, 1, 0)
+                    .putID()
+            }
         }
 
-        fun putWest(vboBuffer: ByteBuffer) {
-            vboBuffer.putPos(minX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ)
-            vboBuffer.putNormal(-1, 0, 0)
-            vboBuffer.putID()
+        fun putWest(vboBuffer: MutableArr) {
+            vboBuffer.usePtr {
+                putPos(minX, maxY, maxZ)
+                    .putUV(sizeZ, sizeZ)
+                    .putNormal(-1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, minZ)
-            vboBuffer.putUV(0.0f, sizeZ + sizeY)
-            vboBuffer.putNormal(-1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(minX, minY, minZ)
+                    .putUV(0.0f, sizeZ + sizeY)
+                    .putNormal(-1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ + sizeY)
-            vboBuffer.putNormal(-1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(minX, minY, maxZ)
+                    .putUV(sizeZ, sizeZ + sizeY)
+                    .putNormal(-1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ)
-            vboBuffer.putNormal(-1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(minX, maxY, maxZ)
+                    .putUV(sizeZ, sizeZ)
+                    .putNormal(-1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, maxY, minZ)
-            vboBuffer.putUV(0.0f, sizeZ)
-            vboBuffer.putNormal(-1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(minX, maxY, minZ)
+                    .putUV(0.0f, sizeZ)
+                    .putNormal(-1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, minZ)
-            vboBuffer.putUV(0.0f, sizeZ + sizeY)
-            vboBuffer.putNormal(-1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(minX, minY, minZ)
+                    .putUV(0.0f, sizeZ + sizeY)
+                    .putNormal(-1, 0, 0)
+                    .putID()
+            }
         }
 
-        fun putSouth(vboBuffer: ByteBuffer) {
-            vboBuffer.putPos(maxX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(0, 0, 1)
-            vboBuffer.putID()
+        fun putSouth(vboBuffer: MutableArr) {
+            vboBuffer.usePtr {
+                putPos(maxX, maxY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ)
+                    .putNormal(0, 0, 1)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ + sizeY)
-            vboBuffer.putNormal(0, 0, 1)
-            vboBuffer.putID()
+                    .putPos(minX, minY, maxZ)
+                    .putUV(sizeZ, sizeZ + sizeY)
+                    .putNormal(0, 0, 1)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ + sizeY)
-            vboBuffer.putNormal(0, 0, 1)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ + sizeY)
+                    .putNormal(0, 0, 1)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(0, 0, 1)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ)
+                    .putNormal(0, 0, 1)
+                    .putID()
 
-            vboBuffer.putPos(minX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ)
-            vboBuffer.putNormal(0, 0, 1)
-            vboBuffer.putID()
+                    .putPos(minX, maxY, maxZ)
+                    .putUV(sizeZ, sizeZ)
+                    .putNormal(0, 0, 1)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, maxZ)
-            vboBuffer.putUV(sizeZ, sizeZ + sizeY)
-            vboBuffer.putNormal(0, 0, 1)
-            vboBuffer.putID()
+                    .putPos(minX, minY, maxZ)
+                    .putUV(sizeZ, sizeZ + sizeY)
+                    .putNormal(0, 0, 1)
+                    .putID()
+            }
         }
 
-        fun putEast(vboBuffer: ByteBuffer) {
-            vboBuffer.putPos(maxX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ, sizeZ)
-            vboBuffer.putNormal(1, 0, 0)
-            vboBuffer.putID()
+        fun putEast(vboBuffer: MutableArr) {
+            vboBuffer.usePtr {
+                putPos(maxX, maxY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ, sizeZ)
+                    .putNormal(1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ + sizeY)
-            vboBuffer.putNormal(1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ + sizeY)
+                    .putNormal(1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ, sizeZ + sizeY)
-            vboBuffer.putNormal(1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ, sizeZ + sizeY)
+                    .putNormal(1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ, sizeZ)
-            vboBuffer.putNormal(1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ, sizeZ)
+                    .putNormal(1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ)
+                    .putNormal(1, 0, 0)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, maxZ)
-            vboBuffer.putUV(sizeZ + sizeX, sizeZ + sizeY)
-            vboBuffer.putNormal(1, 0, 0)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, maxZ)
+                    .putUV(sizeZ + sizeX, sizeZ + sizeY)
+                    .putNormal(1, 0, 0)
+                    .putID()
+            }
         }
 
-        fun putNorth(vboBuffer: ByteBuffer) {
-            vboBuffer.putPos(minX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(0, 0, -1)
-            vboBuffer.putID()
+        fun putNorth(vboBuffer: MutableArr) {
+            vboBuffer.usePtr {
+                putPos(minX, maxY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ + sizeX, sizeZ)
+                    .putNormal(0, 0, -1)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ, sizeZ + sizeY)
-            vboBuffer.putNormal(0, 0, -1)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ, sizeZ + sizeY)
+                    .putNormal(0, 0, -1)
+                    .putID()
 
-            vboBuffer.putPos(minX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ + sizeX, sizeZ + sizeY)
-            vboBuffer.putNormal(0, 0, -1)
-            vboBuffer.putID()
+                    .putPos(minX, minY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ + sizeX, sizeZ + sizeY)
+                    .putNormal(0, 0, -1)
+                    .putID()
 
-            vboBuffer.putPos(minX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ + sizeX, sizeZ)
-            vboBuffer.putNormal(0, 0, -1)
-            vboBuffer.putID()
+                    .putPos(minX, maxY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ + sizeX, sizeZ)
+                    .putNormal(0, 0, -1)
+                    .putID()
 
-            vboBuffer.putPos(maxX, maxY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ, sizeZ)
-            vboBuffer.putNormal(0, 0, -1)
-            vboBuffer.putID()
+                    .putPos(maxX, maxY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ, sizeZ)
+                    .putNormal(0, 0, -1)
+                    .putID()
 
-            vboBuffer.putPos(maxX, minY, minZ)
-            vboBuffer.putUV(sizeZ + sizeX + sizeZ, sizeZ + sizeY)
-            vboBuffer.putNormal(0, 0, -1)
-            vboBuffer.putID()
+                    .putPos(maxX, minY, minZ)
+                    .putUV(sizeZ + sizeX + sizeZ, sizeZ + sizeY)
+                    .putNormal(0, 0, -1)
+                    .putID()
+            }
         }
 
-        private inline fun ByteBuffer.putPos(x: Float, y: Float, z: Float) {
-            this.putFloat(x / 16.0f)
-            this.putFloat(y / 16.0f)
-            this.putFloat(z / 16.0f)
+        private inline fun Ptr.putPos(x: Float, y: Float, z: Float): Ptr {
+            return setFloatInc(x / 16.0f)
+                .setFloatInc(y / 16.0f)
+                .setFloatInc(z / 16.0f)
         }
 
-        private inline fun ByteBuffer.putUV(u: Float, v: Float) {
-            this.putShort(((u + textureOffsetX) / textureSizeX * 65535.0f).toInt().toShort())
-            this.putShort(((v + textureOffsetY) / textureSizeY * 65535.0f).toInt().toShort())
+        private inline fun Ptr.putUV(u: Float, v: Float): Ptr {
+            return setShortInc(((u + textureOffsetX) / textureSizeX * 65535.0f).toInt().toShort())
+                .setShortInc(((v + textureOffsetY) / textureSizeY * 65535.0f).toInt().toShort())
         }
 
-        private inline fun ByteBuffer.putNormal(x: Byte, y: Byte, z: Byte) {
-            this.put(x)
-            this.put(y)
-            this.put(z)
+        private inline fun Ptr.putNormal(x: Byte, y: Byte, z: Byte): Ptr {
+            return setByteInc(x)
+                .setByteInc(y)
+                .setByteInc(z)
         }
 
-        private inline fun ByteBuffer.putID() {
-            this.put(id.toByte())
+        private inline fun Ptr.putID(): Ptr {
+            return setByteInc(id.toByte())
         }
     }
 }
