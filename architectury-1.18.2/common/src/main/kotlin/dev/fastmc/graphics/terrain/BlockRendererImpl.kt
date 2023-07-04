@@ -25,7 +25,6 @@ import kotlin.math.min
 
 @Suppress("DuplicatedCode")
 class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRenderer<BlockState, FluidState>() {
-    @Suppress("UNCHECKED_CAST")
     override val worldSnapshot = context.worldSnapshot
 
     override fun renderBlock(state: BlockState) {
@@ -200,8 +199,8 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         context.setupRenderPos()
 
         val sameFluidOnTop = !isSameFluid(context.blockX, context.blockY, context.blockZ, Direction.UP, state)
-        val renderD = (shouldRenderFluidSide(state, blockState, Direction.DOWN)
-            && !isSideCovered(context.blockX, context.blockY, context.blockZ, Direction.DOWN, 0.890f))
+        val renderD = shouldRenderFluidSide(state, blockState, Direction.DOWN)
+            && !isSideCovered(context.blockX, context.blockY, context.blockZ, Direction.DOWN, 0.890f)
         val renderN = shouldRenderFluidSide(state, blockState, Direction.NORTH)
         val renderS = shouldRenderFluidSide(state, blockState, Direction.SOUTH)
         val renderW = shouldRenderFluidSide(state, blockState, Direction.WEST)
@@ -212,46 +211,45 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
         val isLava = state.isIn(FluidTags.LAVA)
         val sprites = if (isLava) lavaSprites else waterSprites
 
-        val waterColor = if (isLava) 0xFFFFFF else BiomeColors.getWaterColor(worldSnapshot, context.renderBlockPos)
-        val waterColorRed = waterColor shr 16 and 255
-        val waterColorGreen = waterColor shr 8 and 255
-        val waterColorBlue = waterColor and 255
+        val color = if (isLava) 0xFFFFFF else BiomeColors.getWaterColor(worldSnapshot, context.renderBlockPos)
+        val red = color shr 16 and 255
+        val green = color shr 8 and 255
+        val blue = color and 255
 
-        var fluidHeightNW = getFluidHeight(
+        var heightNW = getFluidHeight(
             context.blockX,
             context.blockY,
             context.blockZ,
             state.fluid
         )
-        var fluidHeightSW = getFluidHeight(
+        var heightSW = getFluidHeight(
             context.blockX,
             context.blockY,
             context.blockZ + 1,
             state.fluid
         )
-        var fluidHeightNE = getFluidHeight(
+        var heightNE = getFluidHeight(
             context.blockX + 1,
             context.blockY,
             context.blockZ,
             state.fluid
         )
-        var fluidHeightSE = getFluidHeight(
+        var heightSE = getFluidHeight(
             context.blockX + 1,
             context.blockY,
             context.blockZ + 1,
             state.fluid
         )
 
-        val yDown = if (renderD) 0.005f else 0.0f
-        val minFluidHeight = min(min(fluidHeightNW, fluidHeightSW), min(fluidHeightSE, fluidHeightNE))
+        val minFluidHeight = min(min(heightNW, heightSW), min(heightSE, heightNE))
 
         if (sameFluidOnTop
             && !isSideCovered(context.blockX, context.blockY, context.blockZ, Direction.UP, minFluidHeight)
         ) {
-            fluidHeightNW -= 0.005f
-            fluidHeightSW -= 0.005f
-            fluidHeightSE -= 0.005f
-            fluidHeightNE -= 0.005f
+            heightNW -= FLUID_SIDE_ESP
+            heightSW -= FLUID_SIDE_ESP
+            heightSE -= FLUID_SIDE_ESP
+            heightNE -= FLUID_SIDE_ESP
 
             val fluidVelocity = state.getVelocity(worldSnapshot, context.renderBlockPos)
 
@@ -310,58 +308,58 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             vNE = MathHelper.lerp(start, vNE, avgV)
 
             val brightnessUp = worldSnapshot.getWorldBrightness(1, true)
-            val red = (waterColorRed * brightnessUp) shr 8
-            val green = (waterColorGreen * brightnessUp) shr 8
-            val blue = (waterColorBlue * brightnessUp) shr 8
+            val rUp = (red * brightnessUp) shr 8
+            val gUp = (green * brightnessUp) shr 8
+            val bUp = (blue * brightnessUp) shr 8
 
-            val lightMapUV = getLight(context.blockX, context.blockY, context.blockZ)
+            val lightUp = getLight(context.blockX, context.blockY, context.blockZ)
 
             context.activeVertexBuilder.putVertex(
                 context.renderPosX + 0.0f,
-                context.renderPosY + fluidHeightNW,
+                context.renderPosY + heightNW,
                 context.renderPosZ + 0.0f,
-                red,
-                green,
-                blue,
+                rUp,
+                gUp,
+                bUp,
                 uNW,
                 vNW,
-                lightMapUV,
+                lightUp,
                 0b11_11_11
             )
             context.activeVertexBuilder.putVertex(
                 context.renderPosX + 0.0f,
-                context.renderPosY + fluidHeightSW,
+                context.renderPosY + heightSW,
                 context.renderPosZ + 1.0f,
-                red,
-                green,
-                blue,
+                rUp,
+                gUp,
+                bUp,
                 uSW,
                 vSW,
-                lightMapUV,
+                lightUp,
                 0b11_11_11
             )
             context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
-                context.renderPosY + fluidHeightSE,
+                context.renderPosY + heightSE,
                 context.renderPosZ + 1.0f,
-                red,
-                green,
-                blue,
+                rUp,
+                gUp,
+                bUp,
                 uSE,
                 vSE,
-                lightMapUV,
+                lightUp,
                 0b11_11_11
             )
             context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
-                context.renderPosY + fluidHeightNE,
+                context.renderPosY + heightNE,
                 context.renderPosZ + 0.0f,
-                red,
-                green,
-                blue,
+                rUp,
+                gUp,
+                bUp,
                 uNE,
                 vNE,
-                lightMapUV,
+                lightUp,
                 0b11_11_11
             )
             context.activeVertexBuilder.putQuad(0b11_11_11)
@@ -369,50 +367,50 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             if (isTopClear(context.blockX, context.blockY + 1, context.blockZ, state)) {
                 context.activeVertexBuilder.putVertex(
                     context.renderPosX + 0.0f,
-                    context.renderPosY + fluidHeightNW,
+                    context.renderPosY + heightNW,
                     context.renderPosZ + 0.0f,
-                    red,
-                    green,
-                    blue,
+                    rUp,
+                    gUp,
+                    bUp,
                     uNW,
                     vNW,
-                    lightMapUV,
+                    lightUp,
                     0b11_11_11
                 )
                 context.activeVertexBuilder.putVertex(
                     context.renderPosX + 1.0f,
-                    context.renderPosY + fluidHeightNE,
+                    context.renderPosY + heightNE,
                     context.renderPosZ + 0.0f,
-                    red,
-                    green,
-                    blue,
+                    rUp,
+                    gUp,
+                    bUp,
                     uNE,
                     vNE,
-                    lightMapUV,
+                    lightUp,
                     0b11_11_11
                 )
                 context.activeVertexBuilder.putVertex(
                     context.renderPosX + 1.0f,
-                    context.renderPosY + fluidHeightSE,
+                    context.renderPosY + heightSE,
                     context.renderPosZ + 1.0f,
-                    red,
-                    green,
-                    blue,
+                    rUp,
+                    gUp,
+                    bUp,
                     uSE,
                     vSE,
-                    lightMapUV,
+                    lightUp,
                     0b11_11_11
                 )
                 context.activeVertexBuilder.putVertex(
                     context.renderPosX + 0.0f,
-                    context.renderPosY + fluidHeightSW,
+                    context.renderPosY + heightSW,
                     context.renderPosZ + 1.0f,
-                    red,
-                    green,
-                    blue,
+                    rUp,
+                    gUp,
+                    bUp,
                     uSW,
                     vSW,
-                    lightMapUV,
+                    lightUp,
                     0b11_11_11
                 )
                 context.activeVertexBuilder.putQuad(0b11_11_11)
@@ -426,66 +424,82 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
             val v2 = sprites[0].maxV
 
             val brightnessDown = worldSnapshot.getWorldBrightness(0, true)
-            val red = (waterColorRed * brightnessDown) shr 8
-            val green = (waterColorGreen * brightnessDown) shr 8
-            val blue = (waterColorBlue * brightnessDown) shr 8
+            val rDown = (red * brightnessDown) shr 8
+            val gDown = (green * brightnessDown) shr 8
+            val bDown = (blue * brightnessDown) shr 8
 
-            val lightMapUV = getLight(context.blockX, context.blockY - 1, context.blockZ)
+            val lightDown = getLight(context.blockX, context.blockY - 1, context.blockZ)
 
             context.activeVertexBuilder.putVertex(
                 context.renderPosX,
-                context.renderPosY + yDown,
+                context.renderPosY,
                 context.renderPosZ + 1.0f,
-                red,
-                green,
-                blue,
+                rDown,
+                gDown,
+                bDown,
                 u1,
                 v2,
-                lightMapUV,
+                lightDown,
                 0b11_11_11
             )
             context.activeVertexBuilder.putVertex(
                 context.renderPosX,
-                context.renderPosY + yDown,
+                context.renderPosY,
                 context.renderPosZ,
-                red,
-                green,
-                blue,
+                rDown,
+                gDown,
+                bDown,
                 u1,
                 v1,
-                lightMapUV,
+                lightDown,
                 0b11_11_11
             )
             context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
-                context.renderPosY + yDown,
+                context.renderPosY,
                 context.renderPosZ,
-                red,
-                green,
-                blue,
+                rDown,
+                gDown,
+                bDown,
                 u2,
                 v1,
-                lightMapUV,
+                lightDown,
                 0b11_11_11
             )
             context.activeVertexBuilder.putVertex(
                 context.renderPosX + 1.0f,
-                context.renderPosY + yDown,
+                context.renderPosY,
                 context.renderPosZ + 1.0f,
-                red,
-                green,
-                blue,
+                rDown,
+                gDown,
+                bDown,
                 u2,
                 v2,
-                lightMapUV,
+                lightDown,
                 0b11_11_11
             )
             context.activeVertexBuilder.putQuad(0b11_11_11)
         }
 
         for (i in 0..3) {
+            val renderSide = when (i) {
+                0 -> {
+                    renderN
+                }
+                1 -> {
+                    renderS
+                }
+                2 -> {
+                    renderW
+                }
+                else -> {
+                    renderE
+                }
+            }
+
+            if (!renderSide) continue
+
             var direction: Direction
-            var renderSide: Boolean
 
             var x1: Float
             var z1: Float
@@ -496,181 +510,179 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             when (i) {
                 0 -> {
-                    y11 = fluidHeightNW
-                    y12 = fluidHeightNE
+                    direction = Direction.NORTH
+
+                    y11 = heightNW
+                    y12 = heightNE
+
                     x1 = 0.0f
                     x2 = 1.0f
-                    z1 = 0.005f
-                    z2 = 0.005f
-                    direction = Direction.NORTH
-                    renderSide = renderN
+                    z1 = FLUID_SIDE_ESP
+                    z2 = FLUID_SIDE_ESP
                 }
                 1 -> {
-                    y11 = fluidHeightSE
-                    y12 = fluidHeightSW
+                    direction = Direction.SOUTH
+
+                    y11 = heightSE
+                    y12 = heightSW
+
                     x1 = 1.0f
                     x2 = 0.0f
-                    z1 = 1.0f - 0.005f
-                    z2 = 1.0f - 0.005f
-                    direction = Direction.SOUTH
-                    renderSide = renderS
+                    z1 = 1.0f - FLUID_SIDE_ESP
+                    z2 = 1.0f - FLUID_SIDE_ESP
                 }
                 2 -> {
-                    y11 = fluidHeightSW
-                    y12 = fluidHeightNW
-                    x1 = 0.005f
-                    x2 = 0.005f
+                    direction = Direction.WEST
+
+                    y11 = heightSW
+                    y12 = heightNW
+
+                    x1 = FLUID_SIDE_ESP
+                    x2 = FLUID_SIDE_ESP
                     z1 = 1.0f
                     z2 = 0.0f
-                    direction = Direction.WEST
-                    renderSide = renderW
                 }
                 else -> {
-                    y11 = fluidHeightNE
-                    y12 = fluidHeightSE
-                    x1 = 1.0f - 0.005f
-                    x2 = 1.0f - 0.005f
+                    direction = Direction.EAST
+
+                    y11 = heightNE
+                    y12 = heightSE
+
+                    x1 = 1.0f - FLUID_SIDE_ESP
+                    x2 = 1.0f - FLUID_SIDE_ESP
                     z1 = 0.0f
                     z2 = 1.0f
-                    direction = Direction.EAST
-                    renderSide = renderE
                 }
             }
 
-            if (renderSide && !isSideCovered(
-                    context.blockX,
-                    context.blockY,
-                    context.blockZ,
-                    direction,
-                    max(y11, y12)
-                )
-            ) {
-                var sideSprites = sprites[1]
-                if (!isLava) {
-                    val block = worldSnapshot.getBlockState0(
-                        context.blockX + direction.offsetX,
-                        context.blockY + direction.offsetY,
-                        context.blockZ + direction.offsetZ
-                    ).block
-                    if (block is TransparentBlock || block is LeavesBlock) {
-                        sideSprites = waterOverlaySprite
-                    }
-                }
-                val uN = sideSprites.getFrameU(0.0)
-                val uS = sideSprites.getFrameU(8.0)
-                val vFrom1 = sideSprites.getFrameV(((1.0f - y11) * 16.0f * 0.5f).toDouble())
-                val vFrom2 = sideSprites.getFrameV(((1.0f - y12) * 16.0f * 0.5f).toDouble())
-                val vTo = sideSprites.getFrameV(8.0)
+            if (isSideCovered(context.blockX, context.blockY, context.blockZ, direction, max(y11, y12))) continue
 
-                val brightness = worldSnapshot.getWorldBrightness(direction.ordinal, true)
-                val red = (waterColorRed * brightness) shr 8
-                val green = (waterColorGreen * brightness) shr 8
-                val blue = (waterColorBlue * brightness) shr 8
+            var sideSprites = sprites[1]
+            val sideX = context.blockX + direction.offsetX
+            val sideY = context.blockY + direction.offsetY
+            val sideZ = context.blockZ + direction.offsetZ
 
-                val lightMapUV = getLight(context.blockX, context.blockY, context.blockZ)
-
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + x1,
-                    context.renderPosY + y11,
-                    context.renderPosZ + z1,
-                    red,
-                    green,
-                    blue,
-                    uN,
-                    vFrom1,
-                    lightMapUV,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + x2,
-                    context.renderPosY + y12,
-                    context.renderPosZ + z2,
-                    red,
-                    green,
-                    blue,
-                    uS,
-                    vFrom2,
-                    lightMapUV,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + x2,
-                    context.renderPosY + yDown,
-                    context.renderPosZ + z2,
-                    red,
-                    green,
-                    blue,
-                    uS,
-                    vTo,
-                    lightMapUV,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + x1,
-                    context.renderPosY + yDown,
-                    context.renderPosZ + z1,
-                    red,
-                    green,
-                    blue,
-                    uN,
-                    vTo,
-                    lightMapUV,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putQuad(0b11_11_11)
-
-                if (sideSprites !== waterOverlaySprite) {
-                    context.activeVertexBuilder.putVertex(
-                        context.renderPosX + x1,
-                        context.renderPosY + yDown,
-                        context.renderPosZ + z1,
-                        red,
-                        green,
-                        blue,
-                        uN,
-                        vTo,
-                        lightMapUV,
-                        0b11_11_11
-                    )
-                    context.activeVertexBuilder.putVertex(
-                        context.renderPosX + x2,
-                        context.renderPosY + yDown,
-                        context.renderPosZ + z2,
-                        red,
-                        green,
-                        blue,
-                        uS,
-                        vTo,
-                        lightMapUV,
-                        0b11_11_11
-                    )
-                    context.activeVertexBuilder.putVertex(
-                        context.renderPosX + x2,
-                        context.renderPosY + y12,
-                        context.renderPosZ + z2,
-                        red,
-                        green,
-                        blue,
-                        uS,
-                        vFrom2,
-                        lightMapUV,
-                        0b11_11_11
-                    )
-                    context.activeVertexBuilder.putVertex(
-                        context.renderPosX + x1,
-                        context.renderPosY + y11,
-                        context.renderPosZ + z1,
-                        red,
-                        green,
-                        blue,
-                        uN,
-                        vFrom1,
-                        lightMapUV,
-                        0b11_11_11
-                    )
-                    context.activeVertexBuilder.putQuad(0b11_11_11)
+            if (!isLava) {
+                val offsetBlock = worldSnapshot.getBlockState0(sideX, sideY, sideZ).block
+                if (offsetBlock is TransparentBlock || offsetBlock is LeavesBlock) {
+                    sideSprites = waterOverlaySprite
                 }
             }
+
+            val uN = sideSprites.getFrameU(0.0)
+            val uS = sideSprites.getFrameU(8.0)
+            val vFrom1 = sideSprites.getFrameV(((1.0f - y11) * 16.0f * 0.5f).toDouble())
+            val vFrom2 = sideSprites.getFrameV(((1.0f - y12) * 16.0f * 0.5f).toDouble())
+            val vTo = sideSprites.getFrameV(8.0)
+
+            val brightness = worldSnapshot.getWorldBrightness(direction.ordinal, true)
+            val rSide = (red * brightness) shr 8
+            val gSide = (green * brightness) shr 8
+            val bSide = (blue * brightness) shr 8
+
+            val lightSide = getLight(sideX, sideY, sideZ)
+
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x1,
+                context.renderPosY + y11,
+                context.renderPosZ + z1,
+                rSide,
+                gSide,
+                bSide,
+                uN,
+                vFrom1,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x2,
+                context.renderPosY + y12,
+                context.renderPosZ + z2,
+                rSide,
+                gSide,
+                bSide,
+                uS,
+                vFrom2,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x2,
+                context.renderPosY,
+                context.renderPosZ + z2,
+                rSide,
+                gSide,
+                bSide,
+                uS,
+                vTo,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x1,
+                context.renderPosY,
+                context.renderPosZ + z1,
+                rSide,
+                gSide,
+                bSide,
+                uN,
+                vTo,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putQuad(0b11_11_11)
+
+            if (sideSprites === waterOverlaySprite) continue
+
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x1,
+                context.renderPosY,
+                context.renderPosZ + z1,
+                rSide,
+                gSide,
+                bSide,
+                uN,
+                vTo,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x2,
+                context.renderPosY,
+                context.renderPosZ + z2,
+                rSide,
+                gSide,
+                bSide,
+                uS,
+                vTo,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x2,
+                context.renderPosY + y12,
+                context.renderPosZ + z2,
+                rSide,
+                gSide,
+                bSide,
+                uS,
+                vFrom2,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putVertex(
+                context.renderPosX + x1,
+                context.renderPosY + y11,
+                context.renderPosZ + z1,
+                rSide,
+                gSide,
+                bSide,
+                uN,
+                vFrom1,
+                lightSide,
+                0b11_11_11
+            )
+            context.activeVertexBuilder.putQuad(0b11_11_11)
         }
     }
 

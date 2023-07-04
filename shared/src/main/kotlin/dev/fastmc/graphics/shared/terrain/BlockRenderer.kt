@@ -263,4 +263,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
     }
 
     abstract fun isFullCube(state: T_BlockState): Boolean
+
+    companion object {
+        const val FLUID_SIDE_ESP = 0.0005f
+    }
 }
