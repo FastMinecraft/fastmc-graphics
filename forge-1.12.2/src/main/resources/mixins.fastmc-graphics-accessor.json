@@ -6,9 +6,8 @@
     "refmap": "mixins.fastmc-graphics.refmap.json",
     "client": [
         "AccessorBiomeColorHelper",
+        "AccessorContainerLocalRenderInformation",
+        "AccessorGlStateManager",
         "AccessorMinecraft"
-    ],
-    "mixins": [
-        "AccessorGlStateManager"
     ]
 }
