@@ -23,7 +23,7 @@ public class DummyCompiledChunk extends CompiledChunk {
             .getFront();
     }
 
-    public static RenderGlobal.ContainerLocalRenderInformation makeDummyInfo(RenderGlobal renderGlobal) {
+    public static List<RenderGlobal.ContainerLocalRenderInformation> makeDummyInfo(RenderGlobal renderGlobal) {
         try {
             Field field = Unsafe.class.getDeclaredField("theUnsafe");
             field.setAccessible(true);
@@ -38,7 +38,9 @@ public class DummyCompiledChunk extends CompiledChunk {
             accessor.setRenderChunk(dummyChunk);
             dummyChunk.compiledChunk = new DummyCompiledChunk();
 
-            return dummyInfo;
+            FastObjectArrayList<RenderGlobal.ContainerLocalRenderInformation> list = new FastObjectArrayList<>(1);
+            list.add(dummyInfo);
+            return new ReadOnlyList<>(list);
         } catch (NoSuchFieldException | IllegalAccessException | InstantiationException e) {
             throw new RuntimeException(e);
         }

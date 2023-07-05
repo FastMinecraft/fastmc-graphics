@@ -2,12 +2,11 @@ package dev.fastmc.graphics.mixin.core.render;
 
 import dev.fastmc.common.collection.FastObjectArrayList;
 import dev.fastmc.graphics.FastMcMod;
-import dev.fastmc.graphics.mixin.DummyClassInheritanceMultiMap;
-import dev.fastmc.graphics.mixin.DummyCompiledChunk;
-import dev.fastmc.graphics.mixin.ListSet;
+import dev.fastmc.graphics.mixin.*;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import dev.fastmc.graphics.shared.terrain.RenderChunkStorage;
 import dev.fastmc.graphics.shared.terrain.TerrainRenderer;
+import it.unimi.dsi.fastutil.objects.ObjectArraySet;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import it.unimi.dsi.fastutil.objects.ObjectSets;
 import net.minecraft.client.Minecraft;
@@ -83,9 +82,13 @@ public abstract class MixinCoreRenderGlobal {
     protected abstract void cleanupDamagedBlocks(Iterator<DestroyBlockProgress> iteratorIn);
 
     @Unique
-    private final List<RenderGlobal.ContainerLocalRenderInformation> dummyRenderInfos = ObjectLists.singleton(
-        DummyCompiledChunk.makeDummyInfo((RenderGlobal) (Object) this)
-    );
+    private final List<RenderGlobal.ContainerLocalRenderInformation> emptyRenderInfo = new ReadOnlyList<>(new FastObjectArrayList<>(1));
+
+    @Unique
+    private final List<RenderGlobal.ContainerLocalRenderInformation> dummyRenderInfos = DummyCompiledChunk.makeDummyInfo((RenderGlobal) (Object) this);
+
+    @Unique
+    private final Set<TileEntity> emptyTileEntitySet = new ReadOnlySet<>(new ObjectArraySet<>(0));
 
     @Unique
     private DummyClassInheritanceMultiMap dummyClassInheritanceMultiMap;
@@ -96,9 +99,9 @@ public abstract class MixinCoreRenderGlobal {
         this.viewFrustum = null;
         this.renderChunkFactory = null;
         this.renderDispatcher = null;
-        this.setTileEntities = ObjectSets.emptySet();
-        this.chunksToUpdate = ObjectSets.emptySet();
-        this.renderInfos = ObjectLists.emptyList();
+        this.setTileEntities = emptyTileEntitySet;
+        this.chunksToUpdate = new ReadOnlySet<>(new ObjectArraySet<>(0));
+        this.renderInfos = emptyRenderInfo;
     }
 
     @Inject(method = "setWorldAndLoadRenderers", at = @At("RETURN"))
@@ -265,8 +268,8 @@ public abstract class MixinCoreRenderGlobal {
         CallbackInfo ci
     ) {
         renderTileEntityFastMc(partialTicks);
-        renderInfos = ObjectLists.emptyList();
-        setTileEntities = ObjectSets.emptySet();
+        renderInfos = emptyRenderInfo;
+        setTileEntities = emptyTileEntitySet;
     }
 
     @Unique
