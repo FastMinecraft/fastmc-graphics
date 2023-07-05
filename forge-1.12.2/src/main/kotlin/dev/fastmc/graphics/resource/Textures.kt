@@ -11,7 +11,7 @@ class ResourceLocationTexture(
     private val resourceLocation: ResourceLocation
 ) : ITexture {
     override val id: Int
-        get() = mc.renderEngine.getTexture(resourceLocation).glTextureId
+        get() = mc.renderEngine?.getTexture(resourceLocation)?.glTextureId ?: 0
 
     override fun destroy() {
 

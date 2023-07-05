@@ -12,12 +12,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import java.io.File
+import java.util.*
 
 object FastMcMod {
     val logger: Logger = LogManager.getLogger("Fast Minecraft")
     var isInitialized = false; private set
 
-    var config = Config(); private set
+    var config = Config(Properties().apply {
+        runCatching {
+            File("fastmc-graphics/config.properties").inputStream().use { load(it) }
+        }
+    }); private set
 
     var lightMapUnit = 1; private set
 
@@ -26,6 +32,15 @@ object FastMcMod {
     lateinit var resourceManager: IResourceManager; private set
     lateinit var worldRenderer: WorldRenderer; private set
     lateinit var fontRenderer: IFontRendererWrapper; private set
+
+    init{
+        File("fastmc-graphics").mkdir()
+        Runtime.getRuntime().addShutdownHook(Thread {
+            File("fastmc-graphics/config.properties").outputStream().use {
+                config.toProperties().store(it, null)
+            }
+        })
+    }
 
     fun initGLWrapper(glWrapper: GLWrapper, lightMapUnit: Int) {
         GLWrapper.init(glWrapper)

@@ -3,6 +3,7 @@ package dev.fastmc.graphics.mixin.core.render;
 import dev.fastmc.common.MathUtil;
 import dev.fastmc.common.MathUtilKt;
 import dev.fastmc.graphics.FastMcMod;
+import dev.fastmc.graphics.mixin.FixedFunctionMatrixStacks;
 import dev.fastmc.graphics.shared.FpsDisplay;
 import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
@@ -18,13 +19,10 @@ import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.culling.ICamera;
 import net.minecraft.client.renderer.texture.ITextureObject;
-import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.passive.EntityAnimal;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.MobEffects;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.profiler.Profiler;
@@ -32,13 +30,14 @@ import net.minecraft.util.BlockRenderLayer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.client.ForgeHooksClient;
+import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
@@ -80,15 +79,37 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
     @Shadow
     protected abstract float getFOVModifier(float partialTicks, boolean useFOVSetting);
 
+    @Inject(method = "setupCameraTransform", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", remap = false))
+    private void Inject$setupCameraTransform$INVOKE$Project$gluPerspective(
+        float partialTicks,
+        int pass,
+        CallbackInfo ci
+    ) {
+        FixedFunctionMatrixStacks.perspective(
+            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
+            (float) this.mc.displayWidth / (float) this.mc.displayHeight,
+            0.05f,
+            this.farPlaneDistance * MathHelper.SQRT_2
+        );
+    }
+
+    @Inject(method = "renderHand", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", remap = false))
+    private void Inject$renderHand$INVOKE$Project$gluPerspective(float partialTicks, int pass, CallbackInfo ci) {
+        FixedFunctionMatrixStacks.perspective(
+            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
+            (float) this.mc.displayWidth / (float) this.mc.displayHeight,
+            0.05f,
+            this.farPlaneDistance * 2.0f
+        );
+    }
+
     @Inject(method = "setupCameraTransform", at = @At("RETURN"))
     private void setupCameraTransform$Inject$RETURN(float partialTicks, int pass, CallbackInfo ci) {
-        org.joml.Matrix4f projection = new org.joml.Matrix4f();
-        org.joml.Matrix4f modelView = new org.joml.Matrix4f();
-
-        setupCameraTransform0(partialTicks, pass, projection, modelView);
-
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.updateMatrix(projection, modelView);
+        worldRenderer.updateMatrix(
+            new Matrix4f(FixedFunctionMatrixStacks.PROJECTION),
+            new Matrix4f(FixedFunctionMatrixStacks.MODELVIEW)
+        );
 
         Entity entity = this.mc.getRenderViewEntity();
         if (entity != null) {
@@ -120,261 +141,6 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         worldRenderer.updateGlobalUBO(partialTicks);
     }
 
-    public void setupCameraTransform0(
-        float partialTicks,
-        int pass,
-        org.joml.Matrix4f projection,
-        org.joml.Matrix4f modelView
-    ) {
-        this.farPlaneDistance = (float) (this.mc.gameSettings.renderDistanceChunks * 16);
-        projection.identity();
-
-        if (this.mc.gameSettings.anaglyph) {
-            projection.translate((float) (-(pass * 2 - 1)) * 0.07f, 0.0f, 0.0f);
-        }
-
-        if (this.cameraZoom != 1.0D) {
-            projection.translate((float) this.cameraYaw, (float) (-this.cameraPitch), 0.0f);
-            projection.scale((float) this.cameraZoom, (float) this.cameraZoom, 1.0f);
-        }
-
-        projection.perspective(
-            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
-            (float) this.mc.displayWidth / (float) this.mc.displayHeight,
-            0.05f,
-            this.farPlaneDistance * MathHelper.SQRT_2
-        );
-
-        modelView.identity();
-
-        if (this.mc.gameSettings.anaglyph) {
-            modelView.translate((float) (pass * 2 - 1) * 0.1f, 0.0f, 0.0f);
-        }
-
-        this.hurtCameraEffect0(partialTicks, modelView);
-
-        if (this.mc.gameSettings.viewBobbing) {
-            this.applyBobbing0(partialTicks, modelView);
-        }
-
-        float f1 = this.mc.player.prevTimeInPortal + (this.mc.player.timeInPortal - this.mc.player.prevTimeInPortal) * partialTicks;
-
-        if (f1 > 0.0f) {
-            int i = 20;
-
-            if (this.mc.player.isPotionActive(MobEffects.NAUSEA)) {
-                i = 7;
-            }
-
-            float f2 = 5.0f / (f1 * f1 + 5.0f) - f1 * 0.04f;
-            f2 = f2 * f2;
-            modelView.rotate(
-                MathUtilKt.toRadians(((float) this.rendererUpdateCount + partialTicks) * (float) i),
-                0.0f,
-                1.0f,
-                1.0f
-            );
-            modelView.scale(1.0f / f2, 1.0f, 1.0f);
-            modelView.rotate(
-                MathUtilKt.toRadians(-((float) this.rendererUpdateCount + partialTicks) * (float) i),
-                0.0f,
-                1.0f,
-                1.0f
-            );
-        }
-
-        this.orientCamera0(partialTicks, modelView);
-
-        if (this.debugView) {
-            switch (this.debugViewDirection) {
-                case 0:
-                    modelView.rotate(MathUtilKt.toRadians(90.0f), 0.0f, 1.0f, 0.0f);
-                    break;
-                case 1:
-                    modelView.rotate(MathUtilKt.toRadians(180.0f), 0.0f, 1.0f, 0.0f);
-                    break;
-                case 2:
-                    modelView.rotate(MathUtilKt.toRadians(-90.0f), 0.0f, 1.0f, 0.0f);
-                    break;
-                case 3:
-                    modelView.rotate(MathUtilKt.toRadians(90.0f), 1.0f, 0.0f, 0.0f);
-                    break;
-                case 4:
-                    modelView.rotate(MathUtilKt.toRadians(-90.0f), 1.0f, 0.0f, 0.0f);
-                    break;
-            }
-        }
-    }
-
-    public void hurtCameraEffect0(float partialTicks, org.joml.Matrix4f modelView) {
-        if (this.mc.getRenderViewEntity() instanceof EntityLivingBase) {
-            EntityLivingBase entitylivingbase = (EntityLivingBase) this.mc.getRenderViewEntity();
-            float f = (float) entitylivingbase.hurtTime - partialTicks;
-
-            if (entitylivingbase.getHealth() <= 0.0F) {
-                float f1 = (float) entitylivingbase.deathTime + partialTicks;
-                modelView.rotate(MathUtilKt.toRadians(40.0F - 8000.0F / (f1 + 200.0F)), 0.0F, 0.0F, 1.0F);
-            }
-
-            if (f < 0.0F) {
-                return;
-            }
-
-            f = f / (float) entitylivingbase.maxHurtTime;
-            f = MathHelper.sin(f * f * f * f * (float) Math.PI);
-            float f2 = entitylivingbase.attackedAtYaw;
-            modelView.rotate(MathUtilKt.toRadians(-f2), 0.0F, 1.0F, 0.0F);
-            modelView.rotate(MathUtilKt.toRadians(-f * 14.0F), 0.0F, 0.0F, 1.0F);
-            modelView.rotate(MathUtilKt.toRadians(f2), 0.0F, 1.0F, 0.0F);
-        }
-    }
-
-    public void applyBobbing0(float partialTicks, org.joml.Matrix4f modelView) {
-        if (this.mc.getRenderViewEntity() instanceof EntityPlayer) {
-            EntityPlayer entityplayer = (EntityPlayer) this.mc.getRenderViewEntity();
-            float f = entityplayer.distanceWalkedModified - entityplayer.prevDistanceWalkedModified;
-            float f1 = -(entityplayer.distanceWalkedModified + f * partialTicks);
-            float f2 = entityplayer.prevCameraYaw + (entityplayer.cameraYaw - entityplayer.prevCameraYaw) * partialTicks;
-            float f3 = entityplayer.prevCameraPitch + (entityplayer.cameraPitch - entityplayer.prevCameraPitch) * partialTicks;
-            modelView.translate(
-                MathHelper.sin(f1 * (float) Math.PI) * f2 * 0.5F,
-                -Math.abs(MathHelper.cos(f1 * (float) Math.PI) * f2),
-                0.0F
-            );
-            modelView.rotate(MathUtilKt.toRadians(MathHelper.sin(f1 * (float) Math.PI) * f2 * 3.0F), 0.0F, 0.0F, 1.0F);
-            modelView.rotate(
-                MathUtilKt.toRadians(Math.abs(MathHelper.cos(f1 * (float) Math.PI - 0.2F) * f2) * 5.0F),
-                1.0F,
-                0.0F,
-                0.0F
-            );
-            modelView.rotate(MathUtilKt.toRadians(f3), 1.0F, 0.0F, 0.0F);
-        }
-    }
-
-    @SuppressWarnings("ConstantConditions")
-    public void orientCamera0(float partialTicks, org.joml.Matrix4f modelView) {
-        Entity entity = this.mc.getRenderViewEntity();
-        float f = entity.getEyeHeight();
-        double d0 = entity.prevPosX + (entity.posX - entity.prevPosX) * (double) partialTicks;
-        double d1 = entity.prevPosY + (entity.posY - entity.prevPosY) * (double) partialTicks + (double) f;
-        double d2 = entity.prevPosZ + (entity.posZ - entity.prevPosZ) * (double) partialTicks;
-
-        if (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).isPlayerSleeping()) {
-            f = (float) ((double) f + 1.0D);
-            modelView.translate(0.0F, 0.3F, 0.0F);
-
-            if (!this.mc.gameSettings.debugCamEnable) {
-                BlockPos blockpos = new BlockPos(entity);
-                IBlockState iblockstate = this.mc.world.getBlockState(blockpos);
-                Block block = iblockstate.getBlock();
-
-                if (block.isBed(iblockstate, this.mc.world, blockpos, entity)) {
-                    modelView.rotate(
-                        MathUtilKt.toRadians(block.getBedDirection(
-                            iblockstate,
-                            this.mc.world,
-                            blockpos
-                        ).getHorizontalIndex() * 90.0f),
-                        0.0F,
-                        1.0F,
-                        0.0F
-                    );
-                }
-
-                modelView.rotate(
-                    MathUtilKt.toRadians(entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F),
-                    0.0F,
-                    -1.0F,
-                    0.0F
-                );
-                modelView.rotate(
-                    MathUtilKt.toRadians(entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks),
-                    -1.0F,
-                    0.0F,
-                    0.0F
-                );
-            }
-        } else if (this.mc.gameSettings.thirdPersonView > 0) {
-            double d3 = this.thirdPersonDistancePrev + (4.0F - this.thirdPersonDistancePrev) * partialTicks;
-
-            if (this.mc.gameSettings.debugCamEnable) {
-                modelView.translate(0.0F, 0.0F, (float) (-d3));
-            } else {
-                float f1 = entity.rotationYaw;
-                float f2 = entity.rotationPitch;
-
-                if (this.mc.gameSettings.thirdPersonView == 2) {
-                    f2 += 180.0F;
-                }
-
-                double d4 = (double) (-MathHelper.sin(f1 * 0.017453292F) * MathHelper.cos(f2 * 0.017453292F)) * d3;
-                double d5 = (double) (MathHelper.cos(f1 * 0.017453292F) * MathHelper.cos(f2 * 0.017453292F)) * d3;
-                double d6 = (double) (-MathHelper.sin(f2 * 0.017453292F)) * d3;
-
-                for (int i = 0; i < 8; ++i) {
-                    float f3 = (float) ((i & 1) * 2 - 1);
-                    float f4 = (float) ((i >> 1 & 1) * 2 - 1);
-                    float f5 = (float) ((i >> 2 & 1) * 2 - 1);
-                    f3 = f3 * 0.1F;
-                    f4 = f4 * 0.1F;
-                    f5 = f5 * 0.1F;
-                    RayTraceResult raytraceresult = this.mc.world.rayTraceBlocks(new Vec3d(
-                        d0 + (double) f3,
-                        d1 + (double) f4,
-                        d2 + (double) f5
-                    ), new Vec3d(d0 - d4 + (double) f3 + (double) f5, d1 - d6 + (double) f4, d2 - d5 + (double) f5));
-
-                    if (raytraceresult != null) {
-                        double d7 = raytraceresult.hitVec.distanceTo(new Vec3d(d0, d1, d2));
-
-                        if (d7 < d3) {
-                            d3 = d7;
-                        }
-                    }
-                }
-
-                if (this.mc.gameSettings.thirdPersonView == 2) {
-                    modelView.rotate(MathUtilKt.toRadians(180.0F), 0.0F, 1.0F, 0.0F);
-                }
-
-                modelView.rotate(MathUtilKt.toRadians(entity.rotationPitch - f2), 1.0F, 0.0F, 0.0F);
-                modelView.rotate(MathUtilKt.toRadians(entity.rotationYaw - f1), 0.0F, 1.0F, 0.0F);
-                modelView.translate(0.0F, 0.0F, (float) (-d3));
-                modelView.rotate(MathUtilKt.toRadians(f1 - entity.rotationYaw), 0.0F, 1.0F, 0.0F);
-                modelView.rotate(MathUtilKt.toRadians(f2 - entity.rotationPitch), 1.0F, 0.0F, 0.0F);
-            }
-        } else {
-            modelView.translate(0.0F, 0.0F, 0.05F);
-        }
-
-        if (!this.mc.gameSettings.debugCamEnable) {
-            float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * partialTicks + 180.0F;
-            float pitch = entity.prevRotationPitch + (entity.rotationPitch - entity.prevRotationPitch) * partialTicks;
-            float roll = 0.0F;
-            if (entity instanceof EntityAnimal) {
-                EntityAnimal entityanimal = (EntityAnimal) entity;
-                yaw = entityanimal.prevRotationYawHead + (entityanimal.rotationYawHead - entityanimal.prevRotationYawHead) * partialTicks + 180.0F;
-            }
-            IBlockState state = ActiveRenderInfo.getBlockStateAtEntityViewpoint(this.mc.world, entity, partialTicks);
-            net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup event = new net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup(
-                (EntityRenderer) (Object) this,
-                entity,
-                state,
-                partialTicks,
-                yaw,
-                pitch,
-                roll
-            );
-            net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
-            modelView.rotate(MathUtilKt.toRadians(event.getRoll()), 0.0F, 0.0F, 1.0F);
-            modelView.rotate(MathUtilKt.toRadians(event.getPitch()), 1.0F, 0.0F, 0.0F);
-            modelView.rotate(MathUtilKt.toRadians(event.getYaw()), 0.0F, 1.0F, 0.0F);
-        }
-
-        modelView.translate(0.0F, -f, 0.0F);
-    }
-
     @Inject(method = "updateCameraAndRender", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiIngame;renderGameOverlay(F)V", shift = At.Shift.AFTER))
     public void updateCameraAndRender$Inject$INVOKE$renderGameOverlay(
         float partialTicks,
@@ -390,6 +156,7 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         );
     }
 
+    @Unique
     private int currentPass = 0;
 
     @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ActiveRenderInfo;updateRenderInfo(Lnet/minecraft/entity/Entity;Z)V", shift = At.Shift.AFTER, remap = false))
@@ -420,6 +187,43 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         this.mc.profiler.endStartSection("clouds");
     }
 
+    @Inject(method = "renderCloudsCheck", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", remap = false, ordinal = 0))
+    private void Inject$renderCloudsCheck$INVOKE$Project$gluPerspective$0(
+        RenderGlobal renderGlobalIn,
+        float partialTicks,
+        int pass,
+        double x,
+        double y,
+        double z,
+        CallbackInfo ci
+    ) {
+        FixedFunctionMatrixStacks.perspective(
+            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
+            (float) this.mc.displayWidth / (float) this.mc.displayHeight,
+            0.05f,
+            this.farPlaneDistance * 4.0f
+        );
+    }
+
+    @Inject(method = "renderCloudsCheck", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", remap = false, ordinal = 1))
+    private void Inject$renderCloudsCheck$INVOKE$Project$gluPerspective$1(
+        RenderGlobal renderGlobalIn,
+        float partialTicks,
+        int pass,
+        double x,
+        double y,
+        double z,
+        CallbackInfo ci
+    ) {
+        FixedFunctionMatrixStacks.perspective(
+            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
+            (float) this.mc.displayWidth / (float) this.mc.displayHeight,
+            0.05f,
+            this.farPlaneDistance * MathHelper.SQRT_2
+        );
+    }
+
+
     @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;loadIdentity()V", ordinal = 0))
     private void Inject$renderWorldPass$INVOKE$GlStateManager$loadIdentity$0(
         int pass,
@@ -443,6 +247,21 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
     @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/GlStateManager;loadIdentity()V", ordinal = 1))
     private void Redirect$renderWorldPass$INVOKE$RenderGlobal$loadIdentity$1() {
 
+    }
+
+    @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", ordinal = 0, remap = false))
+    private void Inject$renderWorldPass$INVOKE$Project$gluPerspective$0(
+        int pass,
+        float partialTicks,
+        long finishTimeNano,
+        CallbackInfo ci
+    ) {
+        FixedFunctionMatrixStacks.perspective(
+            MathUtilKt.toRadians(this.getFOVModifier(partialTicks, true)),
+            (float) this.mc.displayWidth / (float) this.mc.displayHeight,
+            0.05f,
+            this.farPlaneDistance * 2.0f
+        );
     }
 
     @Redirect(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", ordinal = 1, remap = false))

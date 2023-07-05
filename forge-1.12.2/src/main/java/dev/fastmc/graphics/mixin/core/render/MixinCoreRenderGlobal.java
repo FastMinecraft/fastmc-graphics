@@ -84,7 +84,8 @@ public abstract class MixinCoreRenderGlobal {
 
     @Unique
     private final List<RenderGlobal.ContainerLocalRenderInformation> dummyRenderInfos = ObjectLists.singleton(
-        DummyCompiledChunk.makeDummyInfo((RenderGlobal) (Object) this));
+        DummyCompiledChunk.makeDummyInfo((RenderGlobal) (Object) this)
+    );
 
     @Unique
     private DummyClassInheritanceMultiMap dummyClassInheritanceMultiMap;
@@ -256,7 +257,7 @@ public abstract class MixinCoreRenderGlobal {
         return dummyClassInheritanceMultiMap;
     }
 
-    @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V"))
+    @Inject(method = "renderEntities", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/tileentity/TileEntityRendererDispatcher;drawBatch(I)V", remap = false))
     private void Inject$renderEntities$INVOKE$TileEntityRendererDispatcher$drawBatch(
         Entity renderViewEntity,
         ICamera camera,

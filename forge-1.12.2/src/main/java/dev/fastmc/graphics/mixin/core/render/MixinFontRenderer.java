@@ -2,6 +2,7 @@ package dev.fastmc.graphics.mixin.core.render;
 
 import dev.fastmc.common.MathUtilKt;
 import dev.fastmc.graphics.FastMcMod;
+import dev.fastmc.graphics.mixin.FixedFunctionMatrixStacks;
 import dev.fastmc.graphics.shared.util.MatrixUtils;
 import net.minecraft.client.gui.FontRenderer;
 import org.joml.Matrix4f;
@@ -52,14 +53,14 @@ public abstract class MixinFontRenderer {
         CallbackInfoReturnable<Integer> cir
     ) {
         if (FastMcMod.INSTANCE.isInitialized()) {
-            glGetFloatv(GL_PROJECTION_MATRIX, MatrixUtils.INSTANCE.getPtrLong());
-            Matrix4f projection = MatrixUtils.INSTANCE.getMatrix();
-
-            glGetFloatv(GL_MODELVIEW_MATRIX, MatrixUtils.INSTANCE.getPtrLong());
-            Matrix4f modelView = MatrixUtils.INSTANCE.getMatrix();
+            Matrix4f projection = FixedFunctionMatrixStacks.PROJECTION.pushMatrix();
+            Matrix4f modelView = FixedFunctionMatrixStacks.MODELVIEW.pushMatrix();
 
             FastMcMod.INSTANCE.getFontRenderer().drawString(projection, modelView, text, x, y, color, 1.0f, drawShadow);
             cir.setReturnValue(MathUtilKt.ceilToInt(x + FastMcMod.INSTANCE.getFontRenderer().getWrapped().getWidth(text)));
+
+            FixedFunctionMatrixStacks.PROJECTION.popMatrix();
+            FixedFunctionMatrixStacks.MODELVIEW.popMatrix();
         }
     }
 
