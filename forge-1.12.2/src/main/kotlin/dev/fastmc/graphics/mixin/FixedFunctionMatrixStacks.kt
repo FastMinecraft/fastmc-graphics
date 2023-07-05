@@ -1,5 +1,6 @@
 package dev.fastmc.graphics.mixin
 
+import dev.fastmc.common.sq
 import dev.fastmc.common.toRadians
 import org.joml.Matrix4f
 import org.joml.Matrix4fStack
@@ -8,6 +9,7 @@ import org.lwjgl.opengl.GL11.GL_MODELVIEW
 import org.lwjgl.opengl.GL11.GL_PROJECTION
 import org.lwjgl.util.vector.Quaternion
 import java.nio.FloatBuffer
+import kotlin.math.sqrt
 
 object FixedFunctionMatrixStacks {
     @JvmField
@@ -58,7 +60,8 @@ object FixedFunctionMatrixStacks {
 
     @JvmStatic
     fun rotate(angle: Float, x: Float, y: Float, z: Float) {
-        CURRENT.rotate(angle.toRadians(), x, y, z)
+        val invLen = 1.0 / sqrt(x.toDouble().sq + y.toDouble().sq + z.toDouble().sq)
+        CURRENT.rotate(angle.toRadians(), (x * invLen).toFloat(), (y * invLen).toFloat(), (z * invLen).toFloat())
     }
 
     @JvmStatic
