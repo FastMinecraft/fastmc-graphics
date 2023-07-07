@@ -214,30 +214,33 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         CallbackInfo ci
     ) {
         Vec3d cameraPos = camera.getPos();
-        double renderPosX = cameraPos.getX();
-        double renderPosY = cameraPos.getY();
-        double renderPosZ = cameraPos.getZ();
+
         Matrix4f modelView = matrices.peek().getModel();
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.updateScreenSize(
-            client.getWindow().getFramebufferWidth(),
-            client.getWindow().getFramebufferHeight()
-        );
         org.joml.Matrix4f projection1 = AdaptersKt.toJoml(projection);
         org.joml.Matrix4f modelView1 = AdaptersKt.toJoml(modelView);
-        worldRenderer.updateMatrix(projection1, modelView1);
-        worldRenderer.updateCameraPos(renderPosX, renderPosY, renderPosZ);
-        worldRenderer.updateRenderPos(renderPosX, renderPosY, renderPosZ);
-        worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
-        worldRenderer.updateFrustum();
-        worldRenderer.updateGlobalUBO(tickDelta);
+
+        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
+        dev.fastmc.graphics.shared.renderer.Camera fastmcCamera = worldRenderer.getCamera();
+        fastmcCamera.update(
+            client.getWindow().getFramebufferWidth(),
+            client.getWindow().getFramebufferHeight(),
+            cameraPos.getX(),
+            cameraPos.getY(),
+            cameraPos.getZ(),
+            camera.getYaw(),
+            camera.getPitch(),
+            projection1,
+            modelView1,
+            tickDelta
+        );
+
         worldRenderer.getTerrainRenderer().update(true);
 
         float viewDistance = gameRenderer.getViewDistance();
         assert this.client.world != null;
         boolean thickFog = this.client.world.getSkyProperties().useThickFog(
-            MathHelper.floor(renderPosX),
-            MathHelper.floor(renderPosY)
+            MathHelper.floor(cameraPos.getX()),
+            MathHelper.floor(cameraPos.getY())
         ) || this.client.inGameHud.getBossBarHud().shouldThickenFog();
         float fogDistance = Math.max(viewDistance - 16.0F, 32.0F);
         setupTerrainFogShader(camera, fogDistance, thickFog);

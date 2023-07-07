@@ -6,8 +6,8 @@ import dev.fastmc.graphics.FastMcMod;
 import dev.fastmc.graphics.mixin.FixedFunctionMatrixStacks;
 import dev.fastmc.graphics.shared.FpsDisplay;
 import dev.fastmc.graphics.shared.mixin.ICoreWorldRenderer;
-import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import dev.fastmc.graphics.shared.terrain.TerrainShaderManager;
+import dev.fastmc.graphics.shared.renderer.Camera;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -59,25 +59,15 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
     @Shadow
     private float fogColorBlue;
     @Shadow
-    private boolean debugView;
-    @Shadow
-    private float thirdPersonDistancePrev;
-    @Shadow
-    private int debugViewDirection;
-    @Shadow
-    private int rendererUpdateCount;
-    @Shadow
-    private double cameraYaw;
-    @Shadow
-    private double cameraZoom;
-    @Shadow
-    private double cameraPitch;
-    @Shadow
     @Final
     private ResourceLocation locationLightMap;
+    @Unique
+    private int currentPass = 0;
 
     @Shadow
     protected abstract float getFOVModifier(float partialTicks, boolean useFOVSetting);
+
+    @Shadow private double cameraPitch;
 
     @Inject(method = "setupCameraTransform", at = @At(value = "INVOKE", target = "Lorg/lwjgl/util/glu/Project;gluPerspective(FFFF)V", remap = false))
     private void Inject$setupCameraTransform$INVOKE$Project$gluPerspective(
@@ -105,40 +95,52 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
 
     @Inject(method = "setupCameraTransform", at = @At("RETURN"))
     private void setupCameraTransform$Inject$RETURN(float partialTicks, int pass, CallbackInfo ci) {
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.updateMatrix(
-            new Matrix4f(FixedFunctionMatrixStacks.PROJECTION),
-            new Matrix4f(FixedFunctionMatrixStacks.MODELVIEW)
-        );
-
-        Entity entity = this.mc.getRenderViewEntity();
-        if (entity != null) {
-            worldRenderer.updateRenderPos(
-                MathUtil.lerp(entity.prevPosX, entity.posX, partialTicks),
-                MathUtil.lerp(entity.prevPosY, entity.posY, partialTicks),
-                MathUtil.lerp(entity.prevPosZ, entity.posZ, partialTicks)
-            );
-
-            float yaw = MathUtil.lerp(entity.prevRotationYaw, entity.rotationYaw, partialTicks);
-            float pitch = MathUtil.lerp(entity.prevRotationPitch, entity.rotationPitch, partialTicks);
-
-            if (entity instanceof EntityLivingBase && ((EntityLivingBase) entity).isPlayerSleeping()) {
-                BlockPos blockpos = new BlockPos(entity);
-                IBlockState iblockstate = this.mc.world.getBlockState(blockpos);
-                Block block = iblockstate.getBlock();
-
-                if (block.isBed(iblockstate, this.mc.world, blockpos, entity)) {
-                    yaw += block.getBedDirection(iblockstate, this.mc.world, blockpos).getHorizontalIndex() * 90.0f;
-                }
-            } else if (this.mc.gameSettings.thirdPersonView == 2) {
-                yaw += 180.0f;
-            }
-
-            worldRenderer.updateCameraRotation(yaw, pitch);
+        Entity viewEntity = this.mc.getRenderViewEntity();
+        if (viewEntity == null) {
+            viewEntity = this.mc.player;
+        }
+        if (viewEntity == null) {
+            return;
         }
 
-        worldRenderer.updateScreenSize(mc.displayWidth, mc.displayHeight);
-        worldRenderer.updateGlobalUBO(partialTicks);
+        ActiveRenderInfo.updateRenderInfo(viewEntity, this.mc.gameSettings.thirdPersonView == 2);
+        Vec3d cameraPosition = ActiveRenderInfo.projectViewFromEntity(viewEntity, partialTicks);
+
+        Matrix4f projection = new Matrix4f(FixedFunctionMatrixStacks.PROJECTION);
+        Matrix4f modelView = new Matrix4f(FixedFunctionMatrixStacks.MODELVIEW);
+
+        float eyeHeight = viewEntity.getEyeHeight();
+        modelView.translate(0.0f, eyeHeight, 0.0f);
+
+        float yaw = MathUtil.lerp(viewEntity.prevRotationYaw, viewEntity.rotationYaw, partialTicks);
+        float pitch = MathUtil.lerp(viewEntity.prevRotationPitch, viewEntity.rotationPitch, partialTicks);
+
+        if (viewEntity instanceof EntityLivingBase && ((EntityLivingBase) viewEntity).isPlayerSleeping()) {
+            BlockPos blockpos = new BlockPos(viewEntity);
+            IBlockState iblockstate = this.mc.world.getBlockState(blockpos);
+            Block block = iblockstate.getBlock();
+
+            if (block.isBed(iblockstate, this.mc.world, blockpos, viewEntity)) {
+                yaw += block.getBedDirection(iblockstate, this.mc.world, blockpos).getHorizontalIndex() * 90.0f;
+            }
+        } else if (this.mc.gameSettings.thirdPersonView == 2) {
+            yaw += 180.0f;
+        }
+
+
+        Camera camera = FastMcMod.INSTANCE.getWorldRenderer().getCamera();
+        camera.update(
+            mc.displayWidth,
+            mc.displayHeight,
+            cameraPosition.x,
+            cameraPosition.y,
+            cameraPosition.z,
+            yaw,
+            pitch,
+            projection,
+            modelView,
+            partialTicks
+        );
     }
 
     @Inject(method = "updateCameraAndRender", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/GuiIngame;renderGameOverlay(F)V", shift = At.Shift.AFTER))
@@ -156,9 +158,6 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         );
     }
 
-    @Unique
-    private int currentPass = 0;
-
     @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/ActiveRenderInfo;updateRenderInfo(Lnet/minecraft/entity/Entity;Z)V", shift = At.Shift.AFTER, remap = false))
     private void Inject$renderWorldPass$INVOKE$ActiveRenderInfo$updateRenderInfo$AFTER(
         int pass,
@@ -167,14 +166,6 @@ public abstract class MixinCoreEntityRenderer implements ICoreWorldRenderer {
         CallbackInfo ci
     ) {
         currentPass = pass;
-
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        Entity viewEntity = this.mc.getRenderViewEntity();
-        assert viewEntity != null;
-
-        Vec3d cameraPosition = ActiveRenderInfo.projectViewFromEntity(viewEntity, partialTicks);
-        worldRenderer.updateCameraPos(cameraPosition.x, cameraPosition.y, cameraPosition.z);
-        worldRenderer.updateFrustum();
     }
 
     @Inject(method = "renderWorldPass", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/EntityRenderer;renderCloudsCheck(Lnet/minecraft/client/renderer/RenderGlobal;FIDDD)V", ordinal = 0))

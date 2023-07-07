@@ -7,9 +7,6 @@ import dev.fastmc.common.collection.FastIntMap
 import dev.fastmc.common.collection.FastObjectArrayList
 import dev.fastmc.common.distanceSq
 import dev.fastmc.common.sort.ObjectIntrosort
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkY
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.util.threadGroupMain
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -382,11 +379,11 @@ abstract class ChunkBuilder(
         }
 
         private inner class TaskComparator : Comparator<ChunkBuilderTask> {
-            val frustum = renderer.frustum
-            val matrixHash = renderer.matrixPosHash
-            private val cameraChunkX = renderer.cameraChunkX
-            private val cameraChunkY = renderer.cameraChunkY
-            private val cameraChunkZ = renderer.cameraChunkZ
+            val frustum = renderer.camera.frustumIntersection
+            val matrixHash = renderer.camera.matrixPosHash
+            private val cameraChunkX = renderer.camera.chunkX
+            private val cameraChunkY = renderer.camera.chunkY
+            private val cameraChunkZ = renderer.camera.chunkZ
 
             override fun compare(o1: ChunkBuilderTask, o2: ChunkBuilderTask): Int {
                 val visible1 = o1.renderChunk.frustumCull.isInFrustum(frustum, matrixHash)

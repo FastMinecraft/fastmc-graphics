@@ -1,14 +1,6 @@
 #version 460
 #include "/assets/shaders/util/Mat3Rotation.glsl"
-
-layout(std140) uniform Global {
-    mat4 projection;
-    mat4 modelView;
-    mat4 inverseProjection;
-    mat4 inverseModelView;
-    vec2 screenResolution;
-    float partialTicks;
-};
+#include "/assets/shaders/util/CameraUBO.glsl"
 
 uniform vec3 offset;
 

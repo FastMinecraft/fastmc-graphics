@@ -5,9 +5,6 @@ import dev.fastmc.common.collection.IntArrayFIFOQueueNoShrink
 import dev.fastmc.common.collection.StaticBitSet
 import dev.fastmc.common.sort.ByteInsertionSort
 import dev.fastmc.common.sort.IntIntrosort
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkY
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.FastMcExtendScope
 import kotlinx.coroutines.coroutineScope
@@ -98,26 +95,26 @@ class RenderChunkStorage(
     suspend fun update(force: Boolean) {
         updateCaveCulling()
         cameraChunk = getRenderChunkByChunk0(
-            renderer.cameraChunkX,
-            renderer.cameraChunkY.coerceIn(minChunkY, maxChunkY - 1),
-            renderer.cameraChunkZ
+            renderer.camera.chunkX,
+            renderer.camera.chunkY.coerceIn(minChunkY, maxChunkY - 1),
+            renderer.camera.chunkZ
         )
 
         if (force
-            || lastCameraUpdateChunkX != renderer.cameraChunkX
-            || lastCameraUpdateChunkY != renderer.cameraChunkY
-            || lastCameraUpdateChunkZ != renderer.cameraChunkZ
+            || lastCameraUpdateChunkX != renderer.camera.chunkX
+            || lastCameraUpdateChunkY != renderer.camera.chunkY
+            || lastCameraUpdateChunkZ != renderer.camera.chunkZ
             || distanceSq(
-                renderer.cameraX, renderer.cameraY, renderer.cameraZ,
+                renderer.camera.posX, renderer.camera.posY, renderer.camera.posZ,
                 lastCameraUpdateX, lastCameraUpdateY, lastCameraUpdateZ
             ) > 16.0
         ) {
-            lastCameraUpdateChunkX = renderer.cameraChunkX
-            lastCameraUpdateChunkY = renderer.cameraChunkY
-            lastCameraUpdateChunkZ = renderer.cameraChunkZ
-            lastCameraUpdateX = renderer.cameraX
-            lastCameraUpdateY = renderer.cameraY
-            lastCameraUpdateZ = renderer.cameraZ
+            lastCameraUpdateChunkX = renderer.camera.chunkX
+            lastCameraUpdateChunkY = renderer.camera.chunkY
+            lastCameraUpdateChunkZ = renderer.camera.chunkZ
+            lastCameraUpdateX = renderer.camera.posX
+            lastCameraUpdateY = renderer.camera.posY
+            lastCameraUpdateZ = renderer.camera.posZ
             updateRegions()
             markCaveCullingDirty()
             if (lastSortingJob.isDoneOrNull) {
@@ -129,13 +126,13 @@ class RenderChunkStorage(
     private suspend fun updateRegions() {
         coroutineScope {
             val halfSize = sizeXZ shr 1
-            val startChunkX = renderer.cameraChunkX - halfSize
-            val startChunkZ = renderer.cameraChunkZ - halfSize
+            val startChunkX = renderer.camera.chunkX - halfSize
+            val startChunkZ = renderer.camera.chunkZ - halfSize
             val endChunkX = startChunkX + sizeXZ
             val endChunkZ = startChunkZ + sizeXZ
 
-            val startRegionX = (renderer.cameraChunkX - halfSize) shr 4
-            val startRegionZ = (renderer.cameraChunkZ - halfSize) shr 4
+            val startRegionX = (renderer.camera.chunkX - halfSize) shr 4
+            val startRegionZ = (renderer.camera.chunkZ - halfSize) shr 4
             val offsetX = floorToIntMod(startRegionX, regionSizeXZ)
             val offsetZ = floorToIntMod(startRegionZ, regionSizeXZ)
 
@@ -268,7 +265,7 @@ class RenderChunkStorage(
         for (i in newChunkIndices) {
             val renderChunk = renderChunkArray[i]
             chunkDistanceArray[i] = -distanceSq(
-                renderer.cameraChunkX, renderer.cameraChunkY, renderer.cameraChunkZ,
+                renderer.camera.chunkX, renderer.camera.chunkY, renderer.camera.chunkZ,
                 renderChunk.chunkX, renderChunk.chunkY, renderChunk.chunkZ
             )
         }
@@ -290,8 +287,8 @@ class RenderChunkStorage(
         for (ib in newRegionIndices) {
             val i = ib.toInt()
             val region = regionArray[i]
-            val cameraRegionChunkX = renderer.cameraChunkX shr 4 shl 4
-            val cameraRegionChunkZ = renderer.cameraChunkZ shr 4 shl 4
+            val cameraRegionChunkX = renderer.camera.chunkX shr 4 shl 4
+            val cameraRegionChunkZ = renderer.camera.chunkZ shr 4 shl 4
             regionDistanceArray[i] = -distanceSq(
                 cameraRegionChunkX, cameraRegionChunkZ,
                 region.originX shr 4, region.originZ shr 4
@@ -323,7 +320,7 @@ class RenderChunkStorage(
     private val updateCaveCullingRunnable = Runnable {
         val newCullingBitSet = caveCullingBitSet0.initBack().back
 
-        val cameraChunk = getRenderChunkByChunk(renderer.cameraChunkX, renderer.cameraChunkY, renderer.cameraChunkZ)
+        val cameraChunk = getRenderChunkByChunk(renderer.camera.chunkX, renderer.camera.chunkY, renderer.camera.chunkZ)
         val directions = Direction.VALUES
 
         if (cameraChunk != null) {
@@ -335,7 +332,7 @@ class RenderChunkStorage(
                 caveCullingQueue.enqueue(packCullingQueueBits(nextRenderChunk.index, nextDirection.idOpposite, nextDirection.bitOpposite))
             }
         } else {
-            if (renderer.cameraChunkY < minChunkY) {
+            if (renderer.camera.chunkY < minChunkY) {
                 for (i in 0 until sizeXZ * sizeXZ) {
                     val renderChunk = renderChunkArray[i * sizeY]
                     if (!renderChunk.isBuilt && renderChunk !== this.cameraChunk) continue

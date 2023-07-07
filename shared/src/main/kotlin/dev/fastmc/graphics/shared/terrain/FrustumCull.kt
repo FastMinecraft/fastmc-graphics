@@ -9,8 +9,8 @@ abstract class FrustumCull(private val renderer: IRenderer) {
     private var isInFrustum0 = false
 
     fun isInFrustum(): Boolean {
-        val frustum = renderer.frustum
-        val matrixHash = renderer.matrixPosHash
+        val frustum = renderer.camera.frustumIntersection
+        val matrixHash = renderer.camera.matrixPosHash
 
         if (matrixHash != lastMatrixHash) {
             isInFrustum0 = isInFrustum(frustum)

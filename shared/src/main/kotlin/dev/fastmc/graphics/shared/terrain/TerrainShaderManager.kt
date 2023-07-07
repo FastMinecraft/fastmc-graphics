@@ -28,7 +28,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
     fun checkFogRange(x: Int, y: Int, z: Int): Boolean {
         return activeFogShape.distanceSq(
-            renderer.cameraBlockX, renderer.cameraBlockY, renderer.cameraBlockZ,
+            renderer.camera.blockX, renderer.camera.blockY, renderer.camera.blockZ,
             x, y, z
         ) <= renderer.shaderManager.fogRangeSq
     }
@@ -120,7 +120,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
         override fun bind() {
             super.bind()
-            bindBuffer(GL_UNIFORM_BUFFER, manager.renderer.globalUBO, "Global")
+            bindBuffer(GL_UNIFORM_BUFFER, manager.renderer.camera.ubo, "Camera")
             bindBuffer(GL_UNIFORM_BUFFER, manager.fogParametersUBO, "FogParameters")
         }
 

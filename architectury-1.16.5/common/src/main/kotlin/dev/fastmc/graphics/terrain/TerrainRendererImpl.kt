@@ -54,9 +54,9 @@ class TerrainRendererImpl(renderer: dev.fastmc.graphics.shared.renderer.WorldRen
 
             if (!mc.chunkCullingEnabled) return false
             val cameraBlockPos = BlockPos(
-                cameraBlockX,
-                cameraBlockY,
-                cameraBlockZ
+                camera.blockX,
+                camera.blockY,
+                camera.blockZ
             )
 
             return !player.isSpectator || !world.getBlockState(cameraBlockPos).isOpaqueFullCube(world, cameraBlockPos)

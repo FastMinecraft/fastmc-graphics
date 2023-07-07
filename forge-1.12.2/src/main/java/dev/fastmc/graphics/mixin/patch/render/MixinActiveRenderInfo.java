@@ -1,12 +1,14 @@
 package dev.fastmc.graphics.mixin.patch.render;
 
 import dev.fastmc.graphics.FastMcMod;
+import dev.fastmc.graphics.mixin.FixedFunctionMatrixStacks;
 import dev.fastmc.graphics.shared.renderer.WorldRenderer;
 import net.minecraft.client.renderer.ActiveRenderInfo;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
+import org.joml.Matrix4fStack;
 import org.joml.Vector4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
@@ -27,8 +29,7 @@ public class MixinActiveRenderInfo {
     @Shadow
     private static Vec3d position;
 
-    private static final Matrix4f COMBINED_MATRIX = new Matrix4f();
-    private static final Vector4f VECTOR = new Vector4f();
+    private static final Vector4f TEMP_VECTOR = new Vector4f();
 
     /**
      * @author Luna
@@ -36,14 +37,22 @@ public class MixinActiveRenderInfo {
      */
     @Overwrite(remap = false)
     public static void updateRenderInfo(Entity entityplayerIn, boolean p_74583_1_) {
-        WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        Matrix4f invertedModelViewMatrix = worldRenderer.getInverseModelViewMatrix();
-        Matrix4f invertedProjectMatrix = worldRenderer.getInverseProjectMatrix();
-        invertedModelViewMatrix.mul(invertedProjectMatrix, COMBINED_MATRIX);
+        Matrix4fStack project = FixedFunctionMatrixStacks.PROJECTION;
+        project.pushMatrix();
+        project.invert();
 
-        VECTOR.set(0.0f, 0.0f, 0.0f, 1.0f);
-        VECTOR.mulProject(COMBINED_MATRIX);
-        position = new Vec3d(VECTOR.x, VECTOR.y, VECTOR.z);
+        Matrix4fStack modelView = FixedFunctionMatrixStacks.MODELVIEW;
+        modelView.pushMatrix();
+        modelView.invert();
+        modelView.mul(project, modelView);
+
+        TEMP_VECTOR.set(0.0f, 0.0f, 0.0f, 1.0f);
+        TEMP_VECTOR.mulProject(modelView);
+
+        project.popMatrix();
+        modelView.popMatrix();
+
+        position = new Vec3d(TEMP_VECTOR.x, TEMP_VECTOR.y, TEMP_VECTOR.z);
 
         int i = p_74583_1_ ? 1 : 0;
         float f2 = entityplayerIn.rotationPitch;

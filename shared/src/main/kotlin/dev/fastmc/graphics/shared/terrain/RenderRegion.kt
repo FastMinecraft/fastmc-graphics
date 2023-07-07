@@ -141,9 +141,9 @@ class RenderRegion(
 
     private inner class FrustumCullImpl : FrustumCull(renderer) {
         override fun isInFrustum(frustum: FrustumIntersection): Boolean {
-            val x = (originX - renderer.renderPosX).toFloat()
-            val y = (originY - renderer.renderPosY).toFloat()
-            val z = (originZ - renderer.renderPosZ).toFloat()
+            val x = (originX - renderer.camera.posX).toFloat()
+            val y = (originY - renderer.camera.posY).toFloat()
+            val z = (originZ - renderer.camera.posZ).toFloat()
             return frustum.testAab(x, y, z, x + 256.0f, y + (storage.sizeY shl 4), z + 256.0f)
         }
     }

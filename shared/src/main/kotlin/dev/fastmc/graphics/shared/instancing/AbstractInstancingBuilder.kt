@@ -17,7 +17,6 @@ import dev.luna5ama.kmogus.Arr
 import dev.luna5ama.kmogus.Ptr
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import java.nio.ByteOrder
 
 abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: Int) {
     private var resourceManager0: IResourceManager? = null
@@ -67,9 +66,9 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
 
         size0 = size
         resourceManager0 = renderer.resourceManager
-        builtPosX0 = renderer.renderPosX
-        builtPosY0 = renderer.renderPosY
-        builtPosZ0 = renderer.renderPosZ
+        builtPosX0 = renderer.camera.posX
+        builtPosY0 = renderer.camera.posY
+        builtPosZ0 = renderer.camera.posZ
         buffer.realloc((size * vertexSize).toLong(), true)
 
         vertexAttribute = buildAttribute(vertexSize, 1) { setupAttribute() }
@@ -136,9 +135,9 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
             preRender()
 
             shader.setOffset(
-                (builtPosX - renderer.renderPosX).toFloat(),
-                (builtPosY - renderer.renderPosY).toFloat(),
-                (builtPosZ - renderer.renderPosZ).toFloat(),
+                (builtPosX - renderer.camera.posX).toFloat(),
+                (builtPosY - renderer.camera.posY).toFloat(),
+                (builtPosZ - renderer.camera.posZ).toFloat(),
             )
 
             glBindVertexArray(vao.id)
@@ -181,7 +180,7 @@ abstract class AbstractInstancingBuilder<T : IInfo<*>>(private val vertexSize: I
 
         override fun bind() {
             super.bind()
-            bindBuffer(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.globalUBO, "Global")
+            bindBuffer(GL_UNIFORM_BUFFER, FastMcMod.worldRenderer.camera.ubo, "Camera")
         }
 
         fun setOffset(x: Float, y: Float, z: Float) {

@@ -21,8 +21,8 @@ public abstract class MixinClippingHelperImpl extends ClippingHelper {
         float[] array1 = this.projectionMatrix;
         float[] array2 = this.modelviewMatrix;
 
-        FastMcMod.INSTANCE.getWorldRenderer().getProjectionMatrix().get(array1);
-        FastMcMod.INSTANCE.getWorldRenderer().getModelViewMatrix().get(array2);
+        FastMcMod.INSTANCE.getWorldRenderer().getCamera().getProjection().get(array1);
+        FastMcMod.INSTANCE.getWorldRenderer().getCamera().getModelView().get(array2);
 
         this.clippingMatrix[0] = array2[0] * array1[0] + array2[1] * array1[4] + array2[2] * array1[8] + array2[3] * array1[12];
         this.clippingMatrix[1] = array2[0] * array1[1] + array2[1] * array1[5] + array2[2] * array1[9] + array2[3] * array1[13];

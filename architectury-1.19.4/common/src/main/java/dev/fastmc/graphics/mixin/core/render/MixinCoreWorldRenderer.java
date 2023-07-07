@@ -76,11 +76,46 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
     @Final
     private BlockEntityRenderDispatcher blockEntityRenderDispatcher;
 
-    @Shadow private @Nullable Framebuffer translucentFramebuffer;
+    @Shadow
+    private @Nullable Framebuffer translucentFramebuffer;
 
-    @Shadow private @Nullable Framebuffer weatherFramebuffer;
+    @Shadow
+    private @Nullable Framebuffer weatherFramebuffer;
 
-    @Shadow public abstract void reloadTransparencyPostProcessor();
+    @Unique
+    private static void fastmc_graphics$preRenderSolid() {
+        glEnable(GL_CULL_FACE);
+        glDisable(GL_BLEND);
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+    }
+
+    @Unique
+    private static void fastmc_graphics$preRenderTranslucent() {
+        glEnable(GL_CULL_FACE);
+        glEnable(GL_BLEND);
+        glBlendFuncSeparate(
+            GL_SRC_ALPHA,
+            GL_ONE_MINUS_SRC_ALPHA,
+            GL_ONE,
+            GL_ONE_MINUS_SRC_ALPHA
+        );
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+    }
+
+    @Unique
+    private static void fastmc_graphics$setupTranslucentFbo(Framebuffer weather) {
+        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && weather != null;
+        if (usingFbo) {
+            weather.beginWrite(false);
+        } else {
+            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+        }
+    }
+
+    @Shadow
+    public abstract void reloadTransparencyPostProcessor();
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void Inject$init$RETURN(
@@ -204,23 +239,24 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         Matrix4f projection,
         CallbackInfo ci
     ) {
-
         Vec3d cameraPos = camera.getPos();
-        double renderPosX = cameraPos.getX();
-        double renderPosY = cameraPos.getY();
-        double renderPosZ = cameraPos.getZ();
         Matrix4f modelView = matrices.peek().getPositionMatrix();
+
         WorldRenderer worldRenderer = FastMcMod.INSTANCE.getWorldRenderer();
-        worldRenderer.updateScreenSize(
+        dev.fastmc.graphics.shared.renderer.Camera fastmcCamera = worldRenderer.getCamera();
+        fastmcCamera.update(
             client.getWindow().getFramebufferWidth(),
-            client.getWindow().getFramebufferHeight()
+            client.getWindow().getFramebufferHeight(),
+            cameraPos.getX(),
+            cameraPos.getY(),
+            cameraPos.getZ(),
+            camera.getYaw(),
+            camera.getPitch(),
+            projection,
+            modelView,
+            tickDelta
         );
-        worldRenderer.updateMatrix(projection, modelView);
-        worldRenderer.updateCameraPos(renderPosX, renderPosY, renderPosZ);
-        worldRenderer.updateRenderPos(renderPosX, renderPosY, renderPosZ);
-        worldRenderer.updateCameraRotation(camera.getYaw(), camera.getPitch());
-        worldRenderer.updateFrustum();
-        worldRenderer.updateGlobalUBO(tickDelta);
+
         worldRenderer.getTerrainRenderer().update(true);
     }
 
@@ -275,38 +311,6 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
                 fastmc_graphics$setupTranslucentFbo(this.weatherFramebuffer);
             }
             default -> throw new IllegalArgumentException("Invalid layer index: " + layerIndex);
-        }
-    }
-
-    @Unique
-    private static void fastmc_graphics$preRenderSolid() {
-        glEnable(GL_CULL_FACE);
-        glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-    }
-
-    @Unique
-    private static void fastmc_graphics$preRenderTranslucent() {
-        glEnable(GL_CULL_FACE);
-        glEnable(GL_BLEND);
-        glBlendFuncSeparate(
-            GL_SRC_ALPHA,
-            GL_ONE_MINUS_SRC_ALPHA,
-            GL_ONE,
-            GL_ONE_MINUS_SRC_ALPHA
-        );
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-    }
-
-    @Unique
-    private static void fastmc_graphics$setupTranslucentFbo(Framebuffer weather) {
-        boolean usingFbo = MinecraftClient.isFabulousGraphicsOrBetter() && weather != null;
-        if (usingFbo) {
-            weather.beginWrite(false);
-        } else {
-            MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
         }
     }
 
@@ -393,7 +397,8 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
         double renderPosY = cameraPos.getY();
         double renderPosZ = cameraPos.getZ();
 
-        FastObjectArrayList<BlockEntity> renderTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getRenderTileEntityList().getFront();
+        FastObjectArrayList<BlockEntity> renderTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
+            .getRenderTileEntityList().getFront();
         VertexConsumerProvider.Immediate effectVertexConsumers = this.bufferBuilders.getEffectVertexConsumers();
 
         for (int i = 0; i < renderTileEntityList.size(); i++) {
@@ -431,7 +436,8 @@ public abstract class MixinCoreWorldRenderer implements ICoreWorldRenderer {
             matrices.pop();
         }
 
-        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer.getGlobalTileEntityList().getFront();
+        FastObjectArrayList<BlockEntity> globalTileEntityList = (FastObjectArrayList<BlockEntity>) (Object) terrainRenderer
+            .getGlobalTileEntityList().getFront();
         for (int i = 0; i < globalTileEntityList.size(); i++) {
             BlockEntity blockEntity = globalTileEntityList.get(i);
             BlockPos pos = blockEntity.getPos();

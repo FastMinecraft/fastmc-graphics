@@ -1,15 +1,10 @@
 package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.Cancellable
-import dev.fastmc.common.Direction
 import dev.fastmc.common.UpdateCounter
 import dev.fastmc.common.collection.FastObjectArrayList
-import dev.fastmc.common.distanceSq
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
 import dev.fastmc.graphics.shared.opengl.impl.RenderBufferPool
-import dev.fastmc.graphics.shared.renderer.cameraChunkX
-import dev.fastmc.graphics.shared.renderer.cameraChunkY
-import dev.fastmc.graphics.shared.renderer.cameraChunkZ
 import org.joml.FrustumIntersection
 import java.util.concurrent.atomic.AtomicReference
 
@@ -170,9 +165,9 @@ class RenderChunk(
 
     private inner class FrustumCullImpl : FrustumCull(renderer) {
         override fun isInFrustum(frustum: FrustumIntersection): Boolean {
-            val x = (originX - renderer.renderPosX).toFloat()
-            val y = (originY - renderer.renderPosY).toFloat()
-            val z = (originZ - renderer.renderPosZ).toFloat()
+            val x = (originX - renderer.camera.posX).toFloat()
+            val y = (originY - renderer.camera.posY).toFloat()
+            val z = (originZ - renderer.camera.posZ).toFloat()
             return frustum.testAab(x, y, z, x + 16.0f, y + 16.0f, z + 16.0f)
         }
     }

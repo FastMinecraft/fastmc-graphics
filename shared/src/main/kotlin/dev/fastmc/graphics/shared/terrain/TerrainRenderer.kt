@@ -105,18 +105,18 @@ abstract class TerrainRenderer(
         FastMcCoreScope.launch {
             coroutineScope {
                 FastMcMod.profiler.swap("checkUpdate")
-                val cameraPosX0 = cameraBlockX shr 1
-                val cameraPosY0 = cameraBlockY shr 1
-                val cameraPosZ0 = cameraBlockZ shr 1
-                val cameraYaw0 = cameraYaw.floorToInt()
-                val cameraPitch0 = cameraPitch.floorToInt()
+                val cameraPosX0 = camera.blockX shr 1
+                val cameraPosY0 = camera.blockY shr 1
+                val cameraPosZ0 = camera.blockZ shr 1
+                val cameraYaw0 = camera.yaw.floorToInt()
+                val cameraPitch0 = camera.pitch.floorToInt()
 
                 val caveCullingUpdate = chunkStorage.checkCaveCullingUpdate()
                 val indicesUpdate = chunkStorage.checkChunkIndicesUpdate()
                 val viewUpdate =
                     cameraPosX0 != lastCameraX0 || cameraPosY0 != lastCameraY0 || cameraPosZ0 != lastCameraZ0
                         || cameraYaw0 != lastCameraYaw0 || cameraPitch0 != lastCameraPitch0
-                val frustumUpdate = lastMatrixHash != matrixHash
+                val frustumUpdate = lastMatrixHash != camera.matrixHash
                 val forceUpdate = forceUpdateTimer.tickAndReset(1000L) || !chunkStorage.cameraChunk.isBuilt
 
                 if (forceUpdate) {
@@ -162,7 +162,7 @@ abstract class TerrainRenderer(
 
                 FastMcMod.profiler.swap("post")
                 if (updateRegion.get() || updateChunk) {
-                    lastMatrixHash = matrixHash
+                    lastMatrixHash = camera.matrixHash
                     lastCameraX0 = cameraPosX0
                     lastCameraY0 = cameraPosY0
                     lastCameraZ0 = cameraPosZ0
@@ -270,14 +270,14 @@ abstract class TerrainRenderer(
     private fun sortTranslucent() {
         if (!lastSortScheduleTask.isDoneOrNull) return
 
-        val roundedChunkX = (cameraBlockX + 8) shr 4
-        val roundedChunkY = (cameraBlockY + 8) shr 4
-        val roundedChunkZ = (cameraBlockZ + 8) shr 4
+        val roundedChunkX = (camera.blockX + 8) shr 4
+        val roundedChunkY = (camera.blockY + 8) shr 4
+        val roundedChunkZ = (camera.blockZ + 8) shr 4
         var count = 0
 
         if (lastSortChunkX != roundedChunkX || lastSortChunkY != roundedChunkY || lastSortChunkZ != roundedChunkZ) {
             count = 128
-        } else if (distanceSq(cameraX, cameraY, cameraZ, lastSortX, lastSortY, lastSortZ) > 1.0) {
+        } else if (distanceSq(camera.posX, camera.posY, camera.posZ, lastSortX, lastSortY, lastSortZ) > 1.0) {
             count = 16
         }
 
@@ -286,9 +286,9 @@ abstract class TerrainRenderer(
             lastSortChunkY = roundedChunkY
             lastSortChunkZ = roundedChunkZ
 
-            lastSortX = cameraX
-            lastSortY = cameraY
-            lastSortZ = cameraZ
+            lastSortX = camera.posX
+            lastSortY = camera.posY
+            lastSortZ = camera.posZ
 
             val chunkStorage = chunkStorage
             val chunkBuilder = chunkBuilder
@@ -336,8 +336,8 @@ abstract class TerrainRenderer(
 
         val statusCache = chunkLoadingStatusCache
         statusCache.init(
-            cameraChunkX,
-            cameraChunkZ,
+            camera.chunkX,
+            camera.chunkZ,
             chunkStorage.sizeXZ,
             chunkLoadingStatusCacheTimer.tickAndReset(1000L)
         )
@@ -549,12 +549,12 @@ abstract class TerrainRenderer(
     }
 
     private fun calculateVisibleFaceBit(renderChunk: RenderChunk): Int {
-        return (Direction.B_EAST * ((renderChunk.minX - cameraX).floorToInt() ushr 31)) or
-            (Direction.B_WEST * ((cameraX - renderChunk.maxX).floorToInt() ushr 31)) or
-            (Direction.B_UP * ((renderChunk.minY - cameraY).floorToInt() ushr 31)) or
-            (Direction.B_DOWN * ((cameraY - renderChunk.maxY).floorToInt() ushr 31)) or
-            (Direction.B_SOUTH * ((renderChunk.minZ - cameraZ).floorToInt() ushr 31)) or
-            (Direction.B_NORTH * ((cameraZ - renderChunk.maxZ).floorToInt() ushr 31))
+        return (Direction.B_EAST * ((renderChunk.minX - camera.posX).floorToInt() ushr 31)) or
+            (Direction.B_WEST * ((camera.posX - renderChunk.maxX).floorToInt() ushr 31)) or
+            (Direction.B_UP * ((renderChunk.minY - camera.posY).floorToInt() ushr 31)) or
+            (Direction.B_DOWN * ((camera.posY - renderChunk.maxY).floorToInt() ushr 31)) or
+            (Direction.B_SOUTH * ((renderChunk.minZ - camera.posZ).floorToInt() ushr 31)) or
+            (Direction.B_NORTH * ((camera.posZ - renderChunk.maxZ).floorToInt() ushr 31))
     }
 
     private val updateDebugRunnable = Runnable {
@@ -678,9 +678,9 @@ abstract class TerrainRenderer(
             if (layerBatch.isEmpty) continue
 
             shader.setRegionOffset(
-                (region.originX - renderPosX).toFloat(),
-                (region.originY - renderPosY).toFloat(),
-                (region.originZ - renderPosZ).toFloat()
+                (region.originX - camera.posX).toFloat(),
+                (region.originY - camera.posY).toFloat(),
+                (region.originZ - camera.posZ).toFloat()
             )
 
             region.vao.bind()
