@@ -23,6 +23,10 @@ class RenderRegion(
     val originY get() = storage.minChunkY shl 4
     var originZ = 0; private set
 
+    val originChunkX get() = originX shr 4
+    val originChunkY get() = originY shr 4
+    val originChunkZ get() = originZ shr 4
+
     @JvmField
     val frustumCull: FrustumCull = FrustumCullImpl()
 
@@ -46,7 +50,8 @@ class RenderRegion(
 
     @JvmField
     var vao = VertexArrayObject().apply {
-        attachVbo(vbo, TerrainRenderer.VERTEX_ATTRIBUTE)
+        attachVbo(vbo, TerrainRenderer.VERTEX_ATTRIBUTE_MAIN)
+        attachVbo(storage.chunkOffsetBuffer, TerrainRenderer.VERTEX_ATTRIBUTE_CHUNK_OFFSET)
         attachEbo(ebo)
     }
 
@@ -59,7 +64,8 @@ class RenderRegion(
 
             vao.destroyVao()
             vao = VertexArrayObject().apply {
-                attachVbo(newVbo, TerrainRenderer.VERTEX_ATTRIBUTE)
+                attachVbo(newVbo, TerrainRenderer.VERTEX_ATTRIBUTE_MAIN)
+                attachVbo(storage.chunkOffsetBuffer, TerrainRenderer.VERTEX_ATTRIBUTE_CHUNK_OFFSET)
                 attachEbo(newIbo)
             }
         }
@@ -108,7 +114,7 @@ class RenderRegion(
                 setIntInc(indexLength / 4)
                     .setIntInc(1)
                     .setIntInc(indexByteOffset / 4)
-                    .setIntInc(vertexByteOffset / 16)
+                    .setIntInc(vertexByteOffset / TerrainRenderer.VERTEX_SIZE)
                     .setIntInc(baseInstance)
             }
 

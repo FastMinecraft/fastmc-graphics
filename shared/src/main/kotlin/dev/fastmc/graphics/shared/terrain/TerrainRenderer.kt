@@ -537,9 +537,7 @@ abstract class TerrainRenderer(
                                 vertexRegion.offset.toInt(),
                                 indexRegion.offset.toInt(),
                                 region.tempVisibleBits[i].toInt(),
-                                (renderChunk.originX and 255 shl 20)
-                                    or ((renderChunk.chunkY - chunkStorage.minChunkY) shl 14)
-                                    or (renderChunk.originZ and 255)
+                                renderChunk.localIndex
                             )
                         }
                     }
@@ -703,12 +701,20 @@ abstract class TerrainRenderer(
 
     companion object {
         @JvmField
-        val VERTEX_ATTRIBUTE = buildAttribute(16) {
+        val VERTEX_SIZE = 16
+
+        @JvmField
+        val VERTEX_ATTRIBUTE_MAIN = buildAttribute(VERTEX_SIZE) {
             float(0, 3, GLDataType.GL_UNSIGNED_SHORT, false) // Pos
             float(1, 2, GLDataType.GL_UNSIGNED_SHORT, true) // Block texture uv
             float(2, 2, GLDataType.GL_UNSIGNED_BYTE, false) // Light map uv
             float(3, 3, GLDataType.GL_UNSIGNED_BYTE, true) // Color multiplier
             int(4, 1, GLDataType.GL_UNSIGNED_BYTE) // Attributes
+        }
+
+        @JvmField
+        val VERTEX_ATTRIBUTE_CHUNK_OFFSET = buildAttribute(4, 1) {
+            float(6, 3, GLDataType.GL_UNSIGNED_BYTE, false) // Chunk offset
         }
     }
 }

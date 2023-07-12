@@ -7,6 +7,8 @@ import dev.fastmc.common.sort.ByteInsertionSort
 import dev.fastmc.common.sort.IntIntrosort
 import dev.fastmc.graphics.shared.util.FastMcCoreScope
 import dev.fastmc.graphics.shared.util.FastMcExtendScope
+import dev.luna5ama.glwrapper.impl.BufferObject
+import dev.luna5ama.kmogus.MemoryStack
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import java.util.concurrent.Future
@@ -40,6 +42,25 @@ class RenderChunkStorage(
     val regionChunkCount get() = 16 * (maxChunkY - minChunkY) * 16
 
     @JvmField
+    val chunkOffsetBuffer = BufferObject.Immutable().apply {
+        MemoryStack {
+            val arr = malloc(regionChunkCount * 4L)
+            var ptr = arr.ptr
+            for (z in 0 until 16) {
+                for (x in 0 until 16) {
+                    for (y in 0 until sizeY) {
+                        ptr = ptr.setByteInc(x.toByte())
+                            .setByteInc(y.toByte())
+                            .setByteInc(z.toByte())
+                            .setByteInc(0)
+                    }
+                }
+            }
+            allocate(arr.len, arr.ptr, 0)
+        }
+    }
+
+    @JvmField
     val regionArray = Array(totalRegion) {
         RenderRegion(renderer, this, it)
     }
@@ -64,7 +85,7 @@ class RenderChunkStorage(
     private val caveCullingUpdateCounter = UpdateCounter()
     private var lastCaveCullingJob: Future<*>? = null
     private val caveCullingQueue = IntArrayFIFOQueueNoShrink(totalChunk)
-    private val caveCullingBitSet0 = DoubleBuffered( { StaticBitSet(totalChunk) }, DoubleBuffered.CLEAR_INIT_ACTION)
+    private val caveCullingBitSet0 = DoubleBuffered({ StaticBitSet(totalChunk) }, DoubleBuffered.CLEAR_INIT_ACTION)
     val caveCullingBitSet get() = caveCullingBitSet0.front
 
     var cameraChunk = renderChunkArray[0]; private set
@@ -160,8 +181,8 @@ class RenderChunkStorage(
                             var index = (indexX + indexZ * sizeXZ) * sizeY
 
                             renderChunk = renderChunkArray[index]
-                            renderChunk.setPos(x, minChunkY, z)
                             renderChunk.renderRegion = region
+                            renderChunk.setPos(x, minChunkY, z)
 
                             renderChunk.adjacentRenderChunk[Direction.I_UP] = renderChunkArray[index + 1]
 
@@ -177,8 +198,8 @@ class RenderChunkStorage(
 
                             for (y in minChunkY + 1 until maxChunkY - 1) {
                                 renderChunk = renderChunkArray[++index]
-                                renderChunk.setPos(x, y, z)
                                 renderChunk.renderRegion = region
+                                renderChunk.setPos(x, y, z)
 
                                 renderChunk.adjacentRenderChunk[Direction.I_DOWN] = renderChunkArray[index - 1]
                                 renderChunk.adjacentRenderChunk[Direction.I_UP] = renderChunkArray[index + 1]
@@ -195,8 +216,8 @@ class RenderChunkStorage(
                             }
 
                             renderChunk = renderChunkArray[++index]
-                            renderChunk.setPos(x, maxChunkY - 1, z)
                             renderChunk.renderRegion = region
+                            renderChunk.setPos(x, maxChunkY - 1, z)
 
                             renderChunk.adjacentRenderChunk[Direction.I_DOWN] = renderChunkArray[index - 1]
 

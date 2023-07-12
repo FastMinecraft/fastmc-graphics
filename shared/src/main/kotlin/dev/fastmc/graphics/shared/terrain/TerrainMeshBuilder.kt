@@ -55,11 +55,12 @@ abstract class TerrainMeshBuilder {
         u: Float,
         v: Float,
         lightMapUV: Int,
-        faceBit: Int
+        faceBit: Int,
+        extraModelAttribute: Int,
     ) {
         val bufferGroup = bufferGroup!!
         val region = bufferGroup.getVertexBuffer(faceBit - 1).region
-        if (region.arr.rem < 16) {
+        if (region.arr.rem < TerrainRenderer.VERTEX_SIZE) {
             region.expand(task!!)
         }
 
@@ -67,7 +68,6 @@ abstract class TerrainMeshBuilder {
             setShortInc(((x + 0.25f) * 3971.818f).toInt().toShort())
                 .setShortInc(((y + 0.25f) * 3971.818f).toInt().toShort())
                 .setShortInc(((z + 0.25f) * 3971.818f).toInt().toShort())
-
                 .setShortInc((u * 65535.0f).toInt().toShort())
                 .setShortInc((v * 65535.0f).toInt().toShort())
 
@@ -77,7 +77,7 @@ abstract class TerrainMeshBuilder {
                 .setByteInc(g.toByte())
                 .setByteInc(b.toByte())
 
-                .setByteInc(modelAttribute.toByte())
+                .setByteInc((modelAttribute or extraModelAttribute).toByte())
         }
     }
 
@@ -161,9 +161,10 @@ class TranslucentMeshBuilder : TerrainMeshBuilder() {
         u: Float,
         v: Float,
         lightMapUV: Int,
-        faceBit: Int
+        faceBit: Int,
+        extraModelAttribute: Int,
     ) {
-        super.putVertex(x, y, z, r, g, b, u, v, lightMapUV, 1)
+        super.putVertex(x, y, z, r, g, b, u, v, lightMapUV, 1, extraModelAttribute)
         posArrayList.ensureCapacity(posArrayList.size + 3)
         posArrayList.add(x)
         posArrayList.add(y)

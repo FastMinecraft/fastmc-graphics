@@ -20,7 +20,7 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
 
     var fogRangeSq = Int.MAX_VALUE; private set
 
-    private val fogParametersUBO = BufferObject.Immutable().allocate(24, GL_DYNAMIC_STORAGE_BIT)
+    private val fogParametersUBO = BufferObject.Immutable().allocate(32, GL_DYNAMIC_STORAGE_BIT)
 
     private val shaderMap = EnumMap<FogShape, EnumMap<FogType, TerrainShaderProgram>>()
     private var activeFogShape = FogShape.SPHERE
@@ -111,7 +111,9 @@ class TerrainShaderManager(private val renderer: TerrainRenderer) {
         vertex: ShaderSource.Vert,
         fragment: ShaderSource.Frag
     ) : ShaderProgram(
-        vertex,
+        vertex {
+            define("LIGHT_MAP_UNIT", FastMcMod.lightMapUnit)
+        },
         fragment {
             define("LIGHT_MAP_UNIT", FastMcMod.lightMapUnit)
         }

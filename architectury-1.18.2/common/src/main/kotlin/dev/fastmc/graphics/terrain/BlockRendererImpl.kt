@@ -314,106 +314,24 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             val lightUp = getLight(context.blockX, context.blockY, context.blockZ)
 
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + 0.0f,
-                context.renderPosY + heightNW,
-                context.renderPosZ + 0.0f,
-                rUp,
-                gUp,
-                bUp,
-                uNW,
-                vNW,
-                lightUp,
-                0b11_11_11
+            renderFluidQuad(
+                dev.fastmc.common.Direction.I_UP,
+                0.0f, heightNW, 0.0f, uNW, vNW,
+                0.0f, heightSW, 1.0f, uSW, vSW,
+                1.0f, heightSE, 1.0f, uSE, vSE,
+                1.0f, heightNE, 0.0f, uNE, vNE,
+                rUp, gUp, bUp, lightUp
             )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + 0.0f,
-                context.renderPosY + heightSW,
-                context.renderPosZ + 1.0f,
-                rUp,
-                gUp,
-                bUp,
-                uSW,
-                vSW,
-                lightUp,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + 1.0f,
-                context.renderPosY + heightSE,
-                context.renderPosZ + 1.0f,
-                rUp,
-                gUp,
-                bUp,
-                uSE,
-                vSE,
-                lightUp,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + 1.0f,
-                context.renderPosY + heightNE,
-                context.renderPosZ + 0.0f,
-                rUp,
-                gUp,
-                bUp,
-                uNE,
-                vNE,
-                lightUp,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putQuad(0b11_11_11)
 
             if (isTopClear(context.blockX, context.blockY + 1, context.blockZ, state)) {
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + 0.0f,
-                    context.renderPosY + heightNW,
-                    context.renderPosZ + 0.0f,
-                    rUp,
-                    gUp,
-                    bUp,
-                    uNW,
-                    vNW,
-                    lightUp,
-                    0b11_11_11
+                renderFluidQuad(
+                    dev.fastmc.common.Direction.I_UP,
+                    0.0f, heightNW, 0.0f, uNW, vNW,
+                    1.0f, heightNE, 0.0f, uNE, vNE,
+                    1.0f, heightSE, 1.0f, uSE, vSE,
+                    0.0f, heightSW, 1.0f, uSW, vSW,
+                    rUp, gUp, bUp, lightUp
                 )
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + 1.0f,
-                    context.renderPosY + heightNE,
-                    context.renderPosZ + 0.0f,
-                    rUp,
-                    gUp,
-                    bUp,
-                    uNE,
-                    vNE,
-                    lightUp,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + 1.0f,
-                    context.renderPosY + heightSE,
-                    context.renderPosZ + 1.0f,
-                    rUp,
-                    gUp,
-                    bUp,
-                    uSE,
-                    vSE,
-                    lightUp,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putVertex(
-                    context.renderPosX + 0.0f,
-                    context.renderPosY + heightSW,
-                    context.renderPosZ + 1.0f,
-                    rUp,
-                    gUp,
-                    bUp,
-                    uSW,
-                    vSW,
-                    lightUp,
-                    0b11_11_11
-                )
-                context.activeVertexBuilder.putQuad(0b11_11_11)
             }
         }
 
@@ -430,55 +348,14 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             val lightDown = getLight(context.blockX, context.blockY - 1, context.blockZ)
 
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX,
-                context.renderPosY,
-                context.renderPosZ + 1.0f,
-                rDown,
-                gDown,
-                bDown,
-                u1,
-                v2,
-                lightDown,
-                0b11_11_11
+            renderFluidQuad(
+                dev.fastmc.common.Direction.I_DOWN,
+                0.0f, 0.0f, 1.0f, u1, v2,
+                0.0f, 0.0f, 0.0f, u1, v1,
+                1.0f, 0.0f, 0.0f, u2, v1,
+                1.0f, 0.0f, 1.0f, u2, v2,
+                rDown, gDown, bDown, lightDown
             )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX,
-                context.renderPosY,
-                context.renderPosZ,
-                rDown,
-                gDown,
-                bDown,
-                u1,
-                v1,
-                lightDown,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + 1.0f,
-                context.renderPosY,
-                context.renderPosZ,
-                rDown,
-                gDown,
-                bDown,
-                u2,
-                v1,
-                lightDown,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + 1.0f,
-                context.renderPosY,
-                context.renderPosZ + 1.0f,
-                rDown,
-                gDown,
-                bDown,
-                u2,
-                v2,
-                lightDown,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putQuad(0b11_11_11)
         }
 
         for (i in 0..3) {
@@ -582,107 +459,25 @@ class BlockRendererImpl(override val context: RebuildContextImpl) : BlockRendere
 
             val lightSide = getLight(sideX, sideY, sideZ)
 
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x1,
-                context.renderPosY + y11,
-                context.renderPosZ + z1,
-                rSide,
-                gSide,
-                bSide,
-                uN,
-                vFrom1,
-                lightSide,
-                0b11_11_11
+            renderFluidQuad(
+                direction.ordinal,
+                x1, y11, z1, uN, vFrom1,
+                x2, y12, z2, uS, vFrom2,
+                x2, 0.0f, z2, uS, vTo,
+                x1, 0.0f, z1, uN, vTo,
+                rSide, gSide, bSide, lightSide
             )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x2,
-                context.renderPosY + y12,
-                context.renderPosZ + z2,
-                rSide,
-                gSide,
-                bSide,
-                uS,
-                vFrom2,
-                lightSide,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x2,
-                context.renderPosY,
-                context.renderPosZ + z2,
-                rSide,
-                gSide,
-                bSide,
-                uS,
-                vTo,
-                lightSide,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x1,
-                context.renderPosY,
-                context.renderPosZ + z1,
-                rSide,
-                gSide,
-                bSide,
-                uN,
-                vTo,
-                lightSide,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putQuad(0b11_11_11)
 
             if (sideSprites === waterOverlaySprite) continue
 
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x1,
-                context.renderPosY,
-                context.renderPosZ + z1,
-                rSide,
-                gSide,
-                bSide,
-                uN,
-                vTo,
-                lightSide,
-                0b11_11_11
+            renderFluidQuad(
+                direction.ordinal,
+                x1, 0.0f, z1, uN, vTo,
+                x2, 0.0f, z2, uS, vTo,
+                x2, y12, z2, uS, vFrom2,
+                x1, y11, z1, uN, vFrom1,
+                rSide, gSide, bSide, lightSide
             )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x2,
-                context.renderPosY,
-                context.renderPosZ + z2,
-                rSide,
-                gSide,
-                bSide,
-                uS,
-                vTo,
-                lightSide,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x2,
-                context.renderPosY + y12,
-                context.renderPosZ + z2,
-                rSide,
-                gSide,
-                bSide,
-                uS,
-                vFrom2,
-                lightSide,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putVertex(
-                context.renderPosX + x1,
-                context.renderPosY + y11,
-                context.renderPosZ + z1,
-                rSide,
-                gSide,
-                bSide,
-                uN,
-                vFrom1,
-                lightSide,
-                0b11_11_11
-            )
-            context.activeVertexBuilder.putQuad(0b11_11_11)
         }
     }
 

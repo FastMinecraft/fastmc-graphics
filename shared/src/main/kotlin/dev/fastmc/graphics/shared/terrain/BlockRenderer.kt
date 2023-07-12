@@ -55,7 +55,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4]),
             Float.fromBits(vertexData[5]),
             context.lightMapUVArray[0],
-            faceBit
+            faceBit,
+            0b100
         )
 
         color = vertexData[3 + vertexSize]
@@ -70,7 +71,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4 + vertexSize]),
             Float.fromBits(vertexData[5 + vertexSize]),
             context.lightMapUVArray[1],
-            faceBit
+            faceBit,
+            0b100
         )
 
         color = vertexData[3 + vertexSize * 2]
@@ -85,7 +87,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4 + vertexSize * 2]),
             Float.fromBits(vertexData[5 + vertexSize * 2]),
             context.lightMapUVArray[2],
-            faceBit
+            faceBit,
+            0b100
         )
 
         color = vertexData[3 + vertexSize * 3]
@@ -100,7 +103,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4 + vertexSize * 3]),
             Float.fromBits(vertexData[5 + vertexSize * 3]),
             context.lightMapUVArray[3],
-            faceBit
+            faceBit,
+            0b100
         )
         context.activeVertexBuilder.putQuad(faceBit)
     }
@@ -148,7 +152,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4]),
             Float.fromBits(vertexData[5]),
             light,
-            faceBit
+            faceBit,
+            0
         )
 
         color = vertexData[3 + vertexSize]
@@ -162,7 +167,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4 + vertexSize]),
             Float.fromBits(vertexData[5 + vertexSize]),
             light,
-            faceBit
+            faceBit,
+            0
         )
 
         color = vertexData[3 + vertexSize * 2]
@@ -176,7 +182,8 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4 + vertexSize * 2]),
             Float.fromBits(vertexData[5 + vertexSize * 2]),
             light,
-            faceBit
+            faceBit,
+            0
         )
 
         color = vertexData[3 + vertexSize * 3]
@@ -190,10 +197,74 @@ abstract class BlockRenderer<T_BlockState, T_FluidState> {
             Float.fromBits(vertexData[4 + vertexSize * 3]),
             Float.fromBits(vertexData[5 + vertexSize * 3]),
             light,
-            faceBit
+            faceBit,
+            0
         )
 
         context.activeVertexBuilder.putQuad(faceBit)
+    }
+
+    protected fun renderFluidQuad(
+        direction: Int,
+        x1: Float, y1: Float, z1: Float, u1: Float, v1: Float,
+        x2: Float, y2: Float, z2: Float, u2: Float, v2: Float,
+        x3: Float, y3: Float, z3: Float, u3: Float, v3: Float,
+        x4: Float, y4: Float, z4: Float, u4: Float, v4: Float,
+        r: Int, g: Int, b: Int, light: Int
+    ) {
+        context.activeVertexBuilder.putVertex(
+            x1 + context.renderPosX,
+            y1 + context.renderPosY,
+            z1 + context.renderPosZ,
+            r,
+            g,
+            b,
+            u1,
+            v1,
+            light,
+            0b11_11_11,
+            0b1000
+        )
+        context.activeVertexBuilder.putVertex(
+            x2 + context.renderPosX,
+            y2 + context.renderPosY,
+            z2 + context.renderPosZ,
+            r,
+            g,
+            b,
+            u2,
+            v2,
+            light,
+            0b11_11_11,
+            0b1000
+        )
+        context.activeVertexBuilder.putVertex(
+            x3 + context.renderPosX,
+            y3 + context.renderPosY,
+            z3 + context.renderPosZ,
+            r,
+            g,
+            b,
+            u3,
+            v3,
+            light,
+            0b11_11_11,
+            0b1000
+        )
+        context.activeVertexBuilder.putVertex(
+            x4 + context.renderPosX,
+            y4 + context.renderPosY,
+            z4 + context.renderPosZ,
+            r,
+            g,
+            b,
+            u4,
+            v4,
+            light,
+            0b11_11_11,
+            0b1000
+        )
+        context.activeVertexBuilder.putQuad(0b11_11_11)
     }
 
     protected fun getQuadDimensions(

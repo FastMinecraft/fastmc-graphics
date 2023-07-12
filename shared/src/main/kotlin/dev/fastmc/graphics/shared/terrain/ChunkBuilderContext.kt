@@ -4,14 +4,17 @@ package dev.fastmc.graphics.shared.terrain
 
 import dev.fastmc.common.*
 import dev.fastmc.common.collection.FastObjectArrayList
+import dev.fastmc.common.collection.Int2ByteCacheMap
 import dev.fastmc.common.sort.IntIntrosort
 import dev.fastmc.graphics.shared.instancing.tileentity.info.ITileEntityInfo
+import dev.fastmc.graphics.shared.mixin.IPatchedBakedQuad
 import dev.fastmc.graphics.shared.opengl.impl.MappedBufferPool
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 abstract class ContextProvider {
     private val rebuildContextPool = ContextPool(
@@ -202,6 +205,9 @@ abstract class RebuildContext(layerCount: Int) : Context() {
 
     @JvmField
     val boxDimension = FloatArray(Direction.values().size * 2)
+
+    @JvmField
+    val faceBitCache = Array(Direction.VALUES.size) { Int2ByteCacheMap(32).apply {defaultReturnValue(-1)} }
 
     abstract val worldSnapshot: WorldSnapshot112<*, *, *>
     abstract val blockRenderer: BlockRenderer<*, *>
@@ -444,6 +450,25 @@ abstract class RebuildContext(layerCount: Int) : Context() {
         for (i in brightnessArray.indices) {
             brightnessArray[i] = (brightnessArray[i] * globalBrightness) shr 8
         }
+    }
+
+    fun calcFaceBits(
+        direction: Int,
+        dx1: Float,
+        dy1: Float,
+        dz1: Float,
+        dx2: Float,
+        dy2: Float,
+        dz2: Float
+    ) : Int {
+        val cacheMap = faceBitCache[direction]
+        val key = converDeltas(dx1, dy1, dz1, dx2, dy2, dz2)
+        var value = cacheMap.get(key).toInt()
+        if (value == -1) {
+            value = IPatchedBakedQuad.calcFaceBit(dx1, dy1, dz1, dx2, dy2, dz2)
+            cacheMap.put(key, value.toByte())
+        }
+        return value
     }
 
     @Suppress("NAME_SHADOWING")
@@ -799,6 +824,24 @@ abstract class RebuildContext(layerCount: Int) : Context() {
         FLIP_EAST(Direction.EAST, true);
 
         val shape = direction.ordinal + if (flipped) Direction.values().size else 0
+    }
+
+    companion object {
+        private const val FACE_BIT_CACHE_AXIS_SIZE = 31
+
+        @JvmStatic
+        private fun convertDelta(x: Float): Int {
+            return ((x * 0.5f + 0.5f) * FACE_BIT_CACHE_AXIS_SIZE).roundToInt() and FACE_BIT_CACHE_AXIS_SIZE
+        }
+
+        @JvmStatic
+        private fun converDeltas(
+            dx1: Float, dy1: Float, dz1: Float,
+            dx2: Float, dy2: Float, dz2: Float,
+        ): Int {
+            return convertDelta(dx1) or (convertDelta(dy1) shl 5) or (convertDelta(dz1) shl 10) or
+                (convertDelta(dx2) shl 15) or (convertDelta(dy2) shl 20) or (convertDelta(dz2) shl 25)
+        }
     }
 }
 

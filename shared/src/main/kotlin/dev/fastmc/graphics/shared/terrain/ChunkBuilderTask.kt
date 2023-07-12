@@ -148,10 +148,10 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, private val factory
                 arr.usePtr {
                     setIntInc(index)
                         .setIntInc(index + 1)
-                        .setIntInc(index + 3)
+                        .setIntInc(index + 2)
                         .setIntInc(index + 2)
                         .setIntInc(index + 3)
-                        .setIntInc(index + 1)
+                        .setIntInc(index + 0)
                 }
             }
         } else {
@@ -160,10 +160,10 @@ sealed class ChunkBuilderTask(val renderer: TerrainRenderer, private val factory
                 arr.usePtr {
                     setIntInc(index)
                         .setIntInc(index + 1)
-                        .setIntInc(index + 3)
+                        .setIntInc(index + 2)
                         .setIntInc(index + 2)
                         .setIntInc(index + 3)
-                        .setIntInc(index + 1)
+                        .setIntInc(index + 0)
                 }
             }
         }

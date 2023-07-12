@@ -237,7 +237,7 @@ class MappedBufferPool(sectorSizePower: Int, private val sectorCapacity: Int, va
                 throw UnsupportedOperationException()
             }
 
-            override fun realloc(newLength: Long, init: Boolean) {
+            override fun realloc(newLength: Long, init: Boolean): Arr {
                 throw UnsupportedOperationException()
             }
         }

@@ -20,6 +20,10 @@ class RenderChunk(
     var chunkY = 0; private set
     var chunkZ = 0; private set
 
+    var localChunkX = 0; private set
+    var localChunkY = 0; private set
+    var localChunkZ = 0; private set
+
     inline val originX get() = chunkX shl 4
     inline val originY get() = chunkY shl 4
     inline val originZ get() = chunkZ shl 4
@@ -72,6 +76,9 @@ class RenderChunk(
     @JvmField
     var globalTileEntityList: FastObjectArrayList<ITileEntityInfo<*>>? = null
 
+    @JvmField
+    var localIndex = 0
+
     override val isCancelled: Boolean
         get() = isDestroyed
 
@@ -113,6 +120,12 @@ class RenderChunk(
             this.chunkX = chunkX
             this.chunkY = chunkY
             this.chunkZ = chunkZ
+
+            localChunkX = chunkX - renderRegion.originChunkX
+            localChunkY = chunkY - renderRegion.originChunkY
+            localChunkZ = chunkZ - renderRegion.originChunkZ
+
+            localIndex = localChunkY + (localChunkX + localChunkZ * 16) * renderer.chunkStorage.sizeY
 
             lastTaskRef.getAndSet(null)?.cancel()
             occlusionData = ChunkOcclusionData.EMPTY
